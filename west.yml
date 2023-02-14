@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2023 Renesas Electronics Corporation.
+# Copyright (C) 2023 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# West YAML manifest for Zephyr as Xen Dom0
+
+manifest:
+  self:
+    path: aos_core_zephyr
+
+  remotes:
+    - name: xen-troops
+      url-base: https://github.com/xen-troops/
+
+  projects:
+    - name: zephyr
+      remote: xen-troops
+      revision: aos-wip
+      west-commands: scripts/west-commands.yml
