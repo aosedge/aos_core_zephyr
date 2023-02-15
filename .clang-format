@@ -1,0 +1,13 @@
+BasedOnStyle: WebKit
+ColumnLimit: 120
+FixNamespaceComments: true
+NamespaceIndentation: None
+Cpp11BracedListStyle: true
+AllowShortFunctionsOnASingleLine: InlineOnly
+AlwaysBreakTemplateDeclarations: Yes
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
