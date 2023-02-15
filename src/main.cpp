@@ -5,9 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <stdio.h>
-
-void main(void)
+int main(void)
 {
-	printf("AOS Core zephyr app\n");
+    return 0;
 }
