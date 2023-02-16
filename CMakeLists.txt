@@ -13,7 +13,39 @@ include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
 
 project(aoszephyrapp)
 
+# ######################################################################################################################
+# Includes
+# ######################################################################################################################
+
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+# ######################################################################################################################
+# Taget
+# ######################################################################################################################
+
 target_sources(app PRIVATE src/main.cpp)
+
+# ######################################################################################################################
+# Versioning
+# ######################################################################################################################
+
+find_package(Git)
+
+if(NOT GIT_FOUND)
+    set(GIT_EXECUTABLE git)
+endif()
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+
+add_custom_target(
+    version
+    COMMAND
+        ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE} -D INPUT_FILE=${CMAKE_SOURCE_DIR}/src/version.hpp.in -D
+        OUTPUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/version.hpp -D GIT_SOURCE_DIR=${CMAKE_SOURCE_DIR} -P
+        ${CMAKE_MODULE_PATH}/GenerateVersion.cmake
+)
+
+add_dependencies(app version)
 
 # ######################################################################################################################
 # External libs
