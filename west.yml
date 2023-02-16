@@ -13,10 +13,17 @@ manifest:
 
   remotes:
     - name: xen-troops
-      url-base: https://github.com/xen-troops/
+      url-base: https://github.com/xen-troops
+
+    - name: aoscloud
+      url-base: https://github.com/aoscloud
 
   projects:
     - name: zephyr
       remote: xen-troops
       revision: aos-wip
       west-commands: scripts/west-commands.yml
+
+    - name: aos_core_lib_cpp
+      remote: aoscloud
+      revision: develop
