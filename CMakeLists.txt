@@ -17,13 +17,13 @@ project(aoszephyrapp)
 # Includes
 # ######################################################################################################################
 
-zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} include)
 
 # ######################################################################################################################
 # Taget
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp)
+target_sources(app PRIVATE src/main.cpp src/logger/logger.cpp src/app/app.cpp)
 
 # ######################################################################################################################
 # Versioning
