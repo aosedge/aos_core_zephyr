@@ -1,0 +1,4 @@
+tests:
+  aoszephyrapp.cmclient:
+    type: unit
+    tags: cmclient
