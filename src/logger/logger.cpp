@@ -50,6 +50,7 @@
     }
 
 LOG_CALLBACK(app);
+LOG_CALLBACK(cmclient);
 LOG_CALLBACK(launcher);
 
 /***********************************************************************************************************************
@@ -70,6 +71,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const char*
     switch (static_cast<int>(module.GetValue())) {
     case static_cast<int>(Module::eApp):
         log_app::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eCMClient):
+        log_cmclient::LogCallback(level, message);
 
         break;
 
