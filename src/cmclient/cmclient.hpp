@@ -9,8 +9,9 @@
 #define CMCLIENT_HPP_
 
 #include <aos/common/error.hpp>
+#include <aos/common/noncopyable.hpp>
 
-class CMClient {
+class CMClient : private aos::NonCopyable {
 public:
     aos::Error Init();
 };
