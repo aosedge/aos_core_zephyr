@@ -23,7 +23,7 @@ zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 # Taget
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp src/logger/logger.cpp src/app/app.cpp)
+target_sources(app PRIVATE src/main.cpp src/logger/logger.cpp src/app/app.cpp src/cmclient/cmclient.cpp)
 
 # ######################################################################################################################
 # Versioning
