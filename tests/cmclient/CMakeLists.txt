@@ -14,7 +14,7 @@ project(cmclient_test)
 # Includes
 # ######################################################################################################################
 
-target_include_directories(testbinary PRIVATE ${APPLICATION_SOURCE_DIR}/../../include)
+target_include_directories(testbinary PRIVATE ${APPLICATION_SOURCE_DIR}/../../src)
 target_include_directories(testbinary PRIVATE ${APPLICATION_SOURCE_DIR}/../../../aos_core_lib_cpp/include)
 
 # ######################################################################################################################
