@@ -7,7 +7,7 @@
 
 #include <zephyr/ztest.h>
 
-#include "cmclient.hpp"
+#include "cmclient/cmclient.hpp"
 
 ZTEST_SUITE(cmclient, NULL, NULL, NULL, NULL, NULL);
 

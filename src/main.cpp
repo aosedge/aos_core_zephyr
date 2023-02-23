@@ -10,8 +10,8 @@
 
 #include <aos/common/version.hpp>
 
-#include "app.hpp"
-#include "logger.hpp"
+#include "app/app.hpp"
+#include "logger/logger.hpp"
 #include "version.hpp"
 
 int main(void)

@@ -17,7 +17,7 @@ project(aoszephyrapp)
 # Includes
 # ######################################################################################################################
 
-zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} include)
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
 # ######################################################################################################################
 # Taget
