@@ -10,7 +10,7 @@
 
 aos::Error CMClient::Init()
 {
-    LOG_DBG() << "Hello form CM client";
+    LOG_DBG() << "Initialize CM client";
 
     return aos::ErrorEnum::eNone;
 }

@@ -7,6 +7,8 @@
 
 #include <aos/common/error.hpp>
 
+#include "cmclient/cmclient.hpp"
+
 /**
  * Aos zephyr application.
  */
@@ -33,4 +35,6 @@ public:
 private:
     App() {};
     App(App const&) = delete;
+
+    CMClient mCMClient;
 };
