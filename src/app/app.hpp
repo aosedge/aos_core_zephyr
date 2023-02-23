@@ -6,13 +6,14 @@
  */
 
 #include <aos/common/error.hpp>
+#include <aos/common/noncopyable.hpp>
 
 #include "cmclient/cmclient.hpp"
 
 /**
  * Aos zephyr application.
  */
-class App {
+class App : private aos::NonCopyable {
 public:
     /**
      * Initializes application.
@@ -33,8 +34,5 @@ public:
     };
 
 private:
-    App() {};
-    App(App const&) = delete;
-
     CMClient mCMClient;
 };
