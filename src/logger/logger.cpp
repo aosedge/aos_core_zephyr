@@ -52,6 +52,8 @@
 LOG_CALLBACK(app);
 LOG_CALLBACK(cmclient);
 LOG_CALLBACK(launcher);
+LOG_CALLBACK(runner);
+LOG_CALLBACK(storage);
 
 /***********************************************************************************************************************
  * Public
@@ -79,12 +81,22 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const char*
 
         break;
 
+    case static_cast<int>(Module::eRunner):
+        log_runner::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eStorage):
+        log_storage::LogCallback(level, message);
+
+        break;
+
     case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
         log_launcher::LogCallback(level, message);
 
         break;
 
     default:
-        break;
+        __ASSERT(false, "Log from unknown module received: %d", module.GetValue());
     }
 }

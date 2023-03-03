@@ -7,8 +7,11 @@
 
 #include <aos/common/error.hpp>
 #include <aos/common/noncopyable.hpp>
+#include <aos/sm/launcher.hpp>
 
 #include "cmclient/cmclient.hpp"
+#include "runner/runner.hpp"
+#include "storage/storage.hpp"
 
 /**
  * Aos zephyr application.
@@ -26,13 +29,12 @@ public:
      * Returns Aos application instance.
      * @return App&
      */
-    static App& Get()
-    {
-        static App sApp;
-
-        return sApp;
-    };
+    static App& Get() { return sApp; };
 
 private:
-    CMClient mCMClient;
+    static App                  sApp;
+    CMClient                    mCMClient;
+    Storage                     mStorage;
+    Runner                      mRunner;
+    aos::sm::launcher::Launcher mLauncher;
 };

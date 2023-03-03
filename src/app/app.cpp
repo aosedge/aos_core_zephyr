@@ -9,6 +9,12 @@
 #include "log.hpp"
 
 /***********************************************************************************************************************
+ * Variables
+ **********************************************************************************************************************/
+
+App App::sApp;
+
+/***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
@@ -16,8 +22,21 @@ aos::Error App::Init()
 {
     LOG_INF() << "Initialize application";
 
-    auto err = mCMClient.Init();
-    if (!err.IsNone()) {
+    aos::Error err;
+
+    if (!(err = mStorage.Init()).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mRunner.Init(mLauncher)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mLauncher.Init(mCMClient, mRunner, mStorage)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCMClient.Init(mLauncher)).IsNone()) {
         return err;
     }
 
