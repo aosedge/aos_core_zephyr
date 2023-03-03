@@ -8,12 +8,51 @@
 #ifndef CMCLIENT_HPP_
 #define CMCLIENT_HPP_
 
-#include <aos/common/error.hpp>
-#include <aos/common/noncopyable.hpp>
+#include <aos/common/thread.hpp>
+#include <aos/sm/launcher.hpp>
 
-class CMClient : private aos::NonCopyable {
+/**
+ * CM client instance.
+ */
+class CMClient : public aos::sm::launcher::InstanceStatusReceiverItf, private aos::NonCopyable {
 public:
-    aos::Error Init();
+    /**
+     * Creates CM client.
+     */
+    CMClient()
+        : mLauncher(nullptr)
+        , mThread([this](void*) { this->ProcessMessages(); })
+    {
+    }
+
+    /**
+     * Initializes CM client instance.
+     * @param launcher instance launcher.
+     * @return aos::Error.
+     */
+    aos::Error Init(aos::sm::launcher::LauncherItf& launcher);
+
+    /**
+     * Sends instances run status.
+     *
+     * @param instances instances status array.
+     * @return Error.
+     */
+    aos::Error InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances) override;
+
+    /**
+     * Sends instances update status.
+     * @param instances instances status array.
+     *
+     * @return Error.
+     */
+    aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances) override;
+
+private:
+    aos::sm::launcher::LauncherItf* mLauncher;
+    aos::Thread<>                   mThread;
+
+    void ProcessMessages();
 };
 
 #endif

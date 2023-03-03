@@ -21,6 +21,8 @@ public:
     enum class Module {
         eApp = static_cast<int>(aos::LogLevelEnum::eNumLevels),
         eCMClient,
+        eRunner,
+        eStorage,
     };
 
     /**
