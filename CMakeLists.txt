@@ -56,16 +56,33 @@ add_dependencies(app version)
 
 include(ExternalProject)
 
+zephyr_get_include_directories_for_lang_as_string(CXX includes)
+zephyr_get_system_include_directories_for_lang_as_string(CXX system_includes)
+zephyr_get_compile_definitions_for_lang_as_string(CXX definitions)
+zephyr_get_compile_options_for_lang_as_string(CXX options)
+
+set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${options}")
+
 # ######################################################################################################################
 # aos_core_lib_cpp
 # ######################################################################################################################
+
+set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error")
+
+# Aos core configuration
+
+if(NOT BOARD MATCHES "native_posix*")
+    zephyr_compile_definitions(-DAOS_CONFIG_DEFAULT_THREAD_STACK_SIZE=1024)
+endif()
 
 set(AOSCORE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
 
 ExternalProject_Add(
     aoscore
     PREFIX ${AOSCORE_BUILD_DIR}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${AOSCORE_BUILD_DIR}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${AOSCORE_BUILD_DIR} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+               -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+               -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
     SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
     BUILD_BYPRODUCTS ${AOSCORE_BUILD_DIR}/lib/libaossmcpp.a ${AOSCORE_BUILD_DIR}/lib/libaosiamcpp.a
 )
