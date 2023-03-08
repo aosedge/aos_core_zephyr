@@ -41,6 +41,7 @@ target_sources(
             src/runner/runner.cpp
             src/storage/storage.cpp
             src/downloader/downloader.cpp
+            src/resourcemanager/resourcemanager.cpp
 )
 
 # ######################################################################################################################

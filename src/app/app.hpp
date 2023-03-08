@@ -40,6 +40,7 @@ private:
     Storage                     mStorage;
     Runner                      mRunner;
     aos::sm::launcher::Launcher mLauncher;
+    ResourceManager             mResourceManager;
 };
 
 #endif
