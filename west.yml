@@ -27,3 +27,7 @@ manifest:
     - name: aos_core_lib_cpp
       remote: aoscloud
       revision: develop
+
+    - name: zephyr-xenlib
+      remote: xen-troops
+      revision: wip_zephyr_dom0
