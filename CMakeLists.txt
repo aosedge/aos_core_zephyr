@@ -84,6 +84,20 @@ ExternalProject_Add(
     BUILD_BYPRODUCTS ${AOSCORE_BUILD_DIR}/lib/libaossmcpp.a ${AOSCORE_BUILD_DIR}/lib/libaosiamcpp.a
 )
 
+if(BOARD MATCHES "qemu")
+    set(utils_scripts_dir ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
+    if(DTC)
+        add_custom_target(
+            fix_dtb
+            DEPENDS ${ZEPHYR_FINAL_EXECUTABLE}
+            COMMAND ${utils_scripts_dir}/fix_dtb.sh ${utils_scripts_dir}/gicv2.tmpl ${ZEPHYR_BINARY_DIR}/virt_gicv2.dtb
+                    ${ZEPHYR_BINARY_DIR}/zephyr.bin
+        )
+    else()
+        message(WARNING "No dtc program")
+    endif()
+endif()
+
 # aossm
 
 file(MAKE_DIRECTORY ${AOSCORE_BUILD_DIR}/include)
