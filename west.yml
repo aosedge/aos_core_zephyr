@@ -18,6 +18,9 @@ manifest:
     - name: aoscloud
       url-base: https://github.com/aoscloud
 
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
   projects:
     - name: zephyr
       remote: xen-troops
@@ -31,3 +34,10 @@ manifest:
     - name: zephyr-xenlib
       remote: xen-troops
       revision: wip_zephyr_dom0
+
+    - name: littlefs
+      remote: zephyrproject-rtos
+      path: modules/fs/littlefs
+      groups:
+        - fs
+      revision: ca583fd297ceb48bced3c2548600dc615d67af24
