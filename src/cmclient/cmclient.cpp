@@ -48,7 +48,7 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
         ProcessMessages();
     });
     if (!err.IsNone()) {
-        return err;
+        return AOS_ERROR_WRAP(err);
     }
 
     return aos::ErrorEnum::eNone;
@@ -70,9 +70,10 @@ aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& i
     auto err = SendPbMessageToVchan();
     if (!err.IsNone()) {
         LOG_ERR() << "Can't send run instance status: " << err;
+        return err;
     }
 
-    return err;
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
@@ -91,9 +92,10 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
     auto err = SendPbMessageToVchan();
     if (!err.IsNone()) {
         LOG_ERR() << "Can't send update instance status: " << err;
+        return err;
     }
 
-    return err;
+    return aos::ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
@@ -237,7 +239,7 @@ aos::Error CMClient::SendPbMessageToVchan()
     if (!status) {
         LOG_ERR() << "Encoding failed: " << PB_GET_ERROR(&outStream);
 
-        return aos::Error(aos::ErrorEnum::eRuntime);
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
 
     VchanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
@@ -260,6 +262,7 @@ aos::Error CMClient::SendBufferToVchan(vch_handle* vChanHandler, const uint8_t* 
     for (size_t offset = 0; offset < msgSize;) {
         auto ret = vch_write(vChanHandler, buffer + offset, msgSize - offset);
         if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
         }
 
         offset += ret;
@@ -274,17 +277,17 @@ aos::Error CMClient::CalculateSha256(const aos::Buffer& buffer, size_t msgSize, 
 
     auto ret = tc_sha256_init(&s);
     if (TC_CRYPTO_SUCCESS != ret) {
-        return ret;
+        return AOS_ERROR_WRAP(ret);
     }
 
     ret = tc_sha256_update(&s, static_cast<uint8_t*>(buffer.Get()), msgSize);
     if (TC_CRYPTO_SUCCESS != ret) {
-        return ret;
+        return AOS_ERROR_WRAP(ret);
     }
 
     ret = tc_sha256_final(digest, &s);
     if (TC_CRYPTO_SUCCESS != ret) {
-        return ret;
+        return AOS_ERROR_WRAP(ret);
     }
 
     return aos::ErrorEnum::eNone;
