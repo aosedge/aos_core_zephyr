@@ -77,10 +77,12 @@ private:
     atomic_t                                                     mFinishReadTrigger;
     vch_handle                                                   mSMvchanHandler;
     aos::StaticBuffer<servicemanager_v3_SMOutgoingMessages_size> mSendBuffer;
-    aos::StaticBuffer<servicemanager_v3_SMIncomingMessages_size> mReceiveBuffer;
-    servicemanager_v3_SMIncomingMessages                         mIncomingMessage;
-    servicemanager_v3_SMOutgoingMessages                         mOutgoingMessage;
-    aos::Mutex                                                   mSendMutex;
+    aos::StaticBuffer<aos::Max(size_t(servicemanager_v3_SMIncomingMessages_size),
+        sizeof(aos::InstanceInfoStaticArray) + sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray))>
+                                         mReceiveBuffer;
+    servicemanager_v3_SMIncomingMessages mIncomingMessage;
+    servicemanager_v3_SMOutgoingMessages mOutgoingMessage;
+    aos::Mutex                           mSendMutex;
 
     void                             ProcessMessages();
     void                             ConnectToCM();
@@ -92,6 +94,7 @@ private:
     void                             ProcessGetUnitConfigStatus();
     void                             ProcessCheckUnitConfig();
     void                             ProcessSetUnitConfig();
+    void                             ProcessRunInstancesMessage();
 };
 
 #endif
