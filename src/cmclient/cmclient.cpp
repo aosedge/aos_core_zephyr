@@ -7,6 +7,8 @@
 
 #include <unistd.h>
 
+#include <aos/common/tools/memory.hpp>
+
 #include <pb_decode.h>
 #include <tinycrypt/constants.h>
 #include <tinycrypt/sha256.h>
@@ -179,6 +181,7 @@ void CMClient::ProcessMessages()
             break;
 
         case servicemanager_v3_SMIncomingMessages_run_instances_tag:
+            ProcessRunInstancesMessage();
             break;
 
         case servicemanager_v3_SMIncomingMessages_system_log_request_tag:
@@ -371,5 +374,83 @@ void CMClient::ProcessSetUnitConfig()
 
     if (!(err = SendPbMessageToVchan()).IsNone()) {
         LOG_ERR() << "Can't send unit configuration status: " << err;
+    }
+}
+
+void CMClient::ProcessRunInstancesMessage()
+{
+    LOG_DBG() << "Process run instances";
+
+    aos::BufferAllocator<> allocator(mReceiveBuffer);
+
+    auto runInstances = aos::MakeUnique<aos::InstanceInfoStaticArray>(&allocator);
+
+    runInstances->Resize(mIncomingMessage.SMIncomingMessage.run_instances.instances_count);
+
+    for (auto i = 0; i < mIncomingMessage.SMIncomingMessage.run_instances.instances_count; i++) {
+        const auto& pbInstance = mIncomingMessage.SMIncomingMessage.run_instances.instances[i];
+        auto&       instance = (*runInstances)[i];
+
+        if (pbInstance.has_instance) {
+            instance.mInstanceIdent.mServiceID = pbInstance.instance.service_id;
+            instance.mInstanceIdent.mSubjectID = pbInstance.instance.subject_id;
+            instance.mInstanceIdent.mInstance = pbInstance.instance.instance;
+        }
+
+        instance.mPriority = pbInstance.priority;
+        instance.mStatePath = pbInstance.state_path;
+        instance.mStoragePath = pbInstance.storage_path;
+        instance.mUID = pbInstance.uid;
+    }
+
+    auto desiredServices = aos::MakeUnique<aos::ServiceInfoStaticArray>(&allocator);
+
+    desiredServices->Resize(mIncomingMessage.SMIncomingMessage.run_instances.services_count);
+
+    for (auto i = 0; i < mIncomingMessage.SMIncomingMessage.run_instances.services_count; i++) {
+        const auto& pbService = mIncomingMessage.SMIncomingMessage.run_instances.services[0];
+        auto&       service = (*desiredServices)[i];
+
+        if (pbService.has_version_info) {
+            service.mVersionInfo.mAosVersion = pbService.version_info.aos_version;
+            service.mVersionInfo.mVendorVersion = pbService.version_info.vendor_version;
+            service.mVersionInfo.mDescription = pbService.version_info.description;
+        }
+
+        service.mServiceID = pbService.service_id;
+        service.mProviderID = pbService.provider_id;
+        service.mGID = pbService.gid;
+        service.mURL = pbService.url;
+        memcpy(service.mSHA256, pbService.sha256.bytes, aos::cSHA256Size);
+        memcpy(service.mSHA512, pbService.sha512.bytes, aos::cSHA512Size);
+        service.mSize = pbService.size;
+    }
+
+    auto desiredLayers = aos::MakeUnique<aos::LayerInfoStaticArray>(&allocator);
+
+    desiredLayers->Resize(mIncomingMessage.SMIncomingMessage.run_instances.layers_count);
+
+    for (auto i = 0; i < mIncomingMessage.SMIncomingMessage.run_instances.layers_count; i++) {
+        const auto& pbLayer = mIncomingMessage.SMIncomingMessage.run_instances.layers[i];
+        auto&       layer = (*desiredLayers)[i];
+
+        if (pbLayer.has_version_info) {
+            layer.mVersionInfo.mAosVersion = pbLayer.version_info.aos_version;
+            layer.mVersionInfo.mVendorVersion = aos::String(pbLayer.version_info.vendor_version);
+            layer.mVersionInfo.mDescription = aos::String(pbLayer.version_info.description);
+        }
+
+        layer.mLayerID = aos::String(pbLayer.layer_id);
+        layer.mLayerDigest = aos::String(pbLayer.digest);
+        layer.mURL = aos::String(pbLayer.url);
+        memcpy(layer.mSHA256, pbLayer.sha256.bytes, aos::cSHA256Size);
+        memcpy(layer.mSHA512, pbLayer.sha512.bytes, aos::cSHA512Size);
+        layer.mSize = pbLayer.size;
+    }
+
+    auto err = mLauncher->RunInstances(
+        desiredServices, desiredLayers, runInstances, mIncomingMessage.SMIncomingMessage.run_instances.force_restart);
+    if (!err.IsNone()) {
+        LOG_ERR() << "Can't run instances: " << err;
     }
 }
