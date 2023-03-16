@@ -31,7 +31,7 @@ manifest:
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: develop
+      revision: 7cdf7299ff704c6046c1d49eb20070b08f171912
 
     - name: zephyr-xenlib
       remote: amoi
