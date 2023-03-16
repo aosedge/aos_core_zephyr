@@ -21,6 +21,10 @@ project(aoszephyrapp)
 
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
+if(CONFIG_BOARD MATCHES "rcar")
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
+endif()
+
 # ######################################################################################################################
 # Definitions
 # ######################################################################################################################
@@ -44,6 +48,9 @@ target_sources(
             src/resourcemanager/resourcemanager.cpp
             src/ocispec/ocispec.cpp
 )
+
+# NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
+target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domd_cfg_spider.c src/domain_bins_spider.S)
 
 # ######################################################################################################################
 # Versioning
