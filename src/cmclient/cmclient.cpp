@@ -38,12 +38,13 @@ CMClient::~CMClient()
     mThread.Join();
 }
 
-aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager)
+aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader)
 {
     LOG_DBG() << "Initialize CM client";
 
     mLauncher = &launcher;
     mResourceManager = &resourceManager;
+    mDownloader = &downloader;
 
     auto err = mThread.Run([this](void*) {
         ConnectToCM();
@@ -94,6 +95,30 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
     auto err = SendPbMessageToVchan();
     if (!err.IsNone()) {
         LOG_ERR() << "Can't send update instance status: " << err;
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
+{
+    aos::LockGuard lock(mSendMutex);
+
+    mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_image_content_request_tag;
+    mOutgoingMessage.SMOutgoingMessage.image_content_request = servicemanager_v3_ImageContentRequest_init_zero;
+
+    LOG_DBG() << "Content type " << request.contentType.ToString().CStr();
+
+    strcmp(
+        mOutgoingMessage.SMOutgoingMessage.image_content_request.content_type, request.contentType.ToString().CStr());
+    LOG_DBG() << "URL " << request.url.CStr();
+    strcmp(mOutgoingMessage.SMOutgoingMessage.image_content_request.url, request.url.CStr());
+    mOutgoingMessage.SMOutgoingMessage.image_content_request.request_id = request.requestID;
+
+    auto err = SendPbMessageToVchan();
+    if (!err.IsNone()) {
+        LOG_ERR() << "Can't send image content request: " << err;
         return err;
     }
 
@@ -196,9 +221,11 @@ void CMClient::ProcessMessages()
             break;
 
         case servicemanager_v3_SMIncomingMessages_image_content_info_tag:
+            ProcessImageContentInfo();
             break;
 
         case servicemanager_v3_SMIncomingMessages_image_content_tag:
+            ProcessImageContentChunk();
             break;
 
         default:
@@ -452,9 +479,61 @@ void CMClient::ProcessRunInstancesMessage()
         layer.mSize = pbLayer.size;
     }
 
-    auto err = mLauncher->RunInstances(
-        desiredServices, desiredLayers, runInstances, mIncomingMessage.SMIncomingMessage.run_instances.force_restart);
+    auto err = mLauncher->RunInstances(*desiredServices, *desiredLayers, *runInstances,
+        mIncomingMessage.SMIncomingMessage.run_instances.force_restart);
     if (!err.IsNone()) {
         LOG_ERR() << "Can't run instances: " << err;
+    }
+}
+
+void CMClient::ProcessImageContentInfo()
+{
+    LOG_DBG() << "Process image content info";
+
+    aos::BufferAllocator<> allocator(mReceiveBuffer);
+
+    auto contentInfo = aos::MakeUnique<ImageContentInfo>(&allocator);
+
+    if (strlen(mIncomingMessage.SMIncomingMessage.image_content_info.error) != 0) {
+        contentInfo->error = mIncomingMessage.SMIncomingMessage.image_content_info.error;
+    } else {
+        contentInfo->requestID = mIncomingMessage.SMIncomingMessage.image_content_info.request_id;
+        for (auto i = 0; i < mIncomingMessage.SMIncomingMessage.image_content_info.image_files_count; i++) {
+            servicemanager_v3_ImageFile& pbImageFile
+                = mIncomingMessage.SMIncomingMessage.image_content_info.image_files[i];
+            FileInfo fileInfo;
+
+            fileInfo.size = pbImageFile.size;
+            fileInfo.relativePath = pbImageFile.relative_path;
+            memcpy(fileInfo.sha256.Get(), pbImageFile.sha256.bytes, aos::cSHA256Size);
+
+            contentInfo->files.PushBack(fileInfo);
+        }
+    }
+
+    auto err = mDownloader->ReceiveImageContentInfo(*contentInfo);
+    if (!err.IsNone()) {
+        LOG_ERR() << "Can't receive image content info: " << err;
+    }
+}
+
+void CMClient::ProcessImageContentChunk()
+{
+    LOG_DBG() << "Process image content chunk";
+
+    aos::BufferAllocator<> allocator(mReceiveBuffer);
+
+    auto chunk = aos::MakeUnique<FileChunk>(&allocator);
+
+    chunk->part = mIncomingMessage.SMIncomingMessage.image_content.part;
+    chunk->partsCount = mIncomingMessage.SMIncomingMessage.image_content.parts_count;
+    chunk->relativePath = mIncomingMessage.SMIncomingMessage.image_content.relative_path;
+    chunk->requestID = mIncomingMessage.SMIncomingMessage.image_content.request_id;
+    memcpy(chunk->data.Get(), mIncomingMessage.SMIncomingMessage.image_content.data.bytes,
+        mIncomingMessage.SMIncomingMessage.image_content.data.size);
+
+    auto err = mDownloader->ReceiveFileChunk(*chunk);
+    if (!err.IsNone()) {
+        LOG_ERR() << "Can't receive file chunk: " << err;
     }
 }
