@@ -41,6 +41,7 @@ private:
     Runner                      mRunner;
     aos::sm::launcher::Launcher mLauncher;
     ResourceManager             mResourceManager;
+    Downloader                  mDownloader;
 };
 
 #endif

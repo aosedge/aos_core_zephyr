@@ -36,7 +36,11 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mCMClient.Init(mLauncher, mResourceManager)).IsNone()) {
+    if (!(err = mDownloader.Init(mCMClient)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader)).IsNone()) {
         return err;
     }
 
