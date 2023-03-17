@@ -22,6 +22,7 @@ extern "C" {
 #include <vch.h>
 }
 
+#include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
 using SHA256Digest = uint8_t[32];
@@ -29,7 +30,9 @@ using SHA256Digest = uint8_t[32];
 /**
  * CM client instance.
  */
-class CMClient : public aos::sm::launcher::InstanceStatusReceiverItf, private aos::NonCopyable {
+class CMClient : public aos::sm::launcher::InstanceStatusReceiverItf,
+                 public DownloadRequesterItf,
+                 private aos::NonCopyable {
 public:
     /**
      * Creates CM client.
@@ -52,7 +55,8 @@ public:
      * @param resourceManager resourcemanager instance.
      * @return aos::Error.
      */
-    aos::Error Init(aos::sm::launcher::LauncherItf& launcher, ResourceManager& resourceManager);
+    aos::Error Init(
+        aos::sm::launcher::LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader);
 
     /**
      * Sends instances run status.
@@ -70,9 +74,18 @@ public:
      */
     aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances) override;
 
+    /**
+     * Send image content request
+     *
+     * @param request image content request
+     * @return Error
+     */
+    aos::Error SendImageContentRequest(const ImageContentRequest& request) override;
+
 private:
     aos::sm::launcher::LauncherItf*                              mLauncher;
     ResourceManager*                                             mResourceManager;
+    DownloadReceiverItf*                                         mDownloader;
     aos::Thread<>                                                mThread;
     atomic_t                                                     mFinishReadTrigger;
     vch_handle                                                   mSMvchanHandler;
@@ -95,6 +108,8 @@ private:
     void                             ProcessCheckUnitConfig();
     void                             ProcessSetUnitConfig();
     void                             ProcessRunInstancesMessage();
+    void                             ProcessImageContentInfo();
+    void                             ProcessImageContentChunk();
 };
 
 #endif
