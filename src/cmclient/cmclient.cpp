@@ -53,6 +53,8 @@ void CMClient::ProcessMessages()
     auto i = 0;
 
     while (true) {
+        aos::LockGuard lock(mMutex);
+
         LOG_DBG() << "Process message: " << i++;
 
         sleep(2);
