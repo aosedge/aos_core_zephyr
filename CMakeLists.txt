@@ -70,10 +70,7 @@ set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${
 set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error")
 
 # Aos core configuration
-
-if(NOT BOARD MATCHES "native_posix*")
-    zephyr_compile_definitions(-DAOS_CONFIG_THREAD_DEFAULT_STACK_SIZE=1024)
-endif()
+add_definitions(-include aoscoreconfig.hpp)
 
 set(AOSCORE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
 
