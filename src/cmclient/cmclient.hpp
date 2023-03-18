@@ -50,6 +50,7 @@ public:
 
 private:
     aos::sm::launcher::LauncherItf* mLauncher;
+    aos::Mutex                      mMutex;
     aos::Thread<>                   mThread;
 
     void ProcessMessages();
