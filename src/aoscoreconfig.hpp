@@ -9,7 +9,17 @@
 #define AOSCORECONFIG_HPP_
 
 #ifndef CONFIG_BOARD_NATIVE_POSIX
+
+/**
+ * Set thread stack size.
+ */
 #define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 1024
-#endif
+
+/**
+ * Set thread stack alignment.
+ */
+#define AOS_CONFIG_THREAD_STACK_ALIGN ARCH_STACK_PTR_ALIGN
+
+#endif // CONFIG_POSIX_API
 
 #endif
