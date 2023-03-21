@@ -96,6 +96,22 @@ if(BOARD MATCHES "qemu")
     else()
         message(WARNING "No dtc program")
     endif()
+
+    set(xen_srcdir ${CMAKE_CURRENT_SOURCE_DIR}/../xen)
+    set(xen_bindir ${CMAKE_CURRENT_BINARY_DIR}/hyp)
+
+    ExternalProject_Add(
+        hypervisor
+        PREFIX ${xen_bindir}
+        SOURCE_DIR ${xen_srcdir}/xen
+        BINARY_DIR ${xen_bindir}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ${MAKE} make -C ${xen_srcdir}/xen O=${xen_bindir} CONFIG_QEMU_XEN=y CONFIG_DEBUG=y XSM_ENABLE=y
+                      XEN_TARGET_ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTCC=gcc
+        INSTALL_COMMAND cp ${xen_bindir}/xen ${ZEPHYR_BINARY_DIR}/xen
+    )
+
+    add_dependencies(app hypervisor)
 endif()
 
 # aossm
