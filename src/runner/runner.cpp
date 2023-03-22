@@ -5,8 +5,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "runner.hpp"
+extern "C" {
+#include <xrun.h>
+}
+
 #include "log.hpp"
+#include "runner.hpp"
 
 using namespace aos::sm::runner;
 
@@ -25,15 +29,23 @@ aos::Error Runner::Init(RunStatusReceiverItf& statusReceiver)
 
 RunStatus Runner::StartInstance(const aos::String& instanceID, const aos::String& runtimeDir)
 {
-    (void)instanceID;
-    (void)runtimeDir;
+    RunStatus runStatus {instanceID, aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone};
 
-    return RunStatus {};
+    auto ret = xrun_run(runtimeDir.CStr(), cConsoleSocket, instanceID.CStr());
+    if (ret != 0) {
+        runStatus.mState = aos::InstanceRunStateEnum::eFailed;
+        runStatus.mError = AOS_ERROR_WRAP(ret);
+    }
+
+    return runStatus;
 }
 
 aos::Error Runner::StopInstance(const aos::String& instanceID)
 {
-    (void)instanceID;
+    auto ret = xrun_kill(instanceID.CStr());
+    if (ret != 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
 
     return aos::ErrorEnum::eNone;
 }
