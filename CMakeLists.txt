@@ -24,8 +24,14 @@ zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 # ######################################################################################################################
 
 target_sources(
-    app PRIVATE src/main.cpp src/logger/logger.cpp src/app/app.cpp src/cmclient/cmclient.cpp src/runner/runner.cpp
-                src/storage/storage.cpp src/downloader/downloader.cpp
+    app
+    PRIVATE src/main.cpp
+            src/logger/logger.cpp
+            src/app/app.cpp
+            src/cmclient/cmclient.cpp
+            src/runner/runner.cpp
+            src/storage/storage.cpp
+            src/downloader/downloader.cpp
 )
 
 # ######################################################################################################################
@@ -64,28 +70,12 @@ zephyr_get_compile_options_for_lang_as_string(CXX options)
 set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${options}")
 
 # ######################################################################################################################
-# aos_core_lib_cpp
+# Xen on QEMU
 # ######################################################################################################################
 
-set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error")
-
-# Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
-
-set(AOSCORE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
-
-ExternalProject_Add(
-    aoscore
-    PREFIX ${AOSCORE_BUILD_DIR}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${AOSCORE_BUILD_DIR} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-               -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
-               -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
-    SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
-    BUILD_BYPRODUCTS ${AOSCORE_BUILD_DIR}/lib/libaossmcpp.a ${AOSCORE_BUILD_DIR}/lib/libaosiamcpp.a
-)
-
-if(BOARD MATCHES "qemu")
+if(BOARD MATCHES "xenvm-qemu")
     set(utils_scripts_dir ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
+
     if(DTC)
         add_custom_target(
             fix_dtb
@@ -113,6 +103,27 @@ if(BOARD MATCHES "qemu")
 
     add_dependencies(app hypervisor)
 endif()
+
+# ######################################################################################################################
+# aos_core_lib_cpp
+# ######################################################################################################################
+
+set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error")
+
+# Aos core configuration
+add_definitions(-include aoscoreconfig.hpp)
+
+set(AOSCORE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
+
+ExternalProject_Add(
+    aoscore
+    PREFIX ${AOSCORE_BUILD_DIR}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${AOSCORE_BUILD_DIR} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+               -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+               -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
+    SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
+    BUILD_BYPRODUCTS ${AOSCORE_BUILD_DIR}/lib/libaossmcpp.a ${AOSCORE_BUILD_DIR}/lib/libaosiamcpp.a
+)
 
 # aossm
 
