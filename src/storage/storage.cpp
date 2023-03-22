@@ -18,3 +18,23 @@ aos::Error Storage::Init()
 
     return aos::ErrorEnum::eNone;
 }
+
+aos::Error Storage::AddInstance(const aos::InstanceInfo& instance)
+{
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
+{
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
+{
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
+{
+    return aos::ErrorEnum::eNone;
+}

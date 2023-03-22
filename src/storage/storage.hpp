@@ -20,6 +20,38 @@ public:
      * @return aos::Error.
      */
     aos::Error Init();
+
+    /**
+     * Adds new instance to storage.
+     *
+     * @param instance instance to add.
+     * @return Error.
+     */
+    aos::Error AddInstance(const aos::InstanceInfo& instance) override;
+
+    /**
+     * Updates previously stored instance.
+     *
+     * @param instance instance to update.
+     * @return Error.
+     */
+    aos::Error UpdateInstance(const aos::InstanceInfo& instance) override;
+
+    /**
+     * Removes previously stored instance.
+     *
+     * @param instanceID instance ID to remove.
+     * @return Error.
+     */
+    aos::Error RemoveInstance(const aos::InstanceIdent& instanceIdent) override;
+
+    /**
+     * Returns all stored instances.
+     *
+     * @param instances array to return stored instances.
+     * @return Error.
+     */
+    aos::Error GetAllInstances(aos::Array<aos::InstanceInfo>& instances) override;
 };
 
 #endif
