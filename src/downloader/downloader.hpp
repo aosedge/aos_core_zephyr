@@ -9,8 +9,8 @@
 #define DOWNLOADER_HPP_
 
 #include "aos/common/downloader.hpp"
-#include "aos/common/error.hpp"
-#include "aos/common/string.hpp"
+#include "aos/common/tools/error.hpp"
+#include "aos/common/tools/string.hpp"
 #include "aos/common/types.hpp"
 
 /**

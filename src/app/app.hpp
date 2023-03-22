@@ -8,8 +8,8 @@
 #ifndef APP_HPP_
 #define APP_HPP_
 
-#include <aos/common/error.hpp>
-#include <aos/common/noncopyable.hpp>
+#include <aos/common/tools/error.hpp>
+#include <aos/common/tools/noncopyable.hpp>
 #include <aos/sm/launcher.hpp>
 
 #include "cmclient/cmclient.hpp"

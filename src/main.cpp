@@ -8,7 +8,7 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/printk.h>
 
-#include <aos/common/string.hpp>
+#include <aos/common/tools/string.hpp>
 #include <aos/common/version.hpp>
 
 #include "app/app.hpp"

@@ -8,7 +8,7 @@
 #ifndef LOGGER_HPP_
 #define LOGGER_HPP_
 
-#include <aos/common/log.hpp>
+#include <aos/common/tools/log.hpp>
 
 /**
  * Logger instance.
