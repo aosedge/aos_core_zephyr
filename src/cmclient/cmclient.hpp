@@ -8,7 +8,7 @@
 #ifndef CMCLIENT_HPP_
 #define CMCLIENT_HPP_
 
-#include <aos/common/thread.hpp>
+#include <aos/common/tools/thread.hpp>
 #include <aos/sm/launcher.hpp>
 
 /**
