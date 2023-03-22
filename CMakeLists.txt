@@ -20,6 +20,13 @@ project(aoszephyrapp)
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
 # ######################################################################################################################
+# Definitions
+# ######################################################################################################################
+
+# Aos core configuration
+add_definitions(-include aoscoreconfig.hpp)
+
+# ######################################################################################################################
 # Taget
 # ######################################################################################################################
 
@@ -108,11 +115,7 @@ endif()
 # aos_core_lib_cpp
 # ######################################################################################################################
 
-set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error")
-
-# Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
-
+set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error -include aoscoreconfig.hpp")
 set(AOSCORE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
 
 ExternalProject_Add(
