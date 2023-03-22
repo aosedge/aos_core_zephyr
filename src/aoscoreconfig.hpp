@@ -22,4 +22,9 @@
 
 #endif // CONFIG_POSIX_API
 
+/**
+ * Use Aos new operators.
+ */
+#define AOS_CONFIG_NEW_USE_AOS 1
+
 #endif
