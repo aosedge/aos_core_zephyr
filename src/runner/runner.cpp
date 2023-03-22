@@ -23,7 +23,7 @@ aos::Error Runner::Init(RunStatusReceiverItf& statusReceiver)
     return aos::ErrorEnum::eNone;
 }
 
-RunStatus Runner::StartInstance(const char* instanceID, const char* runtimeDir)
+RunStatus Runner::StartInstance(const aos::String& instanceID, const aos::String& runtimeDir)
 {
     (void)instanceID;
     (void)runtimeDir;
@@ -31,7 +31,7 @@ RunStatus Runner::StartInstance(const char* instanceID, const char* runtimeDir)
     return RunStatus {};
 }
 
-aos::Error Runner::StopInstance(const char* instanceID)
+aos::Error Runner::StopInstance(const aos::String& instanceID)
 {
     (void)instanceID;
 

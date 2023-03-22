@@ -37,7 +37,7 @@ public:
      * @param runtimeDir directory with runtime spec.
      * @return RunStatus.
      */
-    aos::sm::runner::RunStatus StartInstance(const char* instanceID, const char* runtimeDir) override;
+    aos::sm::runner::RunStatus StartInstance(const aos::String& instanceID, const aos::String& runtimeDir) override;
 
     /**
      * Stops instance.
@@ -45,7 +45,7 @@ public:
      * @param instanceID instance ID>
      * @return Error.
      */
-    aos::Error StopInstance(const char* instanceID) override;
+    aos::Error StopInstance(const aos::String& instanceID) override;
 
 private:
     aos::sm::runner::RunStatusReceiverItf* mStatusReceiver;
