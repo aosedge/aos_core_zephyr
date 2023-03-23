@@ -55,6 +55,7 @@ LOG_CALLBACK(launcher);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(storage);
 LOG_CALLBACK(resourcemanager);
+LOG_CALLBACK(downloader);
 
 /***********************************************************************************************************************
  * Public
@@ -94,6 +95,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(Module::eResourceMgr):
         log_resourcemanager::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eDownloader):
+        log_downloader::LogCallback(level, message);
 
         break;
 
