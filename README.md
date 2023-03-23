@@ -35,11 +35,6 @@ For test and debug purpose `native_posix_64` or `native_posix` board can be used
 For simulation `qemu_x86` or `qemu_x86_64` board can be used.
 For xen based system `xenvm-qemu` board can be used.
 
-For `xenvm-qemu` additioal step before running should be executed
-```sh
-west build -t fix_dtb
-```
-
 ## Run
 
 ```sh
