@@ -20,6 +20,11 @@
  */
 #define AOS_CONFIG_THREAD_STACK_ALIGN ARCH_STACK_PTR_ALIGN
 
+/**
+ * Set timer signal event notification.
+ */
+#define AOS_CONFIG_TIMER_SIGEV_NOTIFY SIGEV_SIGNAL
+
 #endif // CONFIG_POSIX_API
 
 /**
