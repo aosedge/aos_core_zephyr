@@ -1,0 +1,7 @@
+tests:
+  aoszephyrapp.downloader:
+    tags: downloader
+    timeout: 500
+    integration_platforms:
+      - native_posix
+    platform_allow: native_posix
