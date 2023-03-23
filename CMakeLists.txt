@@ -116,27 +116,27 @@ endif()
 # ######################################################################################################################
 
 set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error -include aoscoreconfig.hpp")
-set(AOSCORE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
+set(aoscore_build_dir ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
 
 ExternalProject_Add(
     aoscore
-    PREFIX ${AOSCORE_BUILD_DIR}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${AOSCORE_BUILD_DIR} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    PREFIX ${aoscore_build_dir}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${aoscore_build_dir} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
                -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
     SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
-    BUILD_BYPRODUCTS ${AOSCORE_BUILD_DIR}/lib/libaossmcpp.a ${AOSCORE_BUILD_DIR}/lib/libaosiamcpp.a
+    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a
 )
 
 # aossm
 
-file(MAKE_DIRECTORY ${AOSCORE_BUILD_DIR}/include)
+file(MAKE_DIRECTORY ${aoscore_build_dir}/include)
 
 add_library(aossm STATIC IMPORTED GLOBAL)
 
 add_dependencies(aossm aoscore)
 
-set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${AOSCORE_BUILD_DIR}/lib/libaossmcpp.a)
-set_target_properties(aossm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${AOSCORE_BUILD_DIR}/include)
+set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaossmcpp.a)
+set_target_properties(aossm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aossm)
