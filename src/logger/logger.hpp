@@ -24,6 +24,7 @@ public:
         eRunner,
         eStorage,
         eResourceMgr,
+        eDownloader,
     };
 
     /**
