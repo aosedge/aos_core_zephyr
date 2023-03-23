@@ -9,8 +9,11 @@
 #define DOWNLOADER_HPP_
 
 #include "aos/common/downloader.hpp"
+#include "aos/common/tools/array.hpp"
 #include "aos/common/tools/error.hpp"
 #include "aos/common/tools/string.hpp"
+#include "aos/common/tools/thread.hpp"
+#include "aos/common/tools/timer.hpp"
 #include "aos/common/types.hpp"
 
 /**
@@ -110,6 +113,11 @@ public:
     Downloader() = default;
 
     /**
+     * Destroys the Downloader object.
+     */
+    ~Downloader();
+
+    /**
      * Initializes downloader instance.
      *
      * @param downloadRequester download requester instance.
@@ -144,7 +152,26 @@ public:
     aos::Error ReceiveImageContentInfo(const ImageContentInfo& content) override;
 
 private:
-    DownloadRequesterItf* mDownloadRequester = nullptr;
+    static constexpr auto cDownloadTimeout = 10000;
+
+    struct DownloadResult {
+        aos::StaticString<aos::cFilePathLen> mRelativePath;
+        int                                  mFile;
+        bool                                 mIsDone;
+    };
+
+    bool IsAllDownloadDone() const;
+    void SetErrorAndNotify(const aos::Error& err);
+
+    DownloadRequesterItf*                mDownloadRequester {};
+    aos::Mutex                           mMutex;
+    aos::ConditionalVariable             mWaitDownload {mMutex};
+    aos::Error                           mErrProcessImageRequest {};
+    aos::StaticString<aos::cFilePathLen> mRequestedPath {};
+    aos::StaticArray<DownloadResult, 32> mDownloadResults {};
+    aos::Timer                           mTimer {};
+    uint64_t                             mRequestID {};
+    bool                                 mFinishDownload {false};
 };
 
 #endif
