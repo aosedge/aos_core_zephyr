@@ -24,10 +24,13 @@ manifest:
     - name: oleksiimoisieiev
       url-base: https://github.com/oleksiimoisieiev
 
+    - name: dsemenets
+      url-base: https://github.com/dsemenets
+
   projects:
     - name: zephyr
-      remote: xen-troops
-      revision: aos-wip
+      remote: dsemenets
+      revision: spider_board
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
