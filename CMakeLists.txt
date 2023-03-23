@@ -81,34 +81,35 @@ set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${
 # ######################################################################################################################
 
 if(BOARD MATCHES "xenvm-qemu")
+    set(xen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/xen)
+
+    ExternalProject_Add(
+        hypervisor
+        GIT_REPOSITORY https://github.com/xen-project/xen
+        GIT_TAG RELEASE-4.17.0
+        SOURCE_DIR ${xen_build_dir}
+        BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND ./configure --disable-docs --disable-tools --disable-stubdom
+        BUILD_COMMAND ${MAKE} make -C ${xen_build_dir} CONFIG_QEMU_XEN=y CONFIG_DEBUG=y XSM_ENABLE=y
+                      XEN_TARGET_ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} HOSTCC=gcc
+        INSTALL_COMMAND cp ${xen_build_dir}/xen/xen ${ZEPHYR_BINARY_DIR}
+        BUILD_BYPRODUCTS ${ZEPHYR_BINARY_DIR}/xen
+    )
+
+    add_dependencies(hypervisor zephyr_final)
+
     set(utils_scripts_dir ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 
     if(DTC)
-        add_custom_target(
-            fix_dtb
-            DEPENDS ${ZEPHYR_FINAL_EXECUTABLE}
+        add_custom_command(
+            TARGET hypervisor
+            POST_BUILD
             COMMAND ${utils_scripts_dir}/fix_dtb.sh ${utils_scripts_dir}/gicv2.tmpl ${ZEPHYR_BINARY_DIR}/virt_gicv2.dtb
                     ${ZEPHYR_BINARY_DIR}/zephyr.bin
         )
     else()
         message(WARNING "No dtc program")
     endif()
-
-    set(xen_srcdir ${CMAKE_CURRENT_SOURCE_DIR}/../xen)
-    set(xen_bindir ${CMAKE_CURRENT_BINARY_DIR}/hyp)
-
-    ExternalProject_Add(
-        hypervisor
-        PREFIX ${xen_bindir}
-        SOURCE_DIR ${xen_srcdir}/xen
-        BINARY_DIR ${xen_bindir}
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ${MAKE} make -C ${xen_srcdir}/xen O=${xen_bindir} CONFIG_QEMU_XEN=y CONFIG_DEBUG=y XSM_ENABLE=y
-                      XEN_TARGET_ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTCC=gcc
-        INSTALL_COMMAND cp ${xen_bindir}/xen ${ZEPHYR_BINARY_DIR}/xen
-    )
-
-    add_dependencies(app hypervisor)
 endif()
 
 # ######################################################################################################################
