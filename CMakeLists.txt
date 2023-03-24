@@ -52,6 +52,10 @@ target_sources(
 # NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
 target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domd_cfg_spider.c src/domain_bins_spider.S)
 
+# NOTE: Include source files for DomD support for Gen3 board.
+# Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
+target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3_2X4G app PRIVATE src/domd_cfg_gen3.c src/domain_bins_gen3.S)
+
 # ######################################################################################################################
 # Versioning
 # ######################################################################################################################

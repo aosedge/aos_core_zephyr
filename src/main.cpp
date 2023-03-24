@@ -15,25 +15,25 @@
 #include "logger/logger.hpp"
 #include "version.hpp"
 
-#if defined(CONFIG_SOC_SERIES_RCAR_GEN4)
+#if defined(CONFIG_SOC_SERIES_RCAR_GEN4) || defined(CONFIG_SOC_SERIES_RCAR_GEN3)
 extern "C" {
 #include <xen_dom_mgmt.h>
 
 extern struct xen_domain_cfg domd_cfg;
 }
-#endif /* CONFIG_SOC_SERIES_RCAR_GEN4 */
+#endif /* CONFIG_SOC_SERIES_RCAR_GEN4 || CONFIG_SOC_SERIES_RCAR_GEN3 */
 
 int main(void)
 {
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
 
-#if defined(CONFIG_SOC_SERIES_RCAR_GEN4)
+#if defined(CONFIG_SOC_SERIES_RCAR_GEN4) || defined(CONFIG_SOC_SERIES_RCAR_GEN3)
     int rc = domain_create(&domd_cfg, 1);
     if (rc) {
         printk("failed to create domain (%d)\n", rc);
     }
-#endif /* CONFIG_SOC_SERIES_RCAR_GEN4 */
+#endif /* CONFIG_SOC_SERIES_RCAR_GEN4 || CONFIG_SOC_SERIES_RCAR_GEN3 */
 
     Logger::Init();
 
