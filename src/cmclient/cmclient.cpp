@@ -148,6 +148,11 @@ void CMClient::ConnectToCM()
 
     SendNodeConfiguration();
 
+    auto err = mLauncher->RunLastInstances();
+    if (!err.IsNone()) {
+        LOG_ERR() << "Can't run last instances: " << err;
+    }
+
     return;
 }
 
