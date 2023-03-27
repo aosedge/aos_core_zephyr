@@ -21,7 +21,9 @@ public:
     }
 
     Error RunInstances(const Array<ServiceInfo>& services, const Array<LayerInfo>& layers,
-        const Array<InstanceInfo>& instances, bool forceRestart);
+        const Array<InstanceInfo>& instances, bool forceRestart) override;
+    
+    Error RunLastInstances() override;
 
     StaticArray<ServiceInfo, TestArraysSize>  mExpectedServices;
     StaticArray<LayerInfo, TestArraysSize>    mExpectedLayers;
