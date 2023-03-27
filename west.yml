@@ -39,7 +39,7 @@ manifest:
 
     - name: aos_core_api
       remote: aoscloud
-      revision: develop
+      revision: feature_zephyr
 
     - name: zephyr-xenlib
       remote: oleksiimoisieiev
