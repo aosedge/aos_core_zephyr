@@ -42,3 +42,7 @@ Error MockLauncher::RunInstances(const Array<ServiceInfo>& services, const Array
 
     return ErrorEnum::eNone;
 }
+
+    Error MockLauncher::RunLastInstances(){
+        return ErrorEnum::eNone;
+    }
