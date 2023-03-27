@@ -32,7 +32,7 @@ manifest:
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: develop
+      revision: integration
 
     - name: aos_core_api
       remote: aoscloud
