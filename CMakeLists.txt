@@ -148,7 +148,7 @@ ExternalProject_Add(
 
 # aossm
 
-generate_api(${CMAKE_CURRENT_BINARY_DIR}/../../aos_core_api)
+generate_api(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api)
 
 file(MAKE_DIRECTORY ${aoscore_build_dir}/include)
 
