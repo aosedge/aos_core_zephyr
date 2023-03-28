@@ -27,6 +27,7 @@ int main(void)
 {
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
+    printk("*** Aos core size: %lu ***\n", sizeof(App));
 
 #if defined(CONFIG_SOC_SERIES_RCAR_GEN4) || defined(CONFIG_SOC_SERIES_RCAR_GEN3)
     int rc = domain_create(&domd_cfg, 1);
