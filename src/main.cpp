@@ -21,6 +21,10 @@ extern "C" {
 
 extern struct xen_domain_cfg domd_cfg;
 }
+#else
+/* NOTE: add empty domd_cfg function because it's used in xen_cmds to prevent breaking the build */
+#include <domain.h>
+struct xen_domain_cfg domd_cfg;
 #endif /* CONFIG_SOC_SERIES_RCAR_GEN4 || CONFIG_SOC_SERIES_RCAR_GEN3 */
 
 int main(void)
