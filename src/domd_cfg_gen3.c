@@ -23,6 +23,7 @@ static char* domd_dtdevs[] = {
     "/soc/usb@ee0a0000",
     "/soc/usb@ee0a0100",
     "/soc/mmc@ee100000",
+    "/soc/mmc@ee140000",
     "/soc/mmc@ee160000",
     "/soc/fdpm@fe940000",
     "/soc/vspm@fe960000",
@@ -149,6 +150,7 @@ static struct xen_domain_iomem domd_iomems[] = {
     {.first_mfn = 0xee080, .nr_mfns = 0x1},
     {.first_mfn = 0xee0a0, .nr_mfns = 0x1},
     {.first_mfn = 0xee100, .nr_mfns = 0x2},
+    {.first_mfn = 0xee140, .nr_mfns = 0x2},
     {.first_mfn = 0xee160, .nr_mfns = 0x2},
     {.first_mfn = 0xec500, .nr_mfns = 0x1},
     {.first_mfn = 0xec5a0, .nr_mfns = 0x1},
@@ -377,6 +379,8 @@ static uint32_t domd_irqs[] = {
     144,
     // mmc@ee100000
     197,
+    // mmc@ee140000
+    199,
     // mmc@ee160000
     200,
     // src-0
