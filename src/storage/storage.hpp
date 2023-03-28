@@ -101,8 +101,7 @@ public:
     aos::RetWithError<aos::sm::servicemanager::ServiceData> GetService(const aos::String& serviceID) override;
 
 private:
-    constexpr static const char* cStorageInstancePath = CONFIG_AOS_STORAGE_PATH "/database_instance.db";
-    constexpr static const char* cStorageServicePath = CONFIG_AOS_STORAGE_PATH "/database_service.db";
+    constexpr static const char* cStoragePath = CONFIG_AOS_STORAGE_PATH;
 
     struct InstanceIdent {
         char     mServiceID[aos::cServiceIDLen];
