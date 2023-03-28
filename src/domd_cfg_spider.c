@@ -11,6 +11,7 @@
 static char* domd_dtdevs[] = {
     "/soc/dma-controller@e7350000",
     "/soc/dma-controller@e7351000",
+    "/soc/mmc@ee140000",
     "/soc/ethernet@e68c0000",
     "/soc/pcie@e65d0000",
 };
@@ -36,7 +37,7 @@ static struct xen_domain_iomem domd_iomems[] = {
     {.first_mfn = 0xe6550, .nr_mfns = 0x1}, {.first_mfn = 0xe6e60, .nr_mfns = 0x1},
     {.first_mfn = 0xe7350, .nr_mfns = 0x1}, {.first_mfn = 0xe7300, .nr_mfns = 0x10},
     {.first_mfn = 0xe7351, .nr_mfns = 0x1}, {.first_mfn = 0xe7310, .nr_mfns = 0x10},
-    {.first_mfn = 0xfff00, .nr_mfns = 0x1},
+    {.first_mfn = 0xee140, .nr_mfns = 0x2}, {.first_mfn = 0xfff00, .nr_mfns = 0x1},
     {.first_mfn = 0xffd60, .nr_mfns = 0x1}, {.first_mfn = 0xffc10, .nr_mfns = 0x10},
     {.first_mfn = 0xffd61, .nr_mfns = 0x1}, {.first_mfn = 0xffc20, .nr_mfns = 0x10},
     {.first_mfn = 0xffd62, .nr_mfns = 0x1}, {.first_mfn = 0xffd70, .nr_mfns = 0x10},
@@ -104,6 +105,8 @@ static uint32_t domd_irqs[] = {
     154,
     153,
     159,
+    // mmc@ee140000
+    268,
     // dma-controller@ffd60000
     64,
     65,
