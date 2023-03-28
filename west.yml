@@ -21,9 +21,6 @@ manifest:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
 
-    - name: oleksiimoisieiev
-      url-base: https://github.com/oleksiimoisieiev
-
     - name: dsemenets
       url-base: https://github.com/dsemenets
 
@@ -42,8 +39,8 @@ manifest:
       revision: feature_zephyr
 
     - name: zephyr-xenlib
-      remote: oleksiimoisieiev
-      revision: xrun_upstr_integration
+      remote: xen-troops
+      revision: wip_zephyr_dom0
 
     - name: littlefs
       remote: zephyrproject-rtos
