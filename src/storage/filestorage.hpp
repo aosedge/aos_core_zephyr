@@ -20,8 +20,6 @@
 #include "aos/common/tools/string.hpp"
 #include "aos/common/types.hpp"
 
-#include "log.hpp"
-
 template <typename T>
 class FileStorage : public aos::NonCopyable {
 public:
