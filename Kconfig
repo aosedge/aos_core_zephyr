@@ -15,7 +15,7 @@ config AOS_SM_VCHAN_PATH
 
 config AOS_STORAGE_PATH
 	string "Path to the storage"
-	default "/var/aos/storage"
+	default "/aos/storage"
 
 config AOS_NODE_ID
 	string "Node id"
@@ -27,7 +27,7 @@ config AOS_NODE_TYPE
 
 config AOS_UNIT_CONFIG_PATH
 	string "Node configuration file path"
-	default "/var/aos/unit_config.cfg"
+	default "/aos/unit_config.cfg"
 
 config AOS_NUM_CPU
 	int "Count of CPUs for domain with Zephyr"
