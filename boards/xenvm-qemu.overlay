@@ -2,11 +2,11 @@
 #include <mem.h>
 
 / {
-  	fstab {
+	fstab {
 		compatible = "zephyr,fstab";
 		storage: storage {
 			compatible = "zephyr,fstab,littlefs";
-			mount-point = "/lfs";
+			mount-point = "/aos";
 			partition = <&storage_partition>;
 			automount;
 			read-size = <16>;
@@ -37,21 +37,12 @@
 			 */
 				storage_partition: partition@1000 {
 					label = "storage";
-					reg = <0x00001000 0x00300000>;
-				};
-				slot0_partition: partition@301000 {
-					 label = "image-0";
-					 reg = <0x00301000 0x00010000>;
-				};
-				slot1_partition: partition@311000 {
-					 label = "image-1";
-					 reg = <0x00311000 0x00010000>;
-				};
-				eepromemu_partition: partition@321000 {
-					label = "eeprom-emu";
-					reg = <0x00321000 0x00010000>;
+					reg = <0x00001000 0x01000000>;
 				};
 			};
 		};
 	};
+};
+&ram {
+	reg = < 0x0 0x60000000 0x0 0x2000000 >;
 };
