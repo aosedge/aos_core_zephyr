@@ -24,9 +24,13 @@ manifest:
     - name: dsemenets
       url-base: https://github.com/dsemenets
 
+    - name: oleksiimoisieiev
+      url-base: https://github.com/oleksiimoisieiev
+
+
   projects:
     - name: zephyr
-      remote: dsemenets
+      remote: oleksiimoisieiev
       revision: spider_board
       west-commands: scripts/west-commands.yml
 
@@ -39,8 +43,8 @@ manifest:
       revision: feature_zephyr
 
     - name: zephyr-xenlib
-      remote: xen-troops
-      revision: wip_zephyr_dom0
+      remote: oleksiimoisieiev
+      revision: vch
 
     - name: littlefs
       remote: zephyrproject-rtos
