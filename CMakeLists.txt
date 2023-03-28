@@ -23,12 +23,20 @@ if(CONFIG_BOARD MATCHES "rcar")
     zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
 endif()
 
+if(BOARD MATCHES "native_posix*")
+    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} mocks/vch mocks/xrun)
+endif()
+
 # ######################################################################################################################
 # Definitions
 # ######################################################################################################################
 
 # Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
+if(BOARD MATCHES "native_posix*")
+    add_definitions(-include ../mocks/aoscoreconfig.hpp)
+else()
+    add_definitions(-include aoscoreconfig.hpp)
+endif()
 
 # ######################################################################################################################
 # Taget
@@ -46,6 +54,9 @@ target_sources(
             src/resourcemanager/resourcemanager.cpp
             src/ocispec/ocispec.cpp
 )
+
+# Enable vhannels and xrun mocks for native posix
+target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp)
 
 # NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
 target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domd_cfg_spider.c src/domain_bins_spider.S)
