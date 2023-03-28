@@ -58,6 +58,7 @@ int main(void)
 {
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
+    printk("*** Aos core size: %lu ***\n", sizeof(App));
 
     int rc = mount_mmc();
     if (rc != 0) {
