@@ -22,22 +22,6 @@ void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::Stri
     printk("[storage] %s \n", message.CStr());
 }
 
-bool operator==(const aos::InstanceInfo& lhs, const aos::InstanceInfo& rhs)
-{
-    return lhs.mInstanceIdent.mInstance == rhs.mInstanceIdent.mInstance
-        && lhs.mInstanceIdent.mServiceID == rhs.mInstanceIdent.mServiceID
-        && lhs.mInstanceIdent.mSubjectID == rhs.mInstanceIdent.mSubjectID && lhs.mPriority == rhs.mPriority
-        && lhs.mStoragePath == rhs.mStoragePath && lhs.mStatePath == rhs.mStatePath && lhs.mUID == rhs.mUID;
-}
-
-bool operator==(const aos::sm::servicemanager::ServiceData& lhs, const aos::sm::servicemanager::ServiceData& rhs)
-{
-    return lhs.mVersionInfo.mAosVersion == rhs.mVersionInfo.mAosVersion
-        && lhs.mVersionInfo.mVendorVersion == rhs.mVersionInfo.mVendorVersion
-        && lhs.mVersionInfo.mDescription == rhs.mVersionInfo.mDescription && lhs.mProviderID == rhs.mProviderID
-        && lhs.mServiceID == rhs.mServiceID && lhs.mImagePath == rhs.mImagePath;
-}
-
 ZTEST(storage, test_AddUpdateRemoveInstance)
 {
     zassert_equal(mkdir(kStoragePath, S_IRWXU | S_IRWXG | S_IRWXO), 0, "Failed to create mount point");
