@@ -53,14 +53,12 @@ public:
             return AOS_ERROR_WRAP(mFd);
         }
 
-        struct stat st;
-
-        auto ret = fstat(mFd, &st);
-        if (ret == -1) {
-            return AOS_ERROR_WRAP(ret);
+        off_t fileSize = lseek(mFd, 0, SEEK_END);
+        if (fileSize == -1) {
+            return aos::ErrorEnum::eRuntime;
         }
 
-        if (st.st_size == 0) {
+        if (fileSize == 0) {
             Header header;
 
             auto err = CalculateSha256(header, sizeof(Header), header.mChecksum);
