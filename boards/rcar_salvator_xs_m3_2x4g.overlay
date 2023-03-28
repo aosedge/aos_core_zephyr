@@ -2,6 +2,11 @@
 #include <mem.h>
 
 / {
+	/delete-node/memory@60000000;
+	ram: memory@70000000 {
+		device_type = "mmio-sram";
+		reg = <0x00 0x70000000 0x00 DT_SIZE_M(256)>;
+	};
   	fstab {
 		compatible = "zephyr,fstab";
 		storage: storage {
