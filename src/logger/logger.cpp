@@ -55,6 +55,7 @@ LOG_CALLBACK(launcher);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(storage);
 LOG_CALLBACK(resourcemanager);
+LOG_CALLBACK(servicemanager);
 LOG_CALLBACK(downloader);
 
 /***********************************************************************************************************************
@@ -105,6 +106,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
         log_launcher::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(aos::LogModuleEnum::eSMServiceManager):
+        log_servicemanager::LogCallback(level, message);
 
         break;
 
