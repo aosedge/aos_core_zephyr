@@ -32,7 +32,8 @@ Error MockLauncher::RunInstances(const Array<ServiceInfo>& services, const Array
         "Incorrect subject id for instance");
     zassert_equal(
         mExpectedInstances[0].mInstanceIdent.mInstance, instances[0].mInstanceIdent.mInstance, "Incorrect instance");
-    zassert_equal(mExpectedInstances[0].mPriority, instances[0].mPriority, "Incorrect priority %d", instances[0].mPriority);
+    zassert_equal(
+        mExpectedInstances[0].mPriority, instances[0].mPriority, "Incorrect priority %d", instances[0].mPriority);
 
     zassert_equal(mExpectedLayers.Size(), layers.Size(), "Incorrect count of layers");
 
@@ -43,6 +44,7 @@ Error MockLauncher::RunInstances(const Array<ServiceInfo>& services, const Array
     return ErrorEnum::eNone;
 }
 
-    Error MockLauncher::RunLastInstances(){
-        return ErrorEnum::eNone;
-    }
+Error MockLauncher::RunLastInstances()
+{
+    return ErrorEnum::eNone;
+}
