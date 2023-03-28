@@ -48,12 +48,12 @@ public:
     {
         mFd = open(path.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (mFd < 0) {
-            return AOS_ERROR_WRAP(mFd);
+            return AOS_ERROR_WRAP(errno);
         }
 
         off_t fileSize = lseek(mFd, 0, SEEK_END);
         if (fileSize == -1) {
-            return aos::ErrorEnum::eRuntime;
+            return AOS_ERROR_WRAP(errno);
         }
 
         if (fileSize == 0) {
@@ -66,7 +66,7 @@ public:
 
             ssize_t nwrite = write(mFd, &header, sizeof(Header));
             if (nwrite != sizeof(Header)) {
-                return aos::ErrorEnum::eRuntime;
+                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
             }
         }
 
@@ -83,7 +83,7 @@ public:
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
+            return AOS_ERROR_WRAP(errno);
         }
 
         Record  record {};
@@ -95,7 +95,7 @@ public:
 
                 auto ret = lseek(mFd, offset, SEEK_CUR);
                 if (ret < 0) {
-                    return AOS_ERROR_WRAP(ret);
+                    return AOS_ERROR_WRAP(errno);
                 }
 
                 record.mData = data;
@@ -108,7 +108,7 @@ public:
 
                 ssize_t nwrite = write(mFd, &record, sizeof(Record));
                 if (nwrite != sizeof(Record)) {
-                    return aos::ErrorEnum::eRuntime;
+                    return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
                 }
 
                 return aos::ErrorEnum::eNone;
@@ -116,7 +116,7 @@ public:
         }
 
         if (nread < 0) {
-            return AOS_ERROR_WRAP(nread);
+            return AOS_ERROR_WRAP(errno);
         }
 
         record.mData = data;
@@ -129,7 +129,7 @@ public:
 
         ssize_t nwrite = write(mFd, &record, sizeof(Record));
         if (nwrite != sizeof(Record)) {
-            return aos::ErrorEnum::eRuntime;
+            return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
         }
 
         return aos::ErrorEnum::eNone;
@@ -148,7 +148,7 @@ public:
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
+            return AOS_ERROR_WRAP(errno);
         }
 
         Record  record {};
@@ -164,7 +164,7 @@ public:
 
                 ret = lseek(mFd, offset, SEEK_CUR);
                 if (ret < 0) {
-                    return AOS_ERROR_WRAP(ret);
+                    return AOS_ERROR_WRAP(errno);
                 }
 
                 record.mData = data;
@@ -176,7 +176,7 @@ public:
 
                 ssize_t nwrite = write(mFd, &record, sizeof(Record));
                 if (nwrite != sizeof(Record)) {
-                    return aos::ErrorEnum::eRuntime;
+                    return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
                 }
 
                 return aos::ErrorEnum::eNone;
@@ -184,7 +184,7 @@ public:
         }
 
         if (nread < 0) {
-            return AOS_ERROR_WRAP(nread);
+            return AOS_ERROR_WRAP(errno);
         }
 
         return aos::ErrorEnum::eNotFound;
@@ -202,7 +202,7 @@ public:
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
+            return AOS_ERROR_WRAP(errno);
         }
 
         Record  record {};
@@ -218,14 +218,14 @@ public:
 
                 ret = lseek(mFd, offset, SEEK_CUR);
                 if (ret < 0) {
-                    return AOS_ERROR_WRAP(ret);
+                    return AOS_ERROR_WRAP(errno);
                 }
 
                 record.mDeleted = 1;
 
                 ssize_t nwrite = write(mFd, &record, sizeof(Record));
                 if (nwrite != sizeof(Record)) {
-                    return aos::ErrorEnum::eRuntime;
+                    return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
                 }
 
                 return aos::ErrorEnum::eNone;
@@ -233,7 +233,7 @@ public:
         }
 
         if (nread < 0) {
-            return AOS_ERROR_WRAP(nread);
+            return AOS_ERROR_WRAP(errno);
         }
 
         return aos::ErrorEnum::eNotFound;
@@ -251,7 +251,7 @@ public:
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
+            return AOS_ERROR_WRAP(errno);
         }
 
         Record  record {};
@@ -269,7 +269,7 @@ public:
         }
 
         if (nread < 0) {
-            return AOS_ERROR_WRAP(nread);
+            return AOS_ERROR_WRAP(errno);
         }
 
         return aos::ErrorEnum::eNone;
@@ -288,7 +288,7 @@ public:
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
+            return AOS_ERROR_WRAP(errno);
         }
 
         Record  record {};
@@ -307,7 +307,7 @@ public:
         }
 
         if (nread < 0) {
-            return AOS_ERROR_WRAP(nread);
+            return AOS_ERROR_WRAP(errno);
         }
 
         return aos::ErrorEnum::eNotFound;
