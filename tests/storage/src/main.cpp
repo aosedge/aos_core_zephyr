@@ -13,8 +13,6 @@
 
 #include "storage/storage.hpp"
 
-static const char* kStoragePath = CONFIG_AOS_STORAGE_PATH;
-
 ZTEST_SUITE(storage, NULL, NULL, NULL, NULL, NULL);
 
 void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
@@ -24,8 +22,6 @@ void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::Stri
 
 ZTEST(storage, test_AddUpdateRemoveInstance)
 {
-    zassert_equal(mkdir(kStoragePath, S_IRWXU | S_IRWXG | S_IRWXO), 0, "Failed to create mount point");
-
     aos::Log::SetCallback(TestLogCallback);
 
     Storage storage;

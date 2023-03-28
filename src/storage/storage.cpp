@@ -5,8 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "storage.hpp"
+#include <aos/common/tools/fs.hpp>
+
 #include "log.hpp"
+#include "storage.hpp"
 
 /***********************************************************************************************************************
  * Public
@@ -18,14 +20,23 @@ aos::Error Storage::Init()
 
     aos::Error err;
 
-    aos::StaticString<aos::cFilePathLen> path {cStorageInstancePath};
+    if (!(err = aos::FS::MakeDir(cStoragePath, true)).IsNone()) {
+        LOG_ERR() << "Failed to create storage directory: " << err;
 
-    if (!(err = mInstanceDatabase.Init(path)).IsNone()) {
         return err;
     }
 
-    path = cStorageServicePath;
-    if (!(err = mServiceDatabase.Init(path)).IsNone()) {
+    LOG_DBG() << "Storage directory: " << cStoragePath;
+
+    auto instancePath = aos::FS::JoinPath(cStoragePath, "instance.db");
+    LOG_DBG() << "Instance database path: " << instancePath;
+    if (!(err = mInstanceDatabase.Init(instancePath)).IsNone()) {
+        return err;
+    }
+
+    auto servicePath = aos::FS::JoinPath(cStoragePath, "service.db");
+    LOG_DBG() << "Service database path: " << servicePath;
+    if (!(err = mServiceDatabase.Init(servicePath)).IsNone()) {
         return err;
     }
 
