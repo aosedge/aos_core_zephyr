@@ -32,4 +32,20 @@
  */
 #define AOS_CONFIG_NEW_USE_AOS 1
 
+/**
+ * Set num SM installs to 1 as downloader supports only one thread right now.
+ */
+#define AOS_CONFIG_SERVICEMANAGER_NUM_COOPERATE_INSTALLS 1
+
+/**
+ * Set Aos runtime dir.
+ * TODO: we should have memory disk for runtime
+ */
+#define AOS_CONFIG_LAUNCHER_RUNTIME_DIR "/aos/runtime"
+
+/**
+ * Set Aos services dir.
+ */
+#define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR "/aos/services"
+
 #endif
