@@ -11,8 +11,6 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
 
-set(ZEPHYR_MODULES ${CMAKE_CURRENT_BINARY_DIR}/../../zephyr-xenlib)
-
 project(aoszephyrapp)
 
 # ######################################################################################################################
@@ -22,7 +20,7 @@ project(aoszephyrapp)
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
 if(CONFIG_BOARD MATCHES "rcar")
-zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
+    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
 endif()
 
 # ######################################################################################################################
