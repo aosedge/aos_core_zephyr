@@ -10,7 +10,7 @@
 
 #include <zephyr/data/json.h>
 
-#include <aos/common/osicpec.hpp>
+#include <aos/common/ocispec.hpp>
 
 static constexpr size_t cMaxDeviceTreeLength = 1024;
 
