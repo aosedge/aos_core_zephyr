@@ -32,11 +32,15 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mLauncher.Init(mCMClient, mRunner, mStorage)).IsNone()) {
+    if (!(err = mDownloader.Init(mCMClient)).IsNone()) {
         return err;
     }
 
-    if (!(err = mDownloader.Init(mCMClient)).IsNone()) {
+     if (!(err= mServiceManager.Init(mDownloader, mStorage)).IsNone()){
+        return err;
+     }
+
+    if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage)).IsNone()) {
         return err;
     }
 
