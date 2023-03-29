@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <aos/common/tools/fs.hpp>
+
 #include "downloader.hpp"
 #include "log.hpp"
 
@@ -80,6 +82,16 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     if (result->mFile == -1) {
         aos::StaticString<aos::cFilePathLen> path;
         path.Append(mRequestedPath).Append("/").Append(chunk.relativePath);
+
+        auto dirPath = aos::FS::Dir(path);
+
+        auto err = aos::FS::MakeDir(dirPath);
+        if (!err.IsNone()) {
+            LOG_ERR() << "Failed to create directory: " << dirPath;
+            SetErrorAndNotify(err);
+
+            return err;
+        }
 
         result->mFile = open(path.CStr(), O_CREAT | O_WRONLY, 0644);
         if (result->mFile < 0) {
