@@ -108,12 +108,14 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_image_content_request_tag;
     mOutgoingMessage.SMOutgoingMessage.image_content_request = servicemanager_v3_ImageContentRequest_init_zero;
 
-    LOG_DBG() << "Content type " << request.contentType.ToString().CStr();
+    LOG_DBG() << "Content type: " << request.contentType.ToString().CStr();
+    LOG_DBG() << "URL: " << request.url.CStr();
 
-    strcmp(
-        mOutgoingMessage.SMOutgoingMessage.image_content_request.content_type, request.contentType.ToString().CStr());
-    LOG_DBG() << "URL " << request.url.CStr();
-    strcmp(mOutgoingMessage.SMOutgoingMessage.image_content_request.url, request.url.CStr());
+    strncpy(mOutgoingMessage.SMOutgoingMessage.image_content_request.content_type,
+        request.contentType.ToString().CStr(),
+        sizeof(mOutgoingMessage.SMOutgoingMessage.image_content_request.content_type));
+    strncpy(mOutgoingMessage.SMOutgoingMessage.image_content_request.url, request.url.CStr(),
+        sizeof(mOutgoingMessage.SMOutgoingMessage.image_content_request.url));
     mOutgoingMessage.SMOutgoingMessage.image_content_request.request_id = request.requestID;
 
     auto err = SendPbMessageToVchan();
