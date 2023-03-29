@@ -41,11 +41,11 @@
  * Set Aos runtime dir.
  * TODO: we should have memory disk for runtime
  */
-#define AOS_CONFIG_LAUNCHER_RUNTIME_DIR "/aos/runtime"
+#define AOS_CONFIG_LAUNCHER_RUNTIME_DIR CONFIG_AOS_RUNTIME_DIR
 
 /**
  * Set Aos services dir.
  */
-#define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR "/aos/services"
+#define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR CONFIG_AOS_SERVICES_DIR
 
 #endif

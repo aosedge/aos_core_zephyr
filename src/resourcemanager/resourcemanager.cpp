@@ -13,7 +13,7 @@
 #include "log.hpp"
 #include "resourcemanager.hpp"
 
-static constexpr auto cUnitConfigFilePath = CONFIG_AOS_UNIT_CONFIG_PATH;
+static constexpr auto cUnitConfigFilePath = CONFIG_AOS_UNIT_CONFIG_FILE;
 
 aos::Error ResourceManager::GetUnitConfigInfo(char* version) const
 {
