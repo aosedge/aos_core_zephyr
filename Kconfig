@@ -11,7 +11,7 @@ config AOS_DOMD_ID
 
 config AOS_SM_VCHAN_PATH
 	string "Path to the SM vchan"
-	default "/tmp/vchan/sm"
+	default "/local/domain/1/tmp/vchan/sm"
 
 config AOS_STORAGE_DIR
 	string "Path to the storage"
