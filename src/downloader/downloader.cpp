@@ -31,16 +31,18 @@ aos::Error Downloader::Init(DownloadRequesterItf& downloadRequester)
 
 aos::Error Downloader::Download(const aos::String& url, const aos::String& path, aos::DownloadContent contentType)
 {
+    aos::LockGuard lock(mMutex);
+
     LOG_DBG() << "Download: " << url;
 
-    aos::LockGuard lock(mMutex);
     mFinishDownload = false;
     mDownloadResults.Clear();
 
     auto err
         = mTimer.Create(Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(aos::ErrorEnum::eTimeout); });
     if (!err.IsNone()) {
-        LOG_DBG() << "Create timer failed " << strerror(errno);
+        LOG_DBG() << "Create timer failed: " << err;
+
         return AOS_ERROR_WRAP(err);
     }
 
@@ -74,20 +76,20 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 
     if (result == nullptr) {
         LOG_ERR() << "File chunk for unknown file: " << chunk.relativePath;
+
         SetErrorAndNotify(aos::ErrorEnum::eNotFound);
 
         return aos::ErrorEnum::eNotFound;
     }
 
     if (result->mFile == -1) {
-        aos::StaticString<aos::cFilePathLen> path;
-        path.Append(mRequestedPath).Append("/").Append(chunk.relativePath);
+        aos::String path = aos::FS::JoinPath(mRequestedPath, chunk.relativePath);
+        auto        dirPath = aos::FS::Dir(path);
 
-        auto dirPath = aos::FS::Dir(path);
-
-        auto err = aos::FS::MakeDir(dirPath, true);
+        auto err = aos::FS::MakeDirAll(dirPath);
         if (!err.IsNone()) {
             LOG_ERR() << "Failed to create directory: " << dirPath;
+
             SetErrorAndNotify(err);
 
             return err;
@@ -95,7 +97,8 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 
         result->mFile = open(path.CStr(), O_CREAT | O_WRONLY, 0644);
         if (result->mFile < 0) {
-            auto err = AOS_ERROR_WRAP(errno);
+            err = AOS_ERROR_WRAP(errno);
+
             SetErrorAndNotify(err);
 
             return err;
@@ -104,7 +107,8 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 
     auto ret = write(result->mFile, chunk.data.Get(), chunk.data.Size());
     if (ret < 0) {
-        auto err = AOS_ERROR_WRAP(ret);
+        auto err = AOS_ERROR_WRAP(errno);
+
         SetErrorAndNotify(err);
 
         return err;
@@ -115,7 +119,8 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     if (chunk.part == chunk.partsCount) {
         ret = close(result->mFile);
         if (ret < 0) {
-            auto err = AOS_ERROR_WRAP(ret);
+            auto err = AOS_ERROR_WRAP(errno);
+
             SetErrorAndNotify(err);
 
             return err;
