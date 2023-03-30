@@ -85,7 +85,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 
         auto dirPath = aos::FS::Dir(path);
 
-        auto err = aos::FS::MakeDir(dirPath);
+        auto err = aos::FS::MakeDir(dirPath, true);
         if (!err.IsNone()) {
             LOG_ERR() << "Failed to create directory: " << dirPath;
             SetErrorAndNotify(err);
