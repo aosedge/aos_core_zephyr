@@ -31,7 +31,7 @@ manifest:
   projects:
     - name: zephyr
       remote: oleksiimoisieiev
-      revision: spider_board
+      revision: vch
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
