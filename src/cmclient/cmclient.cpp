@@ -162,19 +162,38 @@ void CMClient::ProcessMessages()
 {
     VchanMessageHeader header;
 
+    // mSMvchanHandler.blocking = true;
+
     while (!atomic_test_bit(&mFinishReadTrigger, 0)) {
-        auto read = vch_read(&mSMvchanHandler, &header, sizeof(VchanMessageHeader));
+        int readSize = 0;
 
-        if (read < static_cast<int>(sizeof(VchanMessageHeader))) {
-            LOG_ERR() << "Read less than header size: " << read;
-            continue;
+        while (static_cast<size_t>(readSize) < sizeof(VchanMessageHeader)) {
+            auto read = vch_read(&mSMvchanHandler, reinterpret_cast<uint8_t*>(&header) + readSize,
+                sizeof(VchanMessageHeader) - readSize);
+            if (read <= 0) {
+                sleep(1);
+                continue;
+            }
+
+            readSize += read;
         }
 
-        read = vch_read(&mSMvchanHandler, mReceiveBuffer.Get(), header.dataSize);
-        if (read < static_cast<int>(header.dataSize)) {
-            LOG_ERR() << "Read less than expected message: " << read;
-            continue;
+        LOG_DBG() << "Size in header " << header.dataSize;
+        readSize = 0;
+
+        while (static_cast<size_t>(readSize) < header.dataSize) {
+            auto read = vch_read(&mSMvchanHandler, reinterpret_cast<uint8_t*>(mReceiveBuffer.Get()) + readSize,
+                header.dataSize - readSize);
+            LOG_DBG() << "!!! Read " << read;
+            if (read <= 0) {
+                sleep(1);
+                continue;
+            }
+
+            readSize += read;
         }
+
+        LOG_DBG() << "!!! Read finish ";
 
         SHA256Digest calculatedDigest;
 
@@ -252,7 +271,7 @@ void CMClient::SendNodeConfiguration()
     strncpy(config.node_type, cNodeType, sizeof(config.node_type));
     config.remote_node = true;
     config.runner_features_count = 1;
-    strncpy(config.runner_features[0], "xrun", sizeof(config.runner_features[0]));
+    strncpy(config.runner_features[0], "runx", sizeof(config.runner_features[0]));
     config.num_cpus = cNumCPUs;
     config.total_ram = cTotalRAM;
     config.partitions_count = 1;
@@ -524,19 +543,21 @@ void CMClient::ProcessImageContentChunk()
 {
     LOG_DBG() << "Process image content chunk";
 
-    aos::BufferAllocator<> allocator(mReceiveBuffer);
+    // aos::BufferAllocator<> allocator(mReceiveBuffer);
 
-    auto chunk = aos::MakeUnique<FileChunk>(&allocator);
+    // auto chunk = aos::MakeUnique<FileChunk>(&allocator);
 
-    chunk->part = mIncomingMessage.SMIncomingMessage.image_content.part;
-    chunk->partsCount = mIncomingMessage.SMIncomingMessage.image_content.parts_count;
-    chunk->relativePath = mIncomingMessage.SMIncomingMessage.image_content.relative_path;
-    chunk->requestID = mIncomingMessage.SMIncomingMessage.image_content.request_id;
-    memcpy(chunk->data.Get(), mIncomingMessage.SMIncomingMessage.image_content.data.bytes,
-        mIncomingMessage.SMIncomingMessage.image_content.data.size);
+    // chunk->part = mIncomingMessage.SMIncomingMessage.image_content.part;
+    // chunk->partsCount = mIncomingMessage.SMIncomingMessage.image_content.parts_count;
+    // chunk->relativePath = mIncomingMessage.SMIncomingMessage.image_content.relative_path;
+    // chunk->requestID = mIncomingMessage.SMIncomingMessage.image_content.request_id;
 
-    auto err = mDownloader->ReceiveFileChunk(*chunk);
-    if (!err.IsNone()) {
-        LOG_ERR() << "Can't receive file chunk: " << err;
-    }
+    // LOG_DBG() << "Process image content chunk size : " << mIncomingMessage.SMIncomingMessage.image_content.data.size;
+    // // memcpy(chunk->data.Get(), mIncomingMessage.SMIncomingMessage.image_content.data.bytes,
+    // //     mIncomingMessage.SMIncomingMessage.image_content.data.size);
+
+    // auto err = mDownloader->ReceiveFileChunk(*chunk);
+    // if (!err.IsNone()) {
+    //     LOG_ERR() << "Can't receive file chunk: " << err;
+    // }
 }

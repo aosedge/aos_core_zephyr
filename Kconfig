@@ -31,11 +31,11 @@ config AOS_UNIT_CONFIG_FILE
 
 config AOS_NODE_ID
 	string "Node id"
-	default "NODE_0"
+	default "gen4-dom0"
 
 config AOS_NODE_TYPE
-	string "Nodde type"
-	default "NODE_TYPE1"
+	string "Node type"
+	default "rcar-demo2023-1.0-gen4-dom0"
 
 config AOS_NUM_CPU
 	int "Count of CPUs for domain with Zephyr"
