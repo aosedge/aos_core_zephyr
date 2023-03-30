@@ -20,7 +20,7 @@ aos::Error Storage::Init()
 
     aos::Error err;
 
-    if (!(err = aos::FS::MakeDir(cStoragePath, true)).IsNone()) {
+    if (!(err = aos::FS::MakeDirAll(cStoragePath)).IsNone()) {
         LOG_ERR() << "Failed to create storage directory: " << err;
 
         return err;
