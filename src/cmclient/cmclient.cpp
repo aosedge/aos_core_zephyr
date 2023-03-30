@@ -512,7 +512,6 @@ void CMClient::ProcessImageContentInfo()
 
 void CMClient::ProcessImageContentChunk()
 {
-    LOG_DBG() << "Process image content chunk no: " << mIncomingMessage.SMIncomingMessage.image_content.part;
 
     aos::BufferAllocator<> allocator(mReceiveBuffer);
 
@@ -522,6 +521,7 @@ void CMClient::ProcessImageContentChunk()
     chunk->partsCount = mIncomingMessage.SMIncomingMessage.image_content.parts_count;
     chunk->relativePath = mIncomingMessage.SMIncomingMessage.image_content.relative_path;
     chunk->requestID = mIncomingMessage.SMIncomingMessage.image_content.request_id;
+    chunk->data.Resize(mIncomingMessage.SMIncomingMessage.image_content.data.size);
     memcpy(chunk->data.Get(), mIncomingMessage.SMIncomingMessage.image_content.data.bytes,
         mIncomingMessage.SMIncomingMessage.image_content.data.size);
 
@@ -537,7 +537,6 @@ void CMClient::ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t siz
 
     while (static_cast<size_t>(readSize) < size) {
         auto read = vch_read(vchanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
-        LOG_DBG() << "!!! Read " << read;
         if (read <= 0) {
             usleep(50000);
             continue;
