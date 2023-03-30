@@ -34,7 +34,7 @@ config AOS_NODE_ID
 	default "NODE_0"
 
 config AOS_NODE_TYPE
-	string "Nodde type"
+	string "Node type"
 	default "NODE_TYPE1"
 
 config AOS_NUM_CPU
