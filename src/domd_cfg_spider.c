@@ -277,7 +277,7 @@ struct xen_domain_cfg domd_cfg = {
     .nr_irqs = ARRAY_SIZE(domd_irqs),
 
     .gic_version = XEN_DOMCTL_CONFIG_GIC_V3,
-    .tee_type = XEN_DOMCTL_CONFIG_TEE_NONE,
+    .tee_type = XEN_DOMCTL_CONFIG_TEE_OPTEE,
 
     .dtdevs = domd_dtdevs,
     .nr_dtdevs = ARRAY_SIZE(domd_dtdevs),
