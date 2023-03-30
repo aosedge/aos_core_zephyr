@@ -13,7 +13,7 @@
 /**
  * Set thread stack size.
  */
-#define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 4096
+#define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 8192
 
 /**
  * Set thread stack alignment.

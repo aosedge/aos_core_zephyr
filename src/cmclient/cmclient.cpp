@@ -171,7 +171,7 @@ void CMClient::ProcessMessages()
             auto read = vch_read(&mSMvchanHandler, reinterpret_cast<uint8_t*>(&header) + readSize,
                 sizeof(VchanMessageHeader) - readSize);
             if (read <= 0) {
-                sleep(1);
+                usleep(50000);
                 continue;
             }
 
@@ -186,7 +186,7 @@ void CMClient::ProcessMessages()
                 header.dataSize - readSize);
             LOG_DBG() << "!!! Read " << read;
             if (read <= 0) {
-                sleep(1);
+                usleep(50000);
                 continue;
             }
 
@@ -542,22 +542,23 @@ void CMClient::ProcessImageContentInfo()
 void CMClient::ProcessImageContentChunk()
 {
     LOG_DBG() << "Process image content chunk";
+    LOG_DBG() << "part : " << mIncomingMessage.SMIncomingMessage.image_content.part;
 
-    // aos::BufferAllocator<> allocator(mReceiveBuffer);
+    aos::BufferAllocator<> allocator(mReceiveBuffer);
 
-    // auto chunk = aos::MakeUnique<FileChunk>(&allocator);
+    auto chunk = aos::MakeUnique<FileChunk>(&allocator);
 
-    // chunk->part = mIncomingMessage.SMIncomingMessage.image_content.part;
-    // chunk->partsCount = mIncomingMessage.SMIncomingMessage.image_content.parts_count;
-    // chunk->relativePath = mIncomingMessage.SMIncomingMessage.image_content.relative_path;
-    // chunk->requestID = mIncomingMessage.SMIncomingMessage.image_content.request_id;
+    chunk->part = mIncomingMessage.SMIncomingMessage.image_content.part;
+    chunk->partsCount = mIncomingMessage.SMIncomingMessage.image_content.parts_count;
+    chunk->relativePath = mIncomingMessage.SMIncomingMessage.image_content.relative_path;
+    chunk->requestID = mIncomingMessage.SMIncomingMessage.image_content.request_id;
 
-    // LOG_DBG() << "Process image content chunk size : " << mIncomingMessage.SMIncomingMessage.image_content.data.size;
-    // // memcpy(chunk->data.Get(), mIncomingMessage.SMIncomingMessage.image_content.data.bytes,
-    // //     mIncomingMessage.SMIncomingMessage.image_content.data.size);
+    LOG_DBG() << "Process image content chunk size : " << mIncomingMessage.SMIncomingMessage.image_content.data.size;
+    memcpy(chunk->data.Get(), mIncomingMessage.SMIncomingMessage.image_content.data.bytes,
+        mIncomingMessage.SMIncomingMessage.image_content.data.size);
 
-    // auto err = mDownloader->ReceiveFileChunk(*chunk);
-    // if (!err.IsNone()) {
-    //     LOG_ERR() << "Can't receive file chunk: " << err;
-    // }
+    auto err = mDownloader->ReceiveFileChunk(*chunk);
+    if (!err.IsNone()) {
+        LOG_ERR() << "Can't receive file chunk: " << err;
+    }
 }

@@ -152,7 +152,7 @@ public:
     aos::Error ReceiveImageContentInfo(const ImageContentInfo& content) override;
 
 private:
-    static constexpr auto cDownloadTimeout = 10000;
+    static constexpr auto cDownloadTimeout = 120000;
 
     struct DownloadResult {
         aos::StaticString<aos::cFilePathLen> mRelativePath;
