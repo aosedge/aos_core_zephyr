@@ -27,7 +27,7 @@ struct KernelSpec {
 };
 
 struct HWConfigSpec {
-    char *devicetree;
+    char* devicetree;
 };
 
 struct VMSpec {
@@ -67,18 +67,20 @@ static const struct json_obj_descr RuntimeSpecJsonDescr[] = {
 };
 
 struct ImageConfig {
-    char*  cmd[aos::oci::cMaxParamCount];
-    char*  entrypoint[aos::oci::cMaxParamCount];
-    size_t cmdLen;
-    size_t entrypointLen;
+    char*           Cmd[aos::oci::cMaxParamCount];
+    char*           entrypoint[aos::oci::cMaxParamCount];
+    size_t          cmdLen;
+    size_t          entrypointLen;
+    struct json_obj anyJson;
 };
 
 struct ImageSpec {
-    ImageConfig config;
+    ImageConfig     config;
+    struct json_obj anyJson;
 };
 
 const struct json_obj_descr ImageConfigJsonDescr[] = {
-    JSON_OBJ_DESCR_ARRAY(struct ImageConfig, cmd, aos::oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(struct ImageConfig, Cmd, aos::oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
     JSON_OBJ_DESCR_ARRAY(struct ImageConfig, entrypoint, aos::oci::cMaxParamCount, entrypointLen, JSON_TOK_STRING),
 };
 

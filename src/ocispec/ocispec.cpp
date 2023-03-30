@@ -6,6 +6,7 @@
  */
 
 #include <zephyr/fs/fs.h>
+#include <zephyr/sys/printk.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -24,11 +25,11 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
     int ret = json_obj_parse(
         (char*)mJsonFileBuffer.Get(), redRet.mValue, ImageSpecJsonDescr, ARRAY_SIZE(ImageSpecJsonDescr), &mImageSpec);
     if (ret < 0) {
-        return AOS_ERROR_WRAP(ret);
+        printk("LoadImageSpec err %d \n",ret);
     }
 
     for (uint8_t i = 0; i < mImageSpec.config.cmdLen; i++) {
-        imageSpec.mConfig.mCmd.PushBack(mImageSpec.config.cmd[i]);
+        imageSpec.mConfig.mCmd.PushBack(mImageSpec.config.Cmd[i]);
     }
 
     for (uint8_t i = 0; i < mImageSpec.config.entrypointLen; i++) {
@@ -46,7 +47,7 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
     mImageSpec.config.entrypointLen = imageSpec.mConfig.mEntryPoint.Size();
 
     for (size_t i = 0; i < imageSpec.mConfig.mCmd.Size(); i++) {
-        mImageSpec.config.cmd[i] = const_cast<char*>(imageSpec.mConfig.mCmd[i].CStr());
+        mImageSpec.config.Cmd[i] = const_cast<char*>(imageSpec.mConfig.mCmd[i].CStr());
     }
 
     for (size_t i = 0; i < imageSpec.mConfig.mEntryPoint.Size(); i++) {
@@ -80,7 +81,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
     int ret = json_obj_parse((char*)mJsonFileBuffer.Get(), redRet.mValue, RuntimeSpecJsonDescr,
         ARRAY_SIZE(RuntimeSpecJsonDescr), &mRuntimeSpec);
     if (ret < 0) {
-        return AOS_ERROR_WRAP(ret);
+       printk("LoadRuntimeSpec err %d \n",ret);
     }
 
     runtimeSpec.mVersion = mRuntimeSpec.ociVersion;
