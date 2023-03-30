@@ -163,18 +163,8 @@ void CMClient::ProcessMessages()
     VchanMessageHeader header;
 
     while (!atomic_test_bit(&mFinishReadTrigger, 0)) {
-        auto read = vch_read(&mSMvchanHandler, &header, sizeof(VchanMessageHeader));
-
-        if (read < static_cast<int>(sizeof(VchanMessageHeader))) {
-            LOG_ERR() << "Read less than header size: " << read;
-            continue;
-        }
-
-        read = vch_read(&mSMvchanHandler, mReceiveBuffer.Get(), header.dataSize);
-        if (read < static_cast<int>(header.dataSize)) {
-            LOG_ERR() << "Read less than expected message: " << read;
-            continue;
-        }
+        ReadDataFromVChan(&mSMvchanHandler, &header, sizeof(VchanMessageHeader));
+        ReadDataFromVChan(&mSMvchanHandler, mReceiveBuffer.Get(), header.dataSize);
 
         SHA256Digest calculatedDigest;
 
@@ -522,7 +512,7 @@ void CMClient::ProcessImageContentInfo()
 
 void CMClient::ProcessImageContentChunk()
 {
-    LOG_DBG() << "Process image content chunk";
+    LOG_DBG() << "Process image content chunk no: " << mIncomingMessage.SMIncomingMessage.image_content.part;
 
     aos::BufferAllocator<> allocator(mReceiveBuffer);
 
@@ -538,5 +528,21 @@ void CMClient::ProcessImageContentChunk()
     auto err = mDownloader->ReceiveFileChunk(*chunk);
     if (!err.IsNone()) {
         LOG_ERR() << "Can't receive file chunk: " << err;
+    }
+}
+
+void CMClient::ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size)
+{
+    int readSize = 0;
+
+    while (static_cast<size_t>(readSize) < size) {
+        auto read = vch_read(vchanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
+        LOG_DBG() << "!!! Read " << read;
+        if (read <= 0) {
+            usleep(50000);
+            continue;
+        }
+
+        readSize += read;
     }
 }
