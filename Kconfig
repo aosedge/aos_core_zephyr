@@ -23,7 +23,7 @@ config AOS_RUNTIME_DIR
 
 config AOS_SERVICES_DIR
 	string "Aos services dir"
-	default "/aos/service"
+	default "/aos/services"
 
 config AOS_UNIT_CONFIG_FILE
 	string "Node configuration file path"
