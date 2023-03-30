@@ -110,6 +110,7 @@ private:
     void                             ProcessRunInstancesMessage();
     void                             ProcessImageContentInfo();
     void                             ProcessImageContentChunk();
+    void                             ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size);
 };
 
 #endif
