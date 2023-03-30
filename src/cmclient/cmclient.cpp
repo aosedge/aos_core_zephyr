@@ -41,6 +41,7 @@ CMClient::~CMClient()
 aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader)
 {
     LOG_DBG() << "Initialize CM client";
+    LOG_INF() << "Node ID: " << cNodeID << ", node type: " << cNodeType;
 
     mLauncher = &launcher;
     mResourceManager = &resourceManager;
