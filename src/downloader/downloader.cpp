@@ -83,8 +83,8 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     }
 
     if (result->mFile == -1) {
-        aos::String path = aos::FS::JoinPath(mRequestedPath, chunk.relativePath);
-        auto        dirPath = aos::FS::Dir(path);
+        aos::StaticString<aos::cFilePathLen> path = aos::FS::JoinPath(mRequestedPath, chunk.relativePath);
+        auto                                 dirPath = aos::FS::Dir(path);
 
         auto err = aos::FS::MakeDirAll(dirPath);
         if (!err.IsNone()) {
