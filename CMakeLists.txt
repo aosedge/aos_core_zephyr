@@ -40,6 +40,7 @@ target_sources(
             src/storage/storage.cpp
             src/downloader/downloader.cpp
             src/resourcemanager/resourcemanager.cpp
+            src/ocispec/ocispec.cpp
 )
 
 # ######################################################################################################################
