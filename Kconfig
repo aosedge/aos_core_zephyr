@@ -1,0 +1,52 @@
+# Copyright (C) 2023 Renesas Electronics Corporation.
+# Copyright (C) 2023 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Aos zephyr application"
+
+config AOS_DOMD_ID
+	int "DomD id"
+	default 1
+
+config AOS_SM_VCHAN_PATH
+	string "Path to the SM vchan"
+	default "/local/domain/1/tmp/vchan/sm"
+
+config AOS_STORAGE_DIR
+	string "Path to the storage"
+	default "/aos/storage"
+
+config AOS_RUNTIME_DIR
+	string "Aos runtime dir"
+	default "/aos/runtime"
+
+config AOS_SERVICES_DIR
+	string "Aos services dir"
+	default "/aos/services"
+
+config AOS_UNIT_CONFIG_FILE
+	string "Node configuration file path"
+	default "/aos/unit_config.cfg"
+
+config AOS_NODE_ID
+	string "Node id"
+	default "NODE_0"
+
+config AOS_NODE_TYPE
+	string "Node type"
+	default "NODE_TYPE1"
+
+config AOS_NUM_CPU
+	int "Count of CPUs for domain with Zephyr"
+	default 1
+
+config AOS_TOTAL_RAM
+	int "Total RAM of the domain"
+	default 204800
+
+config AOS_PARTITION_SIZE
+	int "Partition size"
+	default 209715200
+
+source "Kconfig"
