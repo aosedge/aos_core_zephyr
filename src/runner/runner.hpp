@@ -48,6 +48,8 @@ public:
     aos::Error StopInstance(const aos::String& instanceID) override;
 
 private:
+    static constexpr int cConsoleSocket = 0;
+
     aos::sm::runner::RunStatusReceiverItf* mStatusReceiver;
 };
 
