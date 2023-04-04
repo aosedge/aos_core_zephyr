@@ -31,6 +31,10 @@ manifest:
       remote: aoscloud
       revision: develop
 
+    - name: aos_core_api
+      remote: aoscloud
+      revision: main
+
     - name: zephyr-xenlib
       remote: xen-troops
       revision: wip_zephyr_dom0
@@ -41,3 +45,8 @@ manifest:
       groups:
         - fs
       revision: ca583fd297ceb48bced3c2548600dc615d67af24
+
+    - name: nanopb
+      remote: zephyrproject-rtos
+      revision: dc4deed54fd4c7e1935e3b6387eedf21bb45dc38
+      path: modules/lib/nanopb
