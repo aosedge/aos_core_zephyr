@@ -19,6 +19,10 @@ project(aoszephyrapp)
 
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
+if(BOARD MATCHES "native_posix*")
+    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} mocks/include)
+endif()
+
 # ######################################################################################################################
 # Definitions
 # ######################################################################################################################
@@ -42,6 +46,9 @@ target_sources(
             src/resourcemanager/resourcemanager.cpp
             src/ocispec/ocispec.cpp
 )
+
+# Enable vchannels and xrun mocks for native posix
+target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp)
 
 # ######################################################################################################################
 # Versioning
