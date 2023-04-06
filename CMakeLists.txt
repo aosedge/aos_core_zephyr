@@ -97,7 +97,7 @@ set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${
 # Xen on QEMU
 # ######################################################################################################################
 
-if(BOARD MATCHES "xenvm-qemu")
+if(CONFIG_BOARD MATCHES "xenvm")
     set(xen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/xen)
 
     ExternalProject_Add(
