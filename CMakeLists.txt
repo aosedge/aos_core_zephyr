@@ -156,6 +156,7 @@ ExternalProject_Add(
                -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
     SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
     BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a
+    DEPENDS zephyr_interface
 )
 
 # aossm
