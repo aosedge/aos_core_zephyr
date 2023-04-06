@@ -19,6 +19,10 @@ project(aoszephyrapp)
 
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
+if(CONFIG_BOARD MATCHES "rcar")
+    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
+endif()
+
 if(BOARD MATCHES "native_posix*")
     zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} mocks/include)
 endif()
