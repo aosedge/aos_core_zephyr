@@ -11,8 +11,10 @@
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
 #include <aos/sm/launcher.hpp>
+#include <aos/sm/servicemanager.hpp>
 
 #include "cmclient/cmclient.hpp"
+#include "ocispec/ocispec.hpp"
 #include "runner/runner.hpp"
 #include "storage/storage.hpp"
 
@@ -35,11 +37,15 @@ public:
     static App& Get() { return sApp; };
 
 private:
-    static App                  sApp;
-    CMClient                    mCMClient;
-    Storage                     mStorage;
-    Runner                      mRunner;
-    aos::sm::launcher::Launcher mLauncher;
+    static App                              sApp;
+    CMClient                                mCMClient;
+    Storage                                 mStorage;
+    Runner                                  mRunner;
+    aos::sm::launcher::Launcher             mLauncher;
+    ResourceManager                         mResourceManager;
+    Downloader                              mDownloader;
+    OCISpec                                 mJsonOciSpec;
+    aos::sm::servicemanager::ServiceManager mServiceManager;
 };
 
 #endif
