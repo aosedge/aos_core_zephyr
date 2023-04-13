@@ -92,7 +92,7 @@ private:
     static constexpr auto cPartitionSize = CONFIG_AOS_PARTITION_SIZE;
     static constexpr auto CReadDelayUSec = 50000;
 
-    void                             ProcessMessages();
+    aos::Error                       ProcessMessages();
     void                             ConnectToCM();
     void                             SendNodeConfiguration();
     aos::Error                       SendPbMessageToVchan();
@@ -105,7 +105,7 @@ private:
     void                             ProcessRunInstancesMessage();
     void                             ProcessImageContentInfo();
     void                             ProcessImageContentChunk();
-    void                             ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size);
+    aos::Error                       ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size);
 
     aos::sm::launcher::LauncherItf*                              mLauncher;
     ResourceManager*                                             mResourceManager;
@@ -115,7 +115,7 @@ private:
     vch_handle                                                   mSMvchanHandler;
     servicemanager_v3_SMIncomingMessages                         mIncomingMessage;
     servicemanager_v3_SMOutgoingMessages                         mOutgoingMessage;
-    aos::Mutex                                                   mSendMutex;
+    aos::Mutex                                                   mMutex;
     aos::StaticBuffer<servicemanager_v3_SMOutgoingMessages_size> mSendBuffer;
     aos::StaticBuffer<aos::Max(size_t(servicemanager_v3_SMIncomingMessages_size),
         sizeof(aos::InstanceInfoStaticArray) + sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray))>

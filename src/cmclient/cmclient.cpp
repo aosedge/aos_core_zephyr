@@ -7,12 +7,13 @@
 
 #include <unistd.h>
 
-#include <aos/common/tools/memory.hpp>
-
 #include <pb_decode.h>
 #include <tinycrypt/constants.h>
 #include <tinycrypt/sha256.h>
 #include <vchanapi.h>
+#include <zephyr/kernel.h>
+
+#include <aos/common/tools/memory.hpp>
 
 #include "cmclient.hpp"
 #include "log.hpp"
@@ -39,8 +40,18 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
     mDownloader = &downloader;
 
     auto err = mThread.Run([this](void*) {
-        ConnectToCM();
-        ProcessMessages();
+        while (true) {
+            ConnectToCM();
+
+            auto err = ProcessMessages();
+            if (!err.IsNone()) {
+                LOG_ERR() << "Error processing messages: " << err;
+
+                continue;
+            }
+
+            break;
+        }
     });
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
@@ -51,7 +62,7 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
 
 aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances)
 {
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_run_instances_status_tag;
     mOutgoingMessage.SMOutgoingMessage.run_instances_status
@@ -72,7 +83,7 @@ aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& i
 
 aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
 {
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_update_instances_status_tag;
     mOutgoingMessage.SMOutgoingMessage.update_instances_status
@@ -93,7 +104,7 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
 
 aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
 {
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_image_content_request_tag;
     mOutgoingMessage.SMOutgoingMessage.image_content_request = servicemanager_v3_ImageContentRequest_init_zero;
@@ -142,17 +153,24 @@ void CMClient::ConnectToCM()
     }
 }
 
-void CMClient::ProcessMessages()
+aos::Error CMClient::ProcessMessages()
 {
     VchanMessageHeader header;
 
     while (!atomic_test_bit(&mFinishReadTrigger, 0)) {
-        ReadDataFromVChan(&mSMvchanHandler, &header, sizeof(VchanMessageHeader));
-        ReadDataFromVChan(&mSMvchanHandler, mReceiveBuffer.Get(), header.dataSize);
+        auto err = ReadDataFromVChan(&mSMvchanHandler, &header, sizeof(VchanMessageHeader));
+        if (!err.IsNone()) {
+            return err;
+        }
+
+        err = ReadDataFromVChan(&mSMvchanHandler, mReceiveBuffer.Get(), header.dataSize);
+        if (!err.IsNone()) {
+            return err;
+        }
 
         SHA256Digest calculatedDigest;
 
-        auto err = CalculateSha256(mReceiveBuffer, header.dataSize, calculatedDigest);
+        err = CalculateSha256(mReceiveBuffer, header.dataSize, calculatedDigest);
         if (!err.IsNone()) {
             LOG_ERR() << "Can't calculate SHA256: " << err;
             continue;
@@ -212,11 +230,13 @@ void CMClient::ProcessMessages()
             break;
         }
     }
+
+    return aos::ErrorEnum::eNone;
 }
 
 void CMClient::SendNodeConfiguration()
 {
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_configuration_tag;
     mOutgoingMessage.SMOutgoingMessage.node_configuration
@@ -328,7 +348,7 @@ servicemanager_v3_InstanceStatus CMClient::InstanceStatusToPB(const aos::Instanc
 
 void CMClient::ProcessGetUnitConfigStatus()
 {
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
     mOutgoingMessage.SMOutgoingMessage.unit_config_status = servicemanager_v3_UnitConfigStatus_init_zero;
@@ -350,7 +370,7 @@ void CMClient::ProcessCheckUnitConfig()
     auto err = mResourceManager->CheckUnitConfig(mIncomingMessage.SMIncomingMessage.check_unit_config.vendor_version,
         mIncomingMessage.SMIncomingMessage.check_unit_config.unit_config);
 
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
     mOutgoingMessage.SMOutgoingMessage.unit_config_status = servicemanager_v3_UnitConfigStatus_init_zero;
@@ -373,7 +393,7 @@ void CMClient::ProcessSetUnitConfig()
     auto err = mResourceManager->UpdateUnitConfig(mIncomingMessage.SMIncomingMessage.set_unit_config.vendor_version,
         mIncomingMessage.SMIncomingMessage.set_unit_config.unit_config);
 
-    aos::LockGuard lock(mSendMutex);
+    aos::LockGuard lock(mMutex);
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
     mOutgoingMessage.SMOutgoingMessage.unit_config_status = servicemanager_v3_UnitConfigStatus_init_zero;
@@ -521,14 +541,20 @@ void CMClient::ProcessImageContentChunk()
     }
 }
 
-void CMClient::ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size)
+aos::Error CMClient::ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size)
 {
-    int readSize = 0;
+    size_t readSize = 0;
 
-    while (static_cast<size_t>(readSize) < size) {
+    while (readSize < size && !atomic_test_bit(&mFinishReadTrigger, 0)) {
+        aos::LockGuard lock(mMutex);
+
         auto read = vch_read(vchanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
-        if (read <= 0) {
-            usleep(CReadDelayUSec);
+        if (read < 0) {
+            return AOS_ERROR_WRAP(read);
+        }
+
+        if (read == 0) {
+            k_yield();
             continue;
         }
 
