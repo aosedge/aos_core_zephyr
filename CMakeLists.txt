@@ -62,11 +62,16 @@ target_sources(
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp)
 
 # NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
-target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c src/domains/domd/domain_bins_spider.S)
+target_sources_ifdef(
+    CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c src/domains/domd/domain_bins_spider.S
+)
 
 # NOTE: Include source files for DomD support for Gen3 board.
 # Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
-target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3_2X4G app PRIVATE src/domains/domd/domd_cfg_gen3.c src/domains/domd/domain_bins_gen3.S)
+target_sources_ifdef(
+    CONFIG_BOARD_RCAR_SALVATOR_XS_M3_2X4G app PRIVATE src/domains/domd/domd_cfg_gen3.c
+    src/domains/domd/domain_bins_gen3.S
+)
 
 # ######################################################################################################################
 # Versioning
@@ -129,6 +134,7 @@ if(CONFIG_BOARD MATCHES "xenvm")
                       XEN_TARGET_ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} HOSTCC=gcc
         INSTALL_COMMAND cp ${xen_build_dir}/xen/xen ${ZEPHYR_BINARY_DIR}
         BUILD_BYPRODUCTS ${ZEPHYR_BINARY_DIR}/xen
+        DEPENDS app
     )
 
     add_dependencies(hypervisor zephyr_final)
