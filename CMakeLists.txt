@@ -68,6 +68,9 @@ target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/do
 # Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
 target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3_2X4G app PRIVATE src/domains/domd/domd_cfg_gen3.c src/domains/domd/domain_bins_gen3.S)
 
+# NOTE: Include source files for xenvm boards.
+target_sources_ifdef(CONFIG_BOARD_XENVM app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
+
 # ######################################################################################################################
 # Versioning
 # ######################################################################################################################
