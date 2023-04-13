@@ -6,7 +6,10 @@
 
 #include <domain.h>
 #include <string.h>
+#include <xen_dom_mgmt.h>
 #include <zephyr/xen/public/domctl.h>
+
+#include <domains/dom_runner.h>
 
 static char* domd_dtdevs[] = {
     "/soc/ethernet@e6800000",
@@ -539,4 +542,9 @@ struct xen_domain_cfg domd_cfg = {
 
     .dtb_start = __dtb_ipl_start,
     .dtb_end = __dtb_ipl_end,
+};
+
+int create_domains(void)
+{
+    return domain_create(&domd_cfg, 1);
 };

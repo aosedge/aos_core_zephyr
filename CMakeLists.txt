@@ -73,6 +73,9 @@ target_sources_ifdef(
     src/domains/domd/domain_bins_gen3.S
 )
 
+# NOTE: Include source files for xenvm boards.
+target_sources_ifdef(CONFIG_BOARD_XENVM app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
+
 # ######################################################################################################################
 # Versioning
 # ######################################################################################################################
