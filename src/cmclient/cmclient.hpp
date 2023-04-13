@@ -51,7 +51,7 @@ public:
     /**
      * Initializes CM client instance.
      * @param launcher instance launcher.
-     * @param resourceManager resourcemanager instance.
+     * @param resourceManager resource manager instance.
      * @return aos::Error.
      */
     aos::Error Init(
@@ -84,7 +84,7 @@ public:
 private:
     static constexpr auto cConnectionTimeoutSec = 5;
     static constexpr auto cDomdID = CONFIG_AOS_DOMD_ID;
-    static constexpr auto cSmVchanPath = CONFIG_AOS_SM_VCHAN_PATH;
+    static constexpr auto cSMVChanPath = CONFIG_AOS_SM_VCHAN_PATH;
     static constexpr auto cNodeID = CONFIG_AOS_NODE_ID;
     static constexpr auto cNodeType = CONFIG_AOS_NODE_TYPE;
     static constexpr auto cNumCPUs = CONFIG_AOS_NUM_CPU;
@@ -95,8 +95,8 @@ private:
     aos::Error                       ProcessMessages();
     void                             ConnectToCM();
     void                             SendNodeConfiguration();
-    aos::Error                       SendPbMessageToVchan();
-    aos::Error                       SendBufferToVchan(vch_handle* vChanHandler, const uint8_t* buffer, size_t msgSize);
+    aos::Error                       SendPBMessageToVChan();
+    aos::Error                       SendBufferToVChan(const uint8_t* buffer, size_t msgSize);
     aos::Error                       CalculateSha256(const aos::Buffer& buffer, size_t size, SHA256Digest& digest);
     servicemanager_v3_InstanceStatus InstanceStatusToPB(const aos::InstanceStatus& instanceStatus) const;
     void                             ProcessGetUnitConfigStatus();
@@ -105,14 +105,14 @@ private:
     void                             ProcessRunInstancesMessage();
     void                             ProcessImageContentInfo();
     void                             ProcessImageContentChunk();
-    aos::Error                       ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size);
+    aos::Error                       ReadDataFromVChan(void* des, size_t size);
 
     aos::sm::launcher::LauncherItf*                              mLauncher;
     ResourceManager*                                             mResourceManager;
     DownloadReceiverItf*                                         mDownloader;
     aos::Thread<>                                                mThread;
     atomic_t                                                     mFinishReadTrigger;
-    vch_handle                                                   mSMvchanHandler;
+    vch_handle                                                   mSMVChanHandler;
     servicemanager_v3_SMIncomingMessages                         mIncomingMessage;
     servicemanager_v3_SMOutgoingMessages                         mOutgoingMessage;
     aos::Mutex                                                   mMutex;

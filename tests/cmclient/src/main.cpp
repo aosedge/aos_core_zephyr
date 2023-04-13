@@ -29,7 +29,7 @@ bool                                 gReadHead = true;
 bool                                 gShutdown = false;
 bool                                 gReadyToRead = true;
 bool                                 gReadyToCheck = false;
-VchanMessageHeader                   gCurrentHeader;
+VChanMessageHeader                   gCurrentHeader;
 servicemanager_v3_SMOutgoingMessages gReceivedMessage;
 servicemanager_v3_SMIncomingMessages gSendMessage;
 uint8_t                              gSendBuffer[servicemanager_v3_SMIncomingMessages_size];
@@ -49,11 +49,6 @@ void TestLogCallback(LogModule module, LogLevel level, const aos::String& messag
     printk("[client] %s \n", message.CStr());
 }
 
-int vch_open(domid_t domain, const char* path, size_t min_rs, size_t min_ws, struct vch_handle* h)
-{
-    return 0;
-}
-
 aos::Error ResourceManager::GetUnitConfigInfo(char* version) const
 {
     printk("[test] GetUnitConfigInfo\n");
@@ -71,6 +66,11 @@ aos::Error ResourceManager::CheckUnitConfig(const char* version, const char* uni
 aos::Error ResourceManager::UpdateUnitConfig(const char* version, const char* unitConfig)
 {
     return aos::ErrorEnum::eNone;
+}
+
+int vch_open(domid_t domain, const char* path, size_t min_rs, size_t min_ws, struct vch_handle* h)
+{
+    return 0;
 }
 
 int vch_connect(domid_t domain, const char* path, struct vch_handle* h)
@@ -112,7 +112,7 @@ int vch_read(struct vch_handle* h, void* buf, size_t size)
         auto status = pb_encode(&outStream, servicemanager_v3_SMIncomingMessages_fields, &gSendMessage);
         zassert_true(status, "Encoding failed: %s\n", PB_GET_ERROR(&outStream));
 
-        VchanMessageHeader     header;
+        VChanMessageHeader     header;
         tc_sha256_state_struct s;
 
         int err = tc_sha256_init(&s);
@@ -126,7 +126,7 @@ int vch_read(struct vch_handle* h, void* buf, size_t size)
 
         header.dataSize = outStream.bytes_written;
 
-        memcpy(buf, static_cast<void*>(&header), sizeof(VchanMessageHeader));
+        memcpy(buf, static_cast<void*>(&header), sizeof(VChanMessageHeader));
         gCurrentSendBufferSize = outStream.bytes_written;
     } else {
         memcpy(buf, gSendBuffer, gCurrentSendBufferSize);
@@ -144,8 +144,8 @@ int vch_write(struct vch_handle* h, const void* buf, size_t size)
 
     if (gWaitHeader) {
         gWaitHeader = false;
-        zassert_equal(size, sizeof(VchanMessageHeader), "Incorrect header size");
-        memcpy(&gCurrentHeader, buf, sizeof(VchanMessageHeader));
+        zassert_equal(size, sizeof(VChanMessageHeader), "Incorrect header size");
+        memcpy(&gCurrentHeader, buf, sizeof(VChanMessageHeader));
 
         return size;
     }

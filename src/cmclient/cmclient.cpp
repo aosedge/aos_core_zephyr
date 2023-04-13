@@ -73,7 +73,7 @@ aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& i
         mOutgoingMessage.SMOutgoingMessage.run_instances_status.instances[i] = InstanceStatusToPB(instances[i]);
     }
 
-    auto err = SendPbMessageToVchan();
+    auto err = SendPBMessageToVChan();
     if (!err.IsNone()) {
         return err;
     }
@@ -94,7 +94,7 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
         mOutgoingMessage.SMOutgoingMessage.update_instances_status.instances[i] = InstanceStatusToPB(instances[i]);
     }
 
-    auto err = SendPbMessageToVchan();
+    auto err = SendPBMessageToVChan();
     if (!err.IsNone()) {
         return err;
     }
@@ -118,7 +118,7 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
         sizeof(mOutgoingMessage.SMOutgoingMessage.image_content_request.url));
     mOutgoingMessage.SMOutgoingMessage.image_content_request.request_id = request.requestID;
 
-    auto err = SendPbMessageToVchan();
+    auto err = SendPBMessageToVChan();
     if (!err.IsNone()) {
         return err;
     }
@@ -133,7 +133,7 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
 void CMClient::ConnectToCM()
 {
     do {
-        auto ret = vch_connect(cDomdID, cSmVchanPath, &mSMvchanHandler);
+        auto ret = vch_connect(cDomdID, cSMVChanPath, &mSMVChanHandler);
         if (ret != 0) {
             LOG_WRN() << "Can't connect to SM vchan error: " << aos::Error(ret);
 
@@ -155,15 +155,15 @@ void CMClient::ConnectToCM()
 
 aos::Error CMClient::ProcessMessages()
 {
-    VchanMessageHeader header;
+    VChanMessageHeader header;
 
     while (!atomic_test_bit(&mFinishReadTrigger, 0)) {
-        auto err = ReadDataFromVChan(&mSMvchanHandler, &header, sizeof(VchanMessageHeader));
+        auto err = ReadDataFromVChan(&header, sizeof(VChanMessageHeader));
         if (!err.IsNone()) {
             return err;
         }
 
-        err = ReadDataFromVChan(&mSMvchanHandler, mReceiveBuffer.Get(), header.dataSize);
+        err = ReadDataFromVChan(mReceiveBuffer.Get(), header.dataSize);
         if (!err.IsNone()) {
             return err;
         }
@@ -256,13 +256,13 @@ void CMClient::SendNodeConfiguration()
     config.partitions[0].types_count = 1;
     strncpy(config.partitions[0].types[0], "services", sizeof(config.partitions[0].types[0]));
 
-    auto err = SendPbMessageToVchan();
+    auto err = SendPBMessageToVChan();
     if (!err.IsNone()) {
         LOG_ERR() << "Can't send node configuration: " << err;
     }
 }
 
-aos::Error CMClient::SendPbMessageToVchan()
+aos::Error CMClient::SendPBMessageToVChan()
 {
     auto outStream
         = pb_ostream_from_buffer(static_cast<pb_byte_t*>(mSendBuffer.Get()), servicemanager_v3_SMOutgoingMessages_size);
@@ -274,25 +274,25 @@ aos::Error CMClient::SendPbMessageToVchan()
         return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
 
-    VchanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
+    VChanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
 
     auto err = CalculateSha256(mSendBuffer, header.dataSize, header.sha256);
     if (!err.IsNone()) {
         return err;
     }
 
-    err = SendBufferToVchan(&mSMvchanHandler, (uint8_t*)&header, sizeof(VchanMessageHeader));
+    err = SendBufferToVChan((uint8_t*)&header, sizeof(VChanMessageHeader));
     if (!err.IsNone()) {
         return err;
     }
 
-    return SendBufferToVchan(&mSMvchanHandler, static_cast<uint8_t*>(mSendBuffer.Get()), header.dataSize);
+    return SendBufferToVChan(static_cast<uint8_t*>(mSendBuffer.Get()), header.dataSize);
 }
 
-aos::Error CMClient::SendBufferToVchan(vch_handle* vChanHandler, const uint8_t* buffer, size_t msgSize)
+aos::Error CMClient::SendBufferToVChan(const uint8_t* buffer, size_t msgSize)
 {
     for (size_t offset = 0; offset < msgSize;) {
-        auto ret = vch_write(vChanHandler, buffer + offset, msgSize - offset);
+        auto ret = vch_write(&mSMVChanHandler, buffer + offset, msgSize - offset);
         if (ret < 0) {
             return AOS_ERROR_WRAP(ret);
         }
@@ -360,7 +360,7 @@ void CMClient::ProcessGetUnitConfigStatus()
             sizeof(mOutgoingMessage.SMOutgoingMessage.unit_config_status.error));
     }
 
-    if (!(err = SendPbMessageToVchan()).IsNone()) {
+    if (!(err = SendPBMessageToVChan()).IsNone()) {
         LOG_ERR() << "Can't send unit configuration status: " << err;
     }
 }
@@ -383,7 +383,7 @@ void CMClient::ProcessCheckUnitConfig()
             sizeof(mOutgoingMessage.SMOutgoingMessage.unit_config_status.error));
     }
 
-    if (!(err = SendPbMessageToVchan()).IsNone()) {
+    if (!(err = SendPBMessageToVChan()).IsNone()) {
         LOG_ERR() << "Can't send unit configuration status: " << err;
     }
 }
@@ -406,7 +406,7 @@ void CMClient::ProcessSetUnitConfig()
             sizeof(mOutgoingMessage.SMOutgoingMessage.unit_config_status.error));
     }
 
-    if (!(err = SendPbMessageToVchan()).IsNone()) {
+    if (!(err = SendPBMessageToVChan()).IsNone()) {
         LOG_ERR() << "Can't send unit configuration status: " << err;
     }
 }
@@ -541,14 +541,14 @@ void CMClient::ProcessImageContentChunk()
     }
 }
 
-aos::Error CMClient::ReadDataFromVChan(vch_handle* vchanHandler, void* des, size_t size)
+aos::Error CMClient::ReadDataFromVChan(void* des, size_t size)
 {
     size_t readSize = 0;
 
     while (readSize < size && !atomic_test_bit(&mFinishReadTrigger, 0)) {
         aos::LockGuard lock(mMutex);
 
-        auto read = vch_read(vchanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
+        auto read = vch_read(&mSMVChanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
         if (read < 0) {
             return AOS_ERROR_WRAP(read);
         }
@@ -560,4 +560,6 @@ aos::Error CMClient::ReadDataFromVChan(vch_handle* vchanHandler, void* des, size
 
         readSize += read;
     }
+
+    return aos::ErrorEnum::eNone;
 }
