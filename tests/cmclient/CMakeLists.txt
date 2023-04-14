@@ -2,7 +2,11 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-find_package(Zephyr COMPONENTS REQUIRED HINTS $ENV{ZEPHYR_BASE})
+find_package(
+    Zephyr
+    COMPONENTS
+    REQUIRED HINTS $ENV{ZEPHYR_BASE}
+)
 
 set(CMAKE_MODULE_PATH ${APPLICATION_SOURCE_DIR}/../../CMakeModules)
 
@@ -21,7 +25,7 @@ add_definitions(-include aoscoreconfig.hpp)
 
 find_package(CoreAPI)
 
-generate_api(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api)
+generate_api(${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_api)
 
 # ######################################################################################################################
 # Includes
