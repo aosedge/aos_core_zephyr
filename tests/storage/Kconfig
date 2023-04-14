@@ -7,7 +7,7 @@ mainmenu "Aos zephyr application"
 
 config AOS_STORAGE_DIR
 	string "Path to the storage"
-	default "/aos/storage"
+	default "/tmp/aos/storage"
 
 config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
