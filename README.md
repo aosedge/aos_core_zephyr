@@ -10,7 +10,8 @@ Zephyr SDK is required to fetch and build this project. Follow
 [Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html) to install mentioned
 dependencies and SDK.
 
-Install protobuf compiler minimum 3.29 version: https://grpc.io/docs/protoc-installation/
+Install protobuf compiler from pre-compiled binaries: <https://grpc.io/docs/protoc-installation/#install-pre-compiled-binaries-any-os>.
+The verified protobuf compiler version is v22.3: <https://github.com/protocolbuffers/protobuf/releases/tag/v22.3>.
 
 ## Fetch
 
