@@ -1,0 +1,48 @@
+
+#include <mem.h>
+
+/ {
+	fstab {
+		compatible = "zephyr,fstab";
+		storage: storage {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/aos";
+			partition = <&storage_partition>;
+			automount;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	};
+	flashcontroller0: flashcontroller {
+		compatible = "zephyr,sim-flash";
+		label = "FLASH_SIMULATOR";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		erase-value = <0xff>;
+		flash_sim0: flash_sim@0 {
+			compatible = "soc-nv-flash";
+			reg = <0x00000000 DT_SIZE_M(16)>;
+			erase-block-size = <1024>;
+			write-block-size = <4>;
+			partitions {
+				compatible = "fixed-partitions";
+				#address-cells = <1>;
+				#size-cells = <1>;
+			/*
+			 * Storage partition will be used by FCB/LittleFS/NVS
+			 * if enabled.
+			 */
+				storage_partition: partition@1000 {
+					label = "storage";
+					reg = <0x00001000 0x01000000>;
+				};
+			};
+		};
+	};
+};
+&ram {
+	reg = < 0x0 0x60000000 0x0 0x2000000 >;
+};

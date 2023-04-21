@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <stdio.h>
+#ifndef VERSION_HPP_
+#define VERSION_HPP_
 
-void main(void)
-{
-	printf("AOS Core zephyr app\n");
-}
+#define AOS_ZEPHYR_APP_VERSION "${GIT_VERSION}"
+
+#endif

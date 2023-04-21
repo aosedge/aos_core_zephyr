@@ -1,0 +1,22 @@
+# HOWTO
+
+## Enable assert
+
+```sh
+CONFIG_ASSERT=y
+```
+
+## Increase main stack size
+
+```sh
+CONFIG_MAIN_STACK_SIZE=8192
+```
+
+## Analyze stack and CPU usage
+
+```sh
+CONFIG_THREAD_ANALYZER=y
+CONFIG_THREAD_ANALYZER_USE_PRINTK=y
+CONFIG_THREAD_ANALYZER_AUTO=y
+CONFIG_THREAD_ANALYZER_AUTO_INTERVAL=5
+```

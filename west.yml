@@ -13,10 +13,47 @@ manifest:
 
   remotes:
     - name: xen-troops
-      url-base: https://github.com/xen-troops/
+      url-base: https://github.com/xen-troops
+
+    - name: aoscloud
+      url-base: https://github.com/aoscloud
+
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
 
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: aos-wip
+      revision: 83d0af1b7cfa2ff0b49e776c17f2e7e00bd02d80
       west-commands: scripts/west-commands.yml
+
+    - name: aos_core_lib_cpp
+      remote: aoscloud
+      revision: v0.1.0
+
+    - name: aos_core_api
+      remote: aoscloud
+      revision: v7.1.0
+
+    - name: zephyr-xenlib
+      remote: xen-troops
+      revision: d0762aabdedab23cfd8465b11eda49ffee3cc602
+
+    - name: littlefs
+      remote: zephyrproject-rtos
+      path: modules/fs/littlefs
+      groups:
+        - fs
+      revision: ca583fd297ceb48bced3c2548600dc615d67af24
+
+    - name: nanopb
+      remote: zephyrproject-rtos
+      revision: dc4deed54fd4c7e1935e3b6387eedf21bb45dc38
+      path: modules/lib/nanopb
+
+    - name: tinycrypt
+      remote: zephyrproject-rtos
+      revision: 3e9a49d2672ec01435ffbf0d788db6d95ef28de0
+      path: modules/crypto/tinycrypt
+      groups:
+        - crypto
