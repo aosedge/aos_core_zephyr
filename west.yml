@@ -24,20 +24,20 @@ manifest:
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: aos-wip
+      revision: 83d0af1b7cfa2ff0b49e776c17f2e7e00bd02d80
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: develop
+      revision: v0.1.0
 
     - name: aos_core_api
       remote: aoscloud
-      revision: main
+      revision: v7.1.0
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: wip_zephyr_dom0
+      revision: d0762aabdedab23cfd8465b11eda49ffee3cc602
 
     - name: littlefs
       remote: zephyrproject-rtos
