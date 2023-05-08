@@ -41,14 +41,26 @@ static const struct json_obj_descr VMKernelDescr[] = {
     JSON_OBJ_DESCR_ARRAY(VMKernel, parameters, aos::oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
 };
 
+static const struct json_obj_descr VMHWConfigIOMEMDescr[] = {
+    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, firstGFN, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, firstMFN, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, nrMFNs, JSON_TOK_NUMBER),
+};
+
 static const struct json_obj_descr VMHWConfigDescr[] = {
-    JSON_OBJ_DESCR_PRIM(VMHWConfig, devicetree, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(VMHWConfig, deviceTree, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(VMHWConfig, vcpus, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(VMHWConfig, memKB, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_ARRAY(VMHWConfig, dtdevs, aos::oci::cMaxDTDevsCount, dtdevsLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJ_ARRAY(VMHWConfig, iomems, aos::oci::cMaxIOMEMsCount, iomemsLen, VMHWConfigIOMEMDescr,
+        ARRAY_SIZE(VMHWConfigIOMEMDescr)),
+    JSON_OBJ_DESCR_ARRAY(VMHWConfig, irqs, aos::oci::cMaxIRQsCount, irqsLen, JSON_TOK_NUMBER),
 };
 
 static const struct json_obj_descr VMDescr[] = {
     JSON_OBJ_DESCR_OBJECT(VM, hypervisor, VMHypervisorDescr),
     JSON_OBJ_DESCR_OBJECT(VM, kernel, VMKernelDescr),
-    JSON_OBJ_DESCR_OBJECT(VM, hwconfig, VMHWConfigDescr),
+    JSON_OBJ_DESCR_OBJECT(VM, hwConfig, VMHWConfigDescr),
 };
 
 static const struct json_obj_descr RuntimeSpecDescr[] = {
@@ -139,9 +151,13 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         return AOS_ERROR_WRAP(ret);
     }
 
-    runtimeSpec.mVersion = jsonRuntimeSpec->ociVersion;
+    runtimeSpec.mOCIVersion = jsonRuntimeSpec->ociVersion;
 
     if (ret & eRuntimeVMField) {
+        if (runtimeSpec.mVM == nullptr) {
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eNoMemory);
+        }
+
         runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
         runtimeSpec.mVM->mKernel.mPath = jsonRuntimeSpec->vm.kernel.path;
 
@@ -151,6 +167,24 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.kernel.parametersLen; i++) {
             runtimeSpec.mVM->mKernel.mParameters.PushBack(jsonRuntimeSpec->vm.kernel.parameters[i]);
+        }
+
+        runtimeSpec.mVM->mHWConfig.mDeviceTree = jsonRuntimeSpec->vm.hwConfig.deviceTree;
+        runtimeSpec.mVM->mHWConfig.mVCPUs = jsonRuntimeSpec->vm.hwConfig.vcpus;
+        runtimeSpec.mVM->mHWConfig.mMemKB = jsonRuntimeSpec->vm.hwConfig.memKB;
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.dtdevsLen; i++) {
+            runtimeSpec.mVM->mHWConfig.mDTDevs.PushBack(jsonRuntimeSpec->vm.hwConfig.dtdevs[i]);
+        }
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
+            auto iomem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
+
+            runtimeSpec.mVM->mHWConfig.mIOMEMs.PushBack({iomem.firstGFN, iomem.firstMFN, iomem.nrMFNs});
+        }
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.irqsLen; i++) {
+            runtimeSpec.mVM->mHWConfig.mIRQs.PushBack(jsonRuntimeSpec->vm.hwConfig.irqs[i]);
         }
     }
 
@@ -165,7 +199,10 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
 
     memset(jsonRuntimeSpec.Get(), 0, sizeof(RuntimeSpec));
 
-    jsonRuntimeSpec->ociVersion = runtimeSpec.mVersion.CStr();
+    jsonRuntimeSpec->vm.hypervisor.path = "";
+    jsonRuntimeSpec->vm.kernel.path = "";
+    jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
+    jsonRuntimeSpec->ociVersion = runtimeSpec.mOCIVersion.CStr();
 
     if (runtimeSpec.mVM) {
         jsonRuntimeSpec->vm.hypervisor.path = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
@@ -183,7 +220,29 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
                 = const_cast<char*>(runtimeSpec.mVM->mKernel.mParameters[i].CStr());
         }
 
-        jsonRuntimeSpec->vm.hwconfig.devicetree = "";
+        jsonRuntimeSpec->vm.hwConfig.deviceTree = runtimeSpec.mVM->mHWConfig.mDeviceTree.CStr();
+        jsonRuntimeSpec->vm.hwConfig.vcpus = runtimeSpec.mVM->mHWConfig.mVCPUs;
+        jsonRuntimeSpec->vm.hwConfig.memKB = runtimeSpec.mVM->mHWConfig.mMemKB;
+
+        jsonRuntimeSpec->vm.hwConfig.dtdevsLen = runtimeSpec.mVM->mHWConfig.mDTDevs.Size();
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.dtdevsLen; i++) {
+            jsonRuntimeSpec->vm.hwConfig.dtdevs[i] = runtimeSpec.mVM->mHWConfig.mDTDevs[i].CStr();
+        }
+
+        jsonRuntimeSpec->vm.hwConfig.iomemsLen = runtimeSpec.mVM->mHWConfig.mIOMEMs.Size();
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
+            auto iomem = runtimeSpec.mVM->mHWConfig.mIOMEMs[i];
+
+            jsonRuntimeSpec->vm.hwConfig.iomems[i] = {iomem.mFirstGFN, iomem.mFirstMFN, iomem.mNrMFNs};
+        }
+
+        jsonRuntimeSpec->vm.hwConfig.irqsLen = runtimeSpec.mVM->mHWConfig.mIRQs.Size();
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.irqsLen; i++) {
+            jsonRuntimeSpec->vm.hwConfig.irqs[i] = runtimeSpec.mVM->mHWConfig.mIRQs[i];
+        }
     }
 
     json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec.Get(),
@@ -229,6 +288,12 @@ aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path)
 {
     aos::Error err = aos::ErrorEnum::eNone;
 
+    // zephyr doesn't support O_TRUNC flag. This is WA to trunc file if it exists.
+    auto ret = unlink(path.CStr());
+    if (ret < 0 && errno != ENOENT) {
+        return AOS_ERROR_WRAP(errno);
+    }
+
     auto file = open(path.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (file < 0) {
         return AOS_ERROR_WRAP(errno);
@@ -242,7 +307,7 @@ aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path)
         err = AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
 
-    auto ret = close(file);
+    ret = close(file);
     if (err.IsNone() && (ret < 0)) {
         err = AOS_ERROR_WRAP(errno);
     }

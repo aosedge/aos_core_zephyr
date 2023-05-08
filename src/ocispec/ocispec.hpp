@@ -54,10 +54,27 @@ struct VMKernel {
 };
 
 /**
+ * Contains information about IOMEMs.
+ */
+struct VMHWConfigIOMEM {
+    uint64_t firstGFN;
+    uint64_t firstMFN;
+    uint64_t nrMFNs;
+};
+
+/**
  * Contains information about HW configuration.
  */
 struct VMHWConfig {
-    const char* devicetree;
+    const char*     deviceTree;
+    uint32_t        vcpus;
+    uint64_t        memKB;
+    const char*     dtdevs[aos::oci::cMaxDTDevsCount];
+    size_t          dtdevsLen;
+    VMHWConfigIOMEM iomems[aos::oci::cMaxIOMEMsCount];
+    size_t          iomemsLen;
+    uint32_t        irqs[aos::oci::cMaxIRQsCount];
+    size_t          irqsLen;
 };
 
 /**
@@ -66,7 +83,7 @@ struct VMHWConfig {
 struct VM {
     VMHypervisor hypervisor;
     VMKernel     kernel;
-    VMHWConfig   hwconfig;
+    VMHWConfig   hwConfig;
 };
 
 /**
