@@ -22,10 +22,15 @@ ZTEST(ocispec, test_read_write_ImageSpec)
     writeImageSpec.mConfig.mCmd.PushBack("hello_world.sh");
     writeImageSpec.mConfig.mEntryPoint.PushBack("Entry1");
 
-    auto err = gOCISpecHelper.SaveImageSpec("/tmp/ImageSpec.txt", writeImageSpec);
+    auto ret = mkdir("/tmp/aos", S_IRWXU | S_IRWXG | S_IRWXO);
+    if (ret != 0) {
+        zassert_true(errno == EEXIST, "Can't create test folder");
+    }
+
+    auto err = gOCISpecHelper.SaveImageSpec("/tmp/aos/ImageSpec.json", writeImageSpec);
     zassert_true(err.IsNone(), "Cant save image spec: %s", err.Message());
 
-    err = gOCISpecHelper.LoadImageSpec("/tmp/ImageSpec.txt", readImageSpec);
+    err = gOCISpecHelper.LoadImageSpec("/tmp/aos/ImageSpec.json", readImageSpec);
     zassert_true(err.IsNone(), "Cant load image spec: %s", err.Message());
 
     for (size_t i = 0; i < writeImageSpec.mConfig.mCmd.Size(); i++) {
@@ -56,10 +61,15 @@ ZTEST(ocispec, test_read_write_RuntimeSpec)
     writeVMConfig.mKernel.mParameters.PushBack("KerParam2");
     writeVMConfig.mKernel.mParameters.PushBack("KerParam3");
 
-    auto err = gOCISpecHelper.SaveRuntimeSpec("/tmp/RuntimeSpec.txt", writeRuntimeSpec);
+    auto ret = mkdir("/tmp/aos", S_IRWXU | S_IRWXG | S_IRWXO);
+    if (ret != 0) {
+        zassert_true(errno == EEXIST, "Can't create test folder");
+    }
+
+    auto err = gOCISpecHelper.SaveRuntimeSpec("/tmp/aos/RuntimeSpec.json", writeRuntimeSpec);
     zassert_true(err.IsNone(), "Cant save runtime spec: %s", err.Message());
 
-    err = gOCISpecHelper.LoadRuntimeSpec("/tmp/RuntimeSpec.txt", readRuntimeSpec);
+    err = gOCISpecHelper.LoadRuntimeSpec("/tmp/aos/RuntimeSpec.json", readRuntimeSpec);
     zassert_true(err.IsNone(), "Cant load runtime spec: %s", err.Message());
 
     zassert_equal(writeRuntimeSpec.mVersion, readRuntimeSpec.mVersion, "Incorrect versions");
@@ -72,7 +82,7 @@ ZTEST(ocispec, test_read_write_RuntimeSpec)
     }
 
     for (size_t i = 0; i < writeVMConfig.mKernel.mParameters.Size(); i++) {
-        zassert_equal(writeVMConfig.mKernel.mParameters[i], readVMConfig.mKernel.mParameters[i],
-            "Incorrect value kernel param");
+        zassert_equal(
+            writeVMConfig.mKernel.mParameters[i], readVMConfig.mKernel.mParameters[i], "Incorrect value kernel param");
     }
 }

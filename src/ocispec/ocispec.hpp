@@ -70,6 +70,14 @@ struct VM {
 };
 
 /**
+ * OCI runtime specification bit fields.
+ */
+enum RuntimeSpecFields {
+    eRuntimeOCIVersionField = BIT(0),
+    eRuntimeVMField = BIT(1),
+};
+
+/**
  * OCI runtime specification.
  */
 struct RuntimeSpec {
@@ -121,8 +129,8 @@ public:
 private:
     static constexpr size_t cJsonMaxContentSize = 4096;
 
-    aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path, size_t maxContentSize);
-    aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path, size_t len);
+    aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path);
+    aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path);
 
     aos::Mutex                                                             mMutex;
     aos::StaticBuffer<cJsonMaxContentSize>                                 mJsonFileBuffer;

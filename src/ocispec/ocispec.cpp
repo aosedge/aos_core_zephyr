@@ -64,7 +64,7 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
 {
     aos::LockGuard lock(mMutex);
 
-    auto readRet = ReadFileContentToBuffer(path, cJsonMaxContentSize);
+    auto readRet = ReadFileContentToBuffer(path);
     if (!readRet.mError.IsNone()) {
         return readRet.mError;
     }
@@ -112,7 +112,7 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
     json_obj_encode_buf(ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), jsonImageSpec.Get(),
         static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
 
-    auto err = WriteEncodedJsonBufferToFile(path, strlen(static_cast<char*>(mJsonFileBuffer.Get())));
+    auto err = WriteEncodedJsonBufferToFile(path);
     if (!err.IsNone()) {
         return err;
     }
@@ -124,11 +124,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 {
     aos::LockGuard lock(mMutex);
 
-    if (runtimeSpec.mVM == nullptr) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
-    }
-
-    auto readRet = ReadFileContentToBuffer(path, cJsonMaxContentSize);
+    auto readRet = ReadFileContentToBuffer(path);
     if (!readRet.mError.IsNone()) {
         return readRet.mError;
     }
@@ -144,15 +140,18 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
     }
 
     runtimeSpec.mVersion = jsonRuntimeSpec->ociVersion;
-    runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
-    runtimeSpec.mVM->mKernel.mPath = jsonRuntimeSpec->vm.kernel.path;
 
-    for (size_t i = 0; i < jsonRuntimeSpec->vm.hypervisor.parametersLen; i++) {
-        runtimeSpec.mVM->mHypervisor.mParameters.PushBack(jsonRuntimeSpec->vm.hypervisor.parameters[i]);
-    }
+    if (ret & eRuntimeVMField) {
+        runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
+        runtimeSpec.mVM->mKernel.mPath = jsonRuntimeSpec->vm.kernel.path;
 
-    for (size_t i = 0; i < jsonRuntimeSpec->vm.kernel.parametersLen; i++) {
-        runtimeSpec.mVM->mKernel.mParameters.PushBack(jsonRuntimeSpec->vm.kernel.parameters[i]);
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.hypervisor.parametersLen; i++) {
+            runtimeSpec.mVM->mHypervisor.mParameters.PushBack(jsonRuntimeSpec->vm.hypervisor.parameters[i]);
+        }
+
+        for (size_t i = 0; i < jsonRuntimeSpec->vm.kernel.parametersLen; i++) {
+            runtimeSpec.mVM->mKernel.mParameters.PushBack(jsonRuntimeSpec->vm.kernel.parameters[i]);
+        }
     }
 
     return aos::ErrorEnum::eNone;
@@ -162,35 +161,35 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
 {
     aos::LockGuard lock(mMutex);
 
-    if (runtimeSpec.mVM == nullptr) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
-    }
-
     auto jsonRuntimeSpec = aos::UniquePtr<RuntimeSpec>(&mAllocator, new (&mAllocator) RuntimeSpec);
 
     memset(jsonRuntimeSpec.Get(), 0, sizeof(RuntimeSpec));
 
     jsonRuntimeSpec->ociVersion = runtimeSpec.mVersion.CStr();
-    jsonRuntimeSpec->vm.hypervisor.path = runtimeSpec.mVM->mHypervisor.mPath.CStr();
-    jsonRuntimeSpec->vm.kernel.path = runtimeSpec.mVM->mKernel.mPath.CStr();
-    jsonRuntimeSpec->vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
-    jsonRuntimeSpec->vm.kernel.parametersLen = runtimeSpec.mVM->mKernel.mParameters.Size();
 
-    for (size_t i = 0; i < runtimeSpec.mVM->mHypervisor.mParameters.Size(); i++) {
-        jsonRuntimeSpec->vm.hypervisor.parameters[i]
-            = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mParameters[i].CStr());
+    if (runtimeSpec.mVM) {
+        jsonRuntimeSpec->vm.hypervisor.path = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
+        jsonRuntimeSpec->vm.kernel.path = const_cast<char*>(runtimeSpec.mVM->mKernel.mPath.CStr());
+        jsonRuntimeSpec->vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
+        jsonRuntimeSpec->vm.kernel.parametersLen = runtimeSpec.mVM->mKernel.mParameters.Size();
+
+        for (size_t i = 0; i < runtimeSpec.mVM->mHypervisor.mParameters.Size(); i++) {
+            jsonRuntimeSpec->vm.hypervisor.parameters[i]
+                = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mParameters[i].CStr());
+        }
+
+        for (size_t i = 0; i < runtimeSpec.mVM->mKernel.mParameters.Size(); i++) {
+            jsonRuntimeSpec->vm.kernel.parameters[i]
+                = const_cast<char*>(runtimeSpec.mVM->mKernel.mParameters[i].CStr());
+        }
+
+        jsonRuntimeSpec->vm.hwconfig.devicetree = "";
     }
-
-    for (size_t i = 0; i < runtimeSpec.mVM->mKernel.mParameters.Size(); i++) {
-        jsonRuntimeSpec->vm.kernel.parameters[i] = const_cast<char*>(runtimeSpec.mVM->mKernel.mParameters[i].CStr());
-    }
-
-    jsonRuntimeSpec->vm.hwconfig.devicetree = "";
 
     json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec.Get(),
-        static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
+        static_cast<char*>(mJsonFileBuffer.Get()), mJsonFileBuffer.Size());
 
-    auto err = WriteEncodedJsonBufferToFile(path, strlen(static_cast<char*>(mJsonFileBuffer.Get())));
+    auto err = WriteEncodedJsonBufferToFile(path);
     if (!err.IsNone()) {
         return err;
     }
@@ -202,7 +201,7 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
  * Private
  **********************************************************************************************************************/
 
-aos::RetWithError<size_t> OCISpec::ReadFileContentToBuffer(const aos::String& path, size_t maxContentSize)
+aos::RetWithError<size_t> OCISpec::ReadFileContentToBuffer(const aos::String& path)
 {
     aos::RetWithError<size_t> err(0, aos::ErrorEnum::eNone);
 
@@ -212,7 +211,7 @@ aos::RetWithError<size_t> OCISpec::ReadFileContentToBuffer(const aos::String& pa
         return err;
     }
 
-    err.mValue = read(file, mJsonFileBuffer.Get(), maxContentSize);
+    err.mValue = read(file, mJsonFileBuffer.Get(), cJsonMaxContentSize);
     if (err.mValue < 0) {
         err.mError = AOS_ERROR_WRAP(errno);
     }
@@ -226,7 +225,7 @@ aos::RetWithError<size_t> OCISpec::ReadFileContentToBuffer(const aos::String& pa
     return err;
 }
 
-aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path, size_t len)
+aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path)
 {
     aos::Error err = aos::ErrorEnum::eNone;
 
@@ -235,6 +234,7 @@ aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path, size_t
         return AOS_ERROR_WRAP(errno);
     }
 
+    auto len = strlen(static_cast<char*>(mJsonFileBuffer.Get()));
     auto written = write(file, mJsonFileBuffer.Get(), len);
     if (written < 0) {
         err = AOS_ERROR_WRAP(errno);
