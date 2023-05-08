@@ -9,6 +9,7 @@
 #define OCISPEC_HPP_
 
 #include <aos/common/ocispec.hpp>
+#include <aos/common/tools/allocator.hpp>
 #include <aos/common/tools/thread.hpp>
 
 // Image spec
@@ -81,12 +82,6 @@ struct RuntimeSpec {
  */
 class OCISpec : public aos::OCISpecItf {
 public:
-    OCISpec()
-        : mJsonFileBuffer()
-        , mRuntimeSpec()
-        , mImageSpec()
-    {
-    }
     /**
      * Loads OCI image spec.
      *
@@ -129,10 +124,9 @@ private:
     aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path, size_t maxContentSize);
     aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path, size_t len);
 
-    aos::StaticBuffer<cJsonMaxContentSize> mJsonFileBuffer;
-    aos::Mutex                             mMutex;
-    RuntimeSpec                            mRuntimeSpec;
-    ImageSpec                              mImageSpec;
+    aos::Mutex                                                             mMutex;
+    aos::StaticBuffer<cJsonMaxContentSize>                                 mJsonFileBuffer;
+    aos::StaticAllocator<aos::Max(sizeof(ImageSpec), sizeof(RuntimeSpec))> mAllocator;
 };
 
 #endif

@@ -9,6 +9,8 @@
 
 #include <zephyr/data/json.h>
 
+#include <aos/common/tools/memory.hpp>
+
 #include "ocispec.hpp"
 
 /***********************************************************************************************************************
@@ -67,18 +69,22 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
         return readRet.mError;
     }
 
+    auto jsonImageSpec = aos::UniquePtr<ImageSpec>(&mAllocator, new (&mAllocator) ImageSpec);
+
+    memset(jsonImageSpec.Get(), 0, sizeof(ImageSpec));
+
     int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageSpecDescr,
-        ARRAY_SIZE(ImageSpecDescr), &mImageSpec);
+        ARRAY_SIZE(ImageSpecDescr), jsonImageSpec.Get());
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
 
-    for (size_t i = 0; i < mImageSpec.config.cmdLen; i++) {
-        imageSpec.mConfig.mCmd.PushBack(mImageSpec.config.Cmd[i]);
+    for (size_t i = 0; i < jsonImageSpec->config.cmdLen; i++) {
+        imageSpec.mConfig.mCmd.PushBack(jsonImageSpec->config.Cmd[i]);
     }
 
-    for (size_t i = 0; i < mImageSpec.config.entrypointLen; i++) {
-        imageSpec.mConfig.mEntryPoint.PushBack(mImageSpec.config.entrypoint[i]);
+    for (size_t i = 0; i < jsonImageSpec->config.entrypointLen; i++) {
+        imageSpec.mConfig.mEntryPoint.PushBack(jsonImageSpec->config.entrypoint[i]);
     }
 
     return aos::ErrorEnum::eNone;
@@ -88,18 +94,22 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
 {
     aos::LockGuard lock(mMutex);
 
-    mImageSpec.config.cmdLen = imageSpec.mConfig.mCmd.Size();
-    mImageSpec.config.entrypointLen = imageSpec.mConfig.mEntryPoint.Size();
+    auto jsonImageSpec = aos::UniquePtr<ImageSpec>(&mAllocator, new (&mAllocator) ImageSpec);
+
+    memset(jsonImageSpec.Get(), 0, sizeof(ImageSpec));
+
+    jsonImageSpec->config.cmdLen = imageSpec.mConfig.mCmd.Size();
+    jsonImageSpec->config.entrypointLen = imageSpec.mConfig.mEntryPoint.Size();
 
     for (size_t i = 0; i < imageSpec.mConfig.mCmd.Size(); i++) {
-        mImageSpec.config.Cmd[i] = imageSpec.mConfig.mCmd[i].CStr();
+        jsonImageSpec->config.Cmd[i] = imageSpec.mConfig.mCmd[i].CStr();
     }
 
     for (size_t i = 0; i < imageSpec.mConfig.mEntryPoint.Size(); i++) {
-        mImageSpec.config.entrypoint[i] = imageSpec.mConfig.mEntryPoint[i].CStr();
+        jsonImageSpec->config.entrypoint[i] = imageSpec.mConfig.mEntryPoint[i].CStr();
     }
 
-    json_obj_encode_buf(ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), &mImageSpec,
+    json_obj_encode_buf(ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), jsonImageSpec.Get(),
         static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
 
     auto err = WriteEncodedJsonBufferToFile(path, strlen(static_cast<char*>(mJsonFileBuffer.Get())));
@@ -123,22 +133,26 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         return readRet.mError;
     }
 
+    auto jsonRuntimeSpec = aos::UniquePtr<RuntimeSpec>(&mAllocator, new (&mAllocator) RuntimeSpec);
+
+    memset(jsonRuntimeSpec.Get(), 0, sizeof(RuntimeSpec));
+
     int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, RuntimeSpecDescr,
-        ARRAY_SIZE(RuntimeSpecDescr), &mRuntimeSpec);
+        ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec.Get());
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
 
-    runtimeSpec.mVersion = mRuntimeSpec.ociVersion;
-    runtimeSpec.mVM->mHypervisor.mPath = mRuntimeSpec.vm.hypervisor.path;
-    runtimeSpec.mVM->mKernel.mPath = mRuntimeSpec.vm.kernel.path;
+    runtimeSpec.mVersion = jsonRuntimeSpec->ociVersion;
+    runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
+    runtimeSpec.mVM->mKernel.mPath = jsonRuntimeSpec->vm.kernel.path;
 
-    for (size_t i = 0; i < mRuntimeSpec.vm.hypervisor.parametersLen; i++) {
-        runtimeSpec.mVM->mHypervisor.mParameters.PushBack(mRuntimeSpec.vm.hypervisor.parameters[i]);
+    for (size_t i = 0; i < jsonRuntimeSpec->vm.hypervisor.parametersLen; i++) {
+        runtimeSpec.mVM->mHypervisor.mParameters.PushBack(jsonRuntimeSpec->vm.hypervisor.parameters[i]);
     }
 
-    for (size_t i = 0; i < mRuntimeSpec.vm.kernel.parametersLen; i++) {
-        runtimeSpec.mVM->mKernel.mParameters.PushBack(mRuntimeSpec.vm.kernel.parameters[i]);
+    for (size_t i = 0; i < jsonRuntimeSpec->vm.kernel.parametersLen; i++) {
+        runtimeSpec.mVM->mKernel.mParameters.PushBack(jsonRuntimeSpec->vm.kernel.parameters[i]);
     }
 
     return aos::ErrorEnum::eNone;
@@ -152,23 +166,28 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
         return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
     }
 
-    mRuntimeSpec.ociVersion = runtimeSpec.mVersion.CStr();
-    mRuntimeSpec.vm.hypervisor.path = runtimeSpec.mVM->mHypervisor.mPath.CStr();
-    mRuntimeSpec.vm.kernel.path = runtimeSpec.mVM->mKernel.mPath.CStr();
-    mRuntimeSpec.vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
-    mRuntimeSpec.vm.kernel.parametersLen = runtimeSpec.mVM->mKernel.mParameters.Size();
+    auto jsonRuntimeSpec = aos::UniquePtr<RuntimeSpec>(&mAllocator, new (&mAllocator) RuntimeSpec);
+
+    memset(jsonRuntimeSpec.Get(), 0, sizeof(RuntimeSpec));
+
+    jsonRuntimeSpec->ociVersion = runtimeSpec.mVersion.CStr();
+    jsonRuntimeSpec->vm.hypervisor.path = runtimeSpec.mVM->mHypervisor.mPath.CStr();
+    jsonRuntimeSpec->vm.kernel.path = runtimeSpec.mVM->mKernel.mPath.CStr();
+    jsonRuntimeSpec->vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
+    jsonRuntimeSpec->vm.kernel.parametersLen = runtimeSpec.mVM->mKernel.mParameters.Size();
 
     for (size_t i = 0; i < runtimeSpec.mVM->mHypervisor.mParameters.Size(); i++) {
-        mRuntimeSpec.vm.hypervisor.parameters[i] = runtimeSpec.mVM->mHypervisor.mParameters[i].CStr();
+        jsonRuntimeSpec->vm.hypervisor.parameters[i]
+            = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mParameters[i].CStr());
     }
 
     for (size_t i = 0; i < runtimeSpec.mVM->mKernel.mParameters.Size(); i++) {
-        mRuntimeSpec.vm.kernel.parameters[i] = runtimeSpec.mVM->mKernel.mParameters[i].CStr();
+        jsonRuntimeSpec->vm.kernel.parameters[i] = const_cast<char*>(runtimeSpec.mVM->mKernel.mParameters[i].CStr());
     }
 
-    mRuntimeSpec.vm.hwconfig.devicetree = "";
+    jsonRuntimeSpec->vm.hwconfig.devicetree = "";
 
-    json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), &mRuntimeSpec,
+    json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec.Get(),
         static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
 
     auto err = WriteEncodedJsonBufferToFile(path, strlen(static_cast<char*>(mJsonFileBuffer.Get())));
