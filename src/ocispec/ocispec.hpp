@@ -8,9 +8,73 @@
 #ifndef OCISPEC_HPP_
 #define OCISPEC_HPP_
 
+#include <aos/common/ocispec.hpp>
 #include <aos/common/tools/thread.hpp>
 
-#include "ocijsonspec.hpp"
+// Image spec
+
+/**
+ * OCI image config.
+ */
+struct ImageConfig {
+    const char* Cmd[aos::oci::cMaxParamCount];
+    size_t      cmdLen;
+    const char* Env[aos::oci::cMaxParamCount];
+    size_t      envLen;
+    const char* entrypoint[aos::oci::cMaxParamCount];
+    size_t      entrypointLen;
+};
+
+/**
+ * OCI image specification.
+ */
+struct ImageSpec {
+    ImageConfig config;
+};
+
+// Runtime spec
+
+/**
+ * Contains information about the hypervisor to use for a virtual machine.
+ */
+struct VMHypervisor {
+    const char* path;
+    const char* parameters[aos::oci::cMaxParamCount];
+    size_t      parametersLen;
+};
+
+/**
+ * Contains information about the kernel to use for a virtual machine.
+ */
+struct VMKernel {
+    const char* path;
+    const char* parameters[aos::oci::cMaxParamCount];
+    size_t      parametersLen;
+};
+
+/**
+ * Contains information about HW configuration.
+ */
+struct VMHWConfig {
+    const char* devicetree;
+};
+
+/**
+ * Contains information for virtual-machine-based containers.
+ */
+struct VM {
+    VMHypervisor hypervisor;
+    VMKernel     kernel;
+    VMHWConfig   hwconfig;
+};
+
+/**
+ * OCI runtime specification.
+ */
+struct RuntimeSpec {
+    const char* ociVersion;
+    VM          vm;
+};
 
 /**
  * OCISpec instance.
@@ -19,7 +83,6 @@ class OCISpec : public aos::OCISpecItf {
 public:
     OCISpec()
         : mJsonFileBuffer()
-        , mBufferMutex()
         , mRuntimeSpec()
         , mImageSpec()
     {
@@ -64,11 +127,12 @@ private:
     static constexpr size_t cJsonMaxContentSize = 4096;
 
     aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path, size_t maxContentSize);
-    aos::Error             WriteEncodedJsonBufferToFile(const aos::String& path, size_t len);
+    aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path, size_t len);
 
     aos::StaticBuffer<cJsonMaxContentSize> mJsonFileBuffer;
-    aos::Mutex                             mBufferMutex;
+    aos::Mutex                             mMutex;
     RuntimeSpec                            mRuntimeSpec;
     ImageSpec                              mImageSpec;
 };
+
 #endif

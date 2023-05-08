@@ -5,33 +5,79 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/fs/fs.h>
-
 #include <fcntl.h>
-#include <unistd.h>
+
+#include <zephyr/data/json.h>
 
 #include "ocispec.hpp"
 
+/***********************************************************************************************************************
+ * Vars
+ **********************************************************************************************************************/
+
+// Image spec
+
+const struct json_obj_descr ImageConfigDescr[] = {
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Cmd, aos::oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Env, aos::oci::cMaxParamCount, envLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, entrypoint, aos::oci::cMaxParamCount, entrypointLen, JSON_TOK_STRING),
+};
+
+const struct json_obj_descr ImageSpecDescr[] = {
+    JSON_OBJ_DESCR_OBJECT(ImageSpec, config, ImageConfigDescr),
+};
+
+// Runtime spec
+
+static const struct json_obj_descr VMHypervisorDescr[] = {
+    JSON_OBJ_DESCR_PRIM(VMHypervisor, path, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(VMHypervisor, parameters, aos::oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
+};
+
+static const struct json_obj_descr VMKernelDescr[] = {
+    JSON_OBJ_DESCR_PRIM(VMKernel, path, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(VMKernel, parameters, aos::oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
+};
+
+static const struct json_obj_descr VMHWConfigDescr[] = {
+    JSON_OBJ_DESCR_PRIM(VMHWConfig, devicetree, JSON_TOK_STRING),
+};
+
+static const struct json_obj_descr VMDescr[] = {
+    JSON_OBJ_DESCR_OBJECT(VM, hypervisor, VMHypervisorDescr),
+    JSON_OBJ_DESCR_OBJECT(VM, kernel, VMKernelDescr),
+    JSON_OBJ_DESCR_OBJECT(VM, hwconfig, VMHWConfigDescr),
+};
+
+static const struct json_obj_descr RuntimeSpecDescr[] = {
+    JSON_OBJ_DESCR_PRIM(RuntimeSpec, ociVersion, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJECT(RuntimeSpec, vm, VMDescr),
+};
+
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
 aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& imageSpec)
 {
-    aos::LockGuard lock(mBufferMutex);
+    aos::LockGuard lock(mMutex);
 
     auto readRet = ReadFileContentToBuffer(path, cJsonMaxContentSize);
     if (!readRet.mError.IsNone()) {
         return readRet.mError;
     }
 
-    int ret = json_obj_parse(
-        (char*)mJsonFileBuffer.Get(), readRet.mValue, ImageSpecJsonDescr, ARRAY_SIZE(ImageSpecJsonDescr), &mImageSpec);
+    int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageSpecDescr,
+        ARRAY_SIZE(ImageSpecDescr), &mImageSpec);
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
 
-    for (uint8_t i = 0; i < mImageSpec.config.cmdLen; i++) {
+    for (size_t i = 0; i < mImageSpec.config.cmdLen; i++) {
         imageSpec.mConfig.mCmd.PushBack(mImageSpec.config.Cmd[i]);
     }
 
-    for (uint8_t i = 0; i < mImageSpec.config.entrypointLen; i++) {
+    for (size_t i = 0; i < mImageSpec.config.entrypointLen; i++) {
         imageSpec.mConfig.mEntryPoint.PushBack(mImageSpec.config.entrypoint[i]);
     }
 
@@ -40,23 +86,23 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
 
 aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::ImageSpec& imageSpec)
 {
-    aos::LockGuard lock(mBufferMutex);
+    aos::LockGuard lock(mMutex);
 
     mImageSpec.config.cmdLen = imageSpec.mConfig.mCmd.Size();
     mImageSpec.config.entrypointLen = imageSpec.mConfig.mEntryPoint.Size();
 
     for (size_t i = 0; i < imageSpec.mConfig.mCmd.Size(); i++) {
-        mImageSpec.config.Cmd[i] = const_cast<char*>(imageSpec.mConfig.mCmd[i].CStr());
+        mImageSpec.config.Cmd[i] = imageSpec.mConfig.mCmd[i].CStr();
     }
 
     for (size_t i = 0; i < imageSpec.mConfig.mEntryPoint.Size(); i++) {
-        mImageSpec.config.entrypoint[i] = const_cast<char*>(imageSpec.mConfig.mEntryPoint[i].CStr());
+        mImageSpec.config.entrypoint[i] = imageSpec.mConfig.mEntryPoint[i].CStr();
     }
 
-    json_obj_encode_buf(ImageSpecJsonDescr, ARRAY_SIZE(ImageSpecJsonDescr), &mImageSpec, (char*)mJsonFileBuffer.Get(),
-        cJsonMaxContentSize);
+    json_obj_encode_buf(ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), &mImageSpec,
+        static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
 
-    auto err = WriteEncodedJsonBufferToFile(path, strlen((char*)mJsonFileBuffer.Get()));
+    auto err = WriteEncodedJsonBufferToFile(path, strlen(static_cast<char*>(mJsonFileBuffer.Get())));
     if (!err.IsNone()) {
         return err;
     }
@@ -66,19 +112,19 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
 
 aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSpec& runtimeSpec)
 {
+    aos::LockGuard lock(mMutex);
+
     if (runtimeSpec.mVM == nullptr) {
         return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
     }
-
-    aos::LockGuard lock(mBufferMutex);
 
     auto readRet = ReadFileContentToBuffer(path, cJsonMaxContentSize);
     if (!readRet.mError.IsNone()) {
         return readRet.mError;
     }
 
-    int ret = json_obj_parse((char*)mJsonFileBuffer.Get(), readRet.mValue, RuntimeSpecJsonDescr,
-        ARRAY_SIZE(RuntimeSpecJsonDescr), &mRuntimeSpec);
+    int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, RuntimeSpecDescr,
+        ARRAY_SIZE(RuntimeSpecDescr), &mRuntimeSpec);
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
@@ -87,11 +133,11 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
     runtimeSpec.mVM->mHypervisor.mPath = mRuntimeSpec.vm.hypervisor.path;
     runtimeSpec.mVM->mKernel.mPath = mRuntimeSpec.vm.kernel.path;
 
-    for (auto i = 0; i < mRuntimeSpec.vm.hypervisor.paramsLen; i++) {
+    for (size_t i = 0; i < mRuntimeSpec.vm.hypervisor.parametersLen; i++) {
         runtimeSpec.mVM->mHypervisor.mParameters.PushBack(mRuntimeSpec.vm.hypervisor.parameters[i]);
     }
 
-    for (auto i = 0; i < mRuntimeSpec.vm.kernel.paramsLen; i++) {
+    for (size_t i = 0; i < mRuntimeSpec.vm.kernel.parametersLen; i++) {
         runtimeSpec.mVM->mKernel.mParameters.PushBack(mRuntimeSpec.vm.kernel.parameters[i]);
     }
 
@@ -100,39 +146,42 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 
 aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec)
 {
+    aos::LockGuard lock(mMutex);
+
     if (runtimeSpec.mVM == nullptr) {
         return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
     }
 
-    aos::LockGuard lock(mBufferMutex);
-
-    mRuntimeSpec.ociVersion = const_cast<char*>(runtimeSpec.mVersion.CStr());
-    mRuntimeSpec.vm.hypervisor.path = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
-    mRuntimeSpec.vm.kernel.path = const_cast<char*>(runtimeSpec.mVM->mKernel.mPath.CStr());
-    mRuntimeSpec.vm.hypervisor.paramsLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
-    mRuntimeSpec.vm.kernel.paramsLen = runtimeSpec.mVM->mKernel.mParameters.Size();
+    mRuntimeSpec.ociVersion = runtimeSpec.mVersion.CStr();
+    mRuntimeSpec.vm.hypervisor.path = runtimeSpec.mVM->mHypervisor.mPath.CStr();
+    mRuntimeSpec.vm.kernel.path = runtimeSpec.mVM->mKernel.mPath.CStr();
+    mRuntimeSpec.vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
+    mRuntimeSpec.vm.kernel.parametersLen = runtimeSpec.mVM->mKernel.mParameters.Size();
 
     for (size_t i = 0; i < runtimeSpec.mVM->mHypervisor.mParameters.Size(); i++) {
-        mRuntimeSpec.vm.hypervisor.parameters[i]
-            = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mParameters[i].CStr());
+        mRuntimeSpec.vm.hypervisor.parameters[i] = runtimeSpec.mVM->mHypervisor.mParameters[i].CStr();
     }
 
     for (size_t i = 0; i < runtimeSpec.mVM->mKernel.mParameters.Size(); i++) {
-        mRuntimeSpec.vm.kernel.parameters[i] = const_cast<char*>(runtimeSpec.mVM->mKernel.mParameters[i].CStr());
+        mRuntimeSpec.vm.kernel.parameters[i] = runtimeSpec.mVM->mKernel.mParameters[i].CStr();
     }
 
-    mRuntimeSpec.vm.hwconfig.devicetree = const_cast<char*>("");
+    mRuntimeSpec.vm.hwconfig.devicetree = "";
 
-    json_obj_encode_buf(RuntimeSpecJsonDescr, ARRAY_SIZE(RuntimeSpecJsonDescr), &mRuntimeSpec,
-        (char*)mJsonFileBuffer.Get(), cJsonMaxContentSize);
+    json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), &mRuntimeSpec,
+        static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
 
-    auto err = WriteEncodedJsonBufferToFile(path, strlen((char*)mJsonFileBuffer.Get()));
+    auto err = WriteEncodedJsonBufferToFile(path, strlen(static_cast<char*>(mJsonFileBuffer.Get())));
     if (!err.IsNone()) {
         return err;
     }
 
     return aos::ErrorEnum::eNone;
 }
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
 
 aos::RetWithError<size_t> OCISpec::ReadFileContentToBuffer(const aos::String& path, size_t maxContentSize)
 {
