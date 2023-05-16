@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) 2023 Renesas Electronics Corporation.
+ * Copyright (C) 2023 EPAM Systems, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <mem.h>
 
@@ -16,6 +22,7 @@
 			block-cycles = <512>;
 		};
 	};
+
 	flashcontroller0: flashcontroller {
 		compatible = "zephyr,sim-flash";
 		label = "FLASH_SIMULATOR";
@@ -43,6 +50,7 @@
 		};
 	};
 };
+
 &ram {
 	reg = < 0x0 0x60000000 0x0 0x2000000 >;
 };
