@@ -39,7 +39,7 @@ add_definitions(-include aoscoreconfig.hpp)
 # ######################################################################################################################
 
 # Add stack usage warning
-target_compile_options(app PRIVATE -Wstack-usage=1024)
+target_compile_options(app PRIVATE -Wstack-usage=2048)
 
 # ######################################################################################################################
 # Taget
