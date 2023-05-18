@@ -16,7 +16,7 @@
 
 aos::Error Storage::Init()
 {
-    LOG_DBG() << "Initialize storage";
+    LOG_DBG() << "Initialize storage: " << cStoragePath;
 
     aos::Error err;
 
@@ -25,8 +25,6 @@ aos::Error Storage::Init()
 
         return err;
     }
-
-    LOG_DBG() << "Storage directory: " << cStoragePath;
 
     auto instancePath = aos::FS::JoinPath(cStoragePath, "instance.db");
 
