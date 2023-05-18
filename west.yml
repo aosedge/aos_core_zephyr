@@ -37,7 +37,7 @@ manifest:
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: d0762aabdedab23cfd8465b11eda49ffee3cc602
+      revision: 11a4b83097c59e199f0fd322c289dece6d7b263d
 
     - name: littlefs
       remote: zephyrproject-rtos
