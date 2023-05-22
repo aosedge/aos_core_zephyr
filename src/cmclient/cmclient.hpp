@@ -92,6 +92,8 @@ private:
     static constexpr auto cPartitionSize = CONFIG_AOS_PARTITION_SIZE;
     static constexpr auto CReadDelayUSec = 50000;
 
+    enum State { eConnected = 0, eFinish = 1 };
+
     aos::Error                       ProcessMessages();
     void                             ConnectToCM();
     void                             SendNodeConfiguration();
@@ -111,7 +113,7 @@ private:
     ResourceManager*                                             mResourceManager;
     DownloadReceiverItf*                                         mDownloader;
     aos::Thread<>                                                mThread;
-    atomic_t                                                     mFinishReadTrigger;
+    atomic_t                                                     mState = {};
     vch_handle                                                   mSMVChanHandler;
     servicemanager_v3_SMIncomingMessages                         mIncomingMessage;
     servicemanager_v3_SMOutgoingMessages                         mOutgoingMessage;

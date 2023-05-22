@@ -26,7 +26,7 @@ using namespace aos::sm::launcher;
 
 CMClient::~CMClient()
 {
-    atomic_set_bit(&mFinishReadTrigger, 0);
+    atomic_set_bit(&mState, eFinish);
     mThread.Join();
 }
 
@@ -43,7 +43,13 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
         while (true) {
             ConnectToCM();
 
-            auto err = ProcessMessages();
+            atomic_set_bit(&mState, eConnected);
+
+            err = ProcessMessages();
+
+            vch_close(&mSMVChanHandler);
+            atomic_clear_bit(&mState, eConnected);
+
             if (!err.IsNone()) {
                 LOG_ERR() << "Error processing messages: " << err;
 
@@ -63,6 +69,10 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
 aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances)
 {
     aos::LockGuard lock(mMutex);
+
+    if (!atomic_test_bit(&mState, eConnected)) {
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eWrongState);
+    }
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_run_instances_status_tag;
     mOutgoingMessage.SMOutgoingMessage.run_instances_status
@@ -85,6 +95,10 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
 {
     aos::LockGuard lock(mMutex);
 
+    if (!atomic_test_bit(&mState, eConnected)) {
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eWrongState);
+    }
+
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_update_instances_status_tag;
     mOutgoingMessage.SMOutgoingMessage.update_instances_status
         = servicemanager_v3_UpdateInstancesStatus servicemanager_v3_UpdateInstancesStatus_init_zero;
@@ -105,6 +119,10 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
 aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
 {
     aos::LockGuard lock(mMutex);
+
+    if (!atomic_test_bit(&mState, eConnected)) {
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eWrongState);
+    }
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_image_content_request_tag;
     mOutgoingMessage.SMOutgoingMessage.image_content_request = servicemanager_v3_ImageContentRequest_init_zero;
@@ -157,7 +175,7 @@ aos::Error CMClient::ProcessMessages()
 {
     VChanMessageHeader header;
 
-    while (!atomic_test_bit(&mFinishReadTrigger, 0)) {
+    while (!atomic_test_bit(&mState, eFinish)) {
         auto err = ReadDataFromVChan(&header, sizeof(VChanMessageHeader));
         if (!err.IsNone()) {
             return err;
@@ -237,6 +255,10 @@ aos::Error CMClient::ProcessMessages()
 void CMClient::SendNodeConfiguration()
 {
     aos::LockGuard lock(mMutex);
+
+    if (!atomic_test_bit(&mState, eConnected)) {
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eWrongState);
+    }
 
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_configuration_tag;
     mOutgoingMessage.SMOutgoingMessage.node_configuration
@@ -545,7 +567,7 @@ aos::Error CMClient::ReadDataFromVChan(void* des, size_t size)
 {
     size_t readSize = 0;
 
-    while (readSize < size && !atomic_test_bit(&mFinishReadTrigger, 0)) {
+    while (readSize < size && !atomic_test_bit(&mState, eFinish)) {
         aos::LockGuard lock(mMutex);
 
         auto read = vch_read(&mSMVChanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
