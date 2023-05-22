@@ -13,6 +13,10 @@
 #include "downloader.hpp"
 #include "log.hpp"
 
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
 Downloader::~Downloader()
 {
     aos::LockGuard lock(mMutex);
@@ -39,8 +43,8 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
     mFinishDownload = false;
     mDownloadResults.Clear();
 
-    auto err
-        = mTimer.Create(Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(aos::ErrorEnum::eTimeout); });
+    auto err = mTimer.Create(
+        Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
     if (!err.IsNone()) {
         LOG_DBG() << "Create timer failed: " << err;
 
@@ -61,43 +65,58 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
         return AOS_ERROR_WRAP(err);
     }
 
+    for (const auto& result : mDownloadResults) {
+        if (result.mFile == -1) {
+            continue;
+        }
+
+        auto ret = close(result.mFile);
+        if (ret < 0) {
+            err = AOS_ERROR_WRAP(errno);
+
+            LOG_ERR() << "Can't close file. Path: " << result.mRelativePath << ", err: " << err;
+
+            if (mErrProcessImageRequest.IsNone()) {
+                mErrProcessImageRequest = err;
+            }
+        }
+    }
+
     return mErrProcessImageRequest;
 }
 
 aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 {
-    LOG_DBG() << "Receive file chunk";
+    LOG_DBG() << "Receive file chunk: " << chunk.relativePath << ", chunk: " << chunk.part << "/" << chunk.partsCount;
 
     aos::LockGuard lock(mMutex);
 
-    auto result
-        = mDownloadResults
-              .Find([&chunk](const DownloadResult& result) { return result.mRelativePath == chunk.relativePath; })
-              .mValue;
+    auto downloadResult = mDownloadResults.Find(
+        [&chunk](const DownloadResult& result) { return result.mRelativePath == chunk.relativePath; });
 
-    if (result == nullptr) {
-        LOG_ERR() << "File chunk for unknown file: " << chunk.relativePath;
+    if (!downloadResult.mError.IsNone()) {
+        auto err = AOS_ERROR_WRAP(downloadResult.mError);
 
-        SetErrorAndNotify(aos::ErrorEnum::eNotFound);
+        SetErrorAndNotify(err);
 
-        return aos::ErrorEnum::eNotFound;
+        return err;
     }
 
-    if (result->mFile == -1) {
+    if (downloadResult.mValue->mFile == -1) {
         auto path = aos::FS::JoinPath(mRequestedPath, chunk.relativePath);
         auto dirPath = aos::FS::Dir(path);
 
         auto err = aos::FS::MakeDirAll(dirPath);
         if (!err.IsNone()) {
-            LOG_ERR() << "Failed to create directory: " << dirPath;
+            err = AOS_ERROR_WRAP(errno);
 
             SetErrorAndNotify(err);
 
             return err;
         }
 
-        result->mFile = open(path.CStr(), O_CREAT | O_WRONLY, 0644);
-        if (result->mFile < 0) {
+        downloadResult.mValue->mFile = open(path.CStr(), O_CREAT | O_WRONLY, 0644);
+        if (downloadResult.mValue->mFile < 0) {
             err = AOS_ERROR_WRAP(errno);
 
             SetErrorAndNotify(err);
@@ -106,7 +125,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
         }
     }
 
-    auto ret = write(result->mFile, chunk.data.Get(), chunk.data.Size());
+    auto ret = write(downloadResult.mValue->mFile, chunk.data.Get(), chunk.data.Size());
     if (ret < 0) {
         auto err = AOS_ERROR_WRAP(errno);
 
@@ -115,10 +134,10 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
         return err;
     }
 
-    mTimer.Reset([this](void*) { SetErrorAndNotify(aos::ErrorEnum::eTimeout); });
+    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
 
     if (chunk.part == chunk.partsCount) {
-        ret = close(result->mFile);
+        ret = close(downloadResult.mValue->mFile);
         if (ret < 0) {
             auto err = AOS_ERROR_WRAP(errno);
 
@@ -127,8 +146,8 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
             return err;
         }
 
-        result->mFile = -1;
-        result->mIsDone = true;
+        downloadResult.mValue->mFile = -1;
+        downloadResult.mValue->mIsDone = true;
 
         if (IsAllDownloadDone()) {
             mFinishDownload = true;
@@ -139,13 +158,6 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     return aos::ErrorEnum::eNone;
 }
 
-void Downloader::SetErrorAndNotify(const aos::Error& err)
-{
-    mFinishDownload = true;
-    mErrProcessImageRequest = err;
-    mWaitDownload.NotifyOne();
-}
-
 aos::Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
 {
     aos::LockGuard lock(mMutex);
@@ -153,25 +165,31 @@ aos::Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
     LOG_DBG() << "Receive image content info";
 
     if (content.requestID != mRequestID) {
-        return aos::ErrorEnum::eFailed;
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
     }
 
     if (content.error != "") {
         LOG_ERR() << "Error: " << content.error;
 
-        SetErrorAndNotify(aos::ErrorEnum::eFailed);
+        auto err = AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
 
-        return aos::ErrorEnum::eFailed;
+        SetErrorAndNotify(err);
+
+        return err;
     }
 
     for (auto& file : content.files) {
         mDownloadResults.PushBack(DownloadResult {file.relativePath, -1, false});
     }
 
-    mTimer.Reset([this](void*) { SetErrorAndNotify(aos::ErrorEnum::eTimeout); });
+    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
 
     return aos::ErrorEnum::eNone;
 }
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
 
 bool Downloader::IsAllDownloadDone() const
 {
@@ -182,4 +200,11 @@ bool Downloader::IsAllDownloadDone() const
     }
 
     return true;
+}
+
+void Downloader::SetErrorAndNotify(const aos::Error& err)
+{
+    mFinishDownload = true;
+    mErrProcessImageRequest = err;
+    mWaitDownload.NotifyOne();
 }
