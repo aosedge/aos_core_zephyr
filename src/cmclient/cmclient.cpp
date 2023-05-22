@@ -186,6 +186,11 @@ aos::Error CMClient::ProcessMessages()
             return err;
         }
 
+        if (header.dataSize > servicemanager_v3_SMIncomingMessages_size) {
+            LOG_ERR() << "Message is too big";
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
+        }
+
         err = ReadDataFromVChan(mReceiveBuffer.Get(), header.dataSize);
         if (!err.IsNone()) {
             return err;
