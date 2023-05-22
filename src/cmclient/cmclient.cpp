@@ -45,6 +45,16 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
 
             atomic_set_bit(&mState, eConnected);
 
+            auto err = SendNodeConfiguration();
+            if (!err.IsNone()) {
+                LOG_ERR() << "Can't send node configuration: " << err;
+            }
+
+            err = mLauncher->RunLastInstances();
+            if (!err.IsNone()) {
+                LOG_ERR() << "Can't run last instances: " << err;
+            }
+
             err = ProcessMessages();
 
             vch_close(&mSMVChanHandler);
@@ -150,10 +160,12 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
 
 void CMClient::ConnectToCM()
 {
-    do {
+    while (true) {
+        LOG_DBG() << "Connecting to vchan: " << cSMVChanPath << ", on dom: " << cDomdID;
+
         auto ret = vch_connect(cDomdID, cSMVChanPath, &mSMVChanHandler);
         if (ret != 0) {
-            LOG_WRN() << "Can't connect to SM vchan error: " << aos::Error(ret);
+            LOG_WRN() << "Can't connect to SM vchan error: " << AOS_ERROR_WRAP(ret);
 
             sleep(cConnectionTimeoutSec);
 
@@ -161,14 +173,7 @@ void CMClient::ConnectToCM()
         }
 
         break;
-    } while (true);
-
-    SendNodeConfiguration();
-
-    auto err = mLauncher->RunLastInstances();
-    if (!err.IsNone()) {
-        LOG_ERR() << "Can't run last instances: " << err;
-    }
+    };
 }
 
 aos::Error CMClient::ProcessMessages()
@@ -195,8 +200,7 @@ aos::Error CMClient::ProcessMessages()
         }
 
         if (0 != memcmp(calculatedDigest, header.sha256, sizeof(SHA256Digest))) {
-            LOG_ERR() << "SHA256 mismatch";
-            continue;
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidChecksum);
         }
 
         mIncomingMessage = servicemanager_v3_SMIncomingMessages_init_zero;
@@ -252,7 +256,7 @@ aos::Error CMClient::ProcessMessages()
     return aos::ErrorEnum::eNone;
 }
 
-void CMClient::SendNodeConfiguration()
+aos::Error CMClient::SendNodeConfiguration()
 {
     aos::LockGuard lock(mMutex);
 
@@ -280,8 +284,10 @@ void CMClient::SendNodeConfiguration()
 
     auto err = SendPBMessageToVChan();
     if (!err.IsNone()) {
-        LOG_ERR() << "Can't send node configuration: " << err;
+        return err;
     }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error CMClient::SendPBMessageToVChan()
