@@ -21,9 +21,7 @@ aos::Error Storage::Init()
     aos::Error err;
 
     if (!(err = aos::FS::MakeDirAll(cStoragePath)).IsNone()) {
-        LOG_ERR() << "Failed to create storage directory: " << err;
-
-        return err;
+        return AOS_ERROR_WRAP(err);
     }
 
     auto instancePath = aos::FS::JoinPath(cStoragePath, "instance.db");
@@ -35,7 +33,7 @@ aos::Error Storage::Init()
     auto servicePath = aos::FS::JoinPath(cStoragePath, "service.db");
 
     if (!(err = mServiceDatabase.Init(servicePath)).IsNone()) {
-        return err;
+        return AOS_ERROR_WRAP(err);
     }
 
     return aos::ErrorEnum::eNone;
@@ -82,7 +80,7 @@ aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
         auto instance = ConvertInstanceInfo(instanceInfo);
         auto err = instances.PushBack(instance);
         if (!err.IsNone()) {
-            return err;
+            return AOS_ERROR_WRAP(err);
         }
 
         return aos::ErrorEnum::eNone;
@@ -121,9 +119,10 @@ aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceDa
 
     auto err = mServiceDatabase.ReadRecords([&services, this](const ServiceData& serviceData) -> aos::Error {
         auto service = ConvertServiceData(serviceData);
+
         auto err = services.PushBack(service);
         if (!err.IsNone()) {
-            return err;
+            return AOS_ERROR_WRAP(err);
         }
 
         return aos::ErrorEnum::eNone;
@@ -147,6 +146,10 @@ aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(cons
 
     return aos::RetWithError<aos::sm::servicemanager::ServiceData>(ConvertServiceData(serviceData));
 }
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
 
 Storage::InstanceInfo Storage::ConvertInstanceInfo(const aos::InstanceInfo& instance)
 {

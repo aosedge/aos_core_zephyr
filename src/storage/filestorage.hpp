@@ -92,7 +92,7 @@ public:
             if (record.mDeleted) {
                 off_t offset = -static_cast<off_t>(sizeof(Record));
 
-                auto ret = lseek(mFd, offset, SEEK_CUR);
+                ret = lseek(mFd, offset, SEEK_CUR);
                 if (ret < 0) {
                     return AOS_ERROR_WRAP(errno);
                 }
