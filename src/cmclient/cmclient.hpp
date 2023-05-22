@@ -36,12 +36,7 @@ public:
     /**
      * Creates CM client.
      */
-    CMClient()
-        : mLauncher(nullptr)
-        , mThread()
-    {
-        atomic_clear_bit(&mFinishReadTrigger, 0);
-    }
+    CMClient() = default;
 
     /**
      * Destructor.
@@ -96,7 +91,7 @@ private:
 
     aos::Error                       ProcessMessages();
     void                             ConnectToCM();
-    void                             SendNodeConfiguration();
+    aos::Error                       SendNodeConfiguration();
     aos::Error                       SendPBMessageToVChan();
     aos::Error                       SendBufferToVChan(const uint8_t* buffer, size_t msgSize);
     aos::Error                       CalculateSha256(const aos::Buffer& buffer, size_t size, SHA256Digest& digest);
@@ -109,10 +104,10 @@ private:
     void                             ProcessImageContentChunk();
     aos::Error                       ReadDataFromVChan(void* des, size_t size);
 
-    aos::sm::launcher::LauncherItf*                              mLauncher;
-    ResourceManager*                                             mResourceManager;
-    DownloadReceiverItf*                                         mDownloader;
-    aos::Thread<>                                                mThread;
+    aos::sm::launcher::LauncherItf*                              mLauncher = {};
+    ResourceManager*                                             mResourceManager = {};
+    DownloadReceiverItf*                                         mDownloader = {};
+    aos::Thread<>                                                mThread = {};
     atomic_t                                                     mState = {};
     vch_handle                                                   mSMVChanHandler;
     servicemanager_v3_SMIncomingMessages                         mIncomingMessage;
