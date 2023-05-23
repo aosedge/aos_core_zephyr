@@ -20,9 +20,9 @@
 // Image spec
 
 const struct json_obj_descr ImageConfigDescr[] = {
-    JSON_OBJ_DESCR_ARRAY(ImageConfig, Cmd, aos::oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
     JSON_OBJ_DESCR_ARRAY(ImageConfig, Env, aos::oci::cMaxParamCount, envLen, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(ImageConfig, entrypoint, aos::oci::cMaxParamCount, entrypointLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Entrypoint, aos::oci::cMaxParamCount, entrypointLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Cmd, aos::oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
 };
 
 const struct json_obj_descr ImageSpecDescr[] = {
@@ -91,12 +91,22 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
         return AOS_ERROR_WRAP(ret);
     }
 
-    for (size_t i = 0; i < jsonImageSpec->config.cmdLen; i++) {
-        imageSpec.mConfig.mCmd.PushBack(jsonImageSpec->config.Cmd[i]);
+    // mEnv
+
+    for (size_t i = 0; i < jsonImageSpec->config.envLen; i++) {
+        imageSpec.mConfig.mEnv.PushBack(jsonImageSpec->config.Env[i]);
     }
 
+    // mEntryPoint
+
     for (size_t i = 0; i < jsonImageSpec->config.entrypointLen; i++) {
-        imageSpec.mConfig.mEntryPoint.PushBack(jsonImageSpec->config.entrypoint[i]);
+        imageSpec.mConfig.mEntryPoint.PushBack(jsonImageSpec->config.Entrypoint[i]);
+    }
+
+    // mCmd
+
+    for (size_t i = 0; i < jsonImageSpec->config.cmdLen; i++) {
+        imageSpec.mConfig.mCmd.PushBack(jsonImageSpec->config.Cmd[i]);
     }
 
     return aos::ErrorEnum::eNone;
@@ -110,19 +120,32 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
 
     memset(jsonImageSpec.Get(), 0, sizeof(ImageSpec));
 
-    jsonImageSpec->config.cmdLen = imageSpec.mConfig.mCmd.Size();
+    // mEnv
+
+    jsonImageSpec->config.envLen = imageSpec.mConfig.mEnv.Size();
+
+    for (size_t i = 0; i < imageSpec.mConfig.mEnv.Size(); i++) {
+        jsonImageSpec->config.Env[i] = imageSpec.mConfig.mEnv[i].CStr();
+    }
+
+    // mEntryPoint
+
     jsonImageSpec->config.entrypointLen = imageSpec.mConfig.mEntryPoint.Size();
+
+    for (size_t i = 0; i < imageSpec.mConfig.mEntryPoint.Size(); i++) {
+        jsonImageSpec->config.Entrypoint[i] = imageSpec.mConfig.mEntryPoint[i].CStr();
+    }
+
+    // mCmd
+
+    jsonImageSpec->config.cmdLen = imageSpec.mConfig.mCmd.Size();
 
     for (size_t i = 0; i < imageSpec.mConfig.mCmd.Size(); i++) {
         jsonImageSpec->config.Cmd[i] = imageSpec.mConfig.mCmd[i].CStr();
     }
 
-    for (size_t i = 0; i < imageSpec.mConfig.mEntryPoint.Size(); i++) {
-        jsonImageSpec->config.entrypoint[i] = imageSpec.mConfig.mEntryPoint[i].CStr();
-    }
-
     json_obj_encode_buf(ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), jsonImageSpec.Get(),
-        static_cast<char*>(mJsonFileBuffer.Get()), cJsonMaxContentSize);
+        static_cast<char*>(mJsonFileBuffer.Get()), mJsonFileBuffer.Size());
 
     auto err = WriteEncodedJsonBufferToFile(path);
     if (!err.IsNone()) {

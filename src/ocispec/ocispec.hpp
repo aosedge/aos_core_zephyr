@@ -22,7 +22,7 @@ struct ImageConfig {
     size_t      cmdLen;
     const char* Env[aos::oci::cMaxParamCount];
     size_t      envLen;
-    const char* entrypoint[aos::oci::cMaxParamCount];
+    const char* Entrypoint[aos::oci::cMaxParamCount];
     size_t      entrypointLen;
 };
 
