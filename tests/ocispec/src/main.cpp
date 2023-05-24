@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <fcntl.h>
+
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
 
@@ -14,127 +16,421 @@
  * Consts
  **********************************************************************************************************************/
 
+static constexpr size_t cJsonMaxContentSize = 4096;
+
 static constexpr auto cImageSpecPath = "/tmp/aos/image.json";
 static constexpr auto cRuntimeSpecPath = "/tmp/aos/runtime.json";
 
 /***********************************************************************************************************************
- * Vars
+ * Private
  **********************************************************************************************************************/
 
-OCISpec gOCISpecHelper;
+static aos::RetWithError<size_t> ReadFile(const aos::String& path, const aos::Buffer& buffer)
+{
+    aos::RetWithError<size_t> result(0);
+
+    auto file = open(path.CStr(), O_RDONLY);
+    if (file < 0) {
+        result.mError = {AOS_ERROR_WRAP(errno)};
+
+        return result;
+    }
+
+    auto ret = read(file, buffer.Get(), buffer.Size());
+    if (ret < 0) {
+        result.mError = AOS_ERROR_WRAP(errno);
+    }
+
+    result.mValue = ret;
+
+    ret = close(file);
+    if (result.mError.IsNone() && ret < 0) {
+        result.mError = AOS_ERROR_WRAP(errno);
+    }
+
+    return result;
+}
+
+aos::Error WriteFile(const aos::String& path, const void* data, size_t size)
+{
+    aos::Error err;
+
+    // zephyr doesn't support O_TRUNC flag. This is WA to trunc file if it exists.
+    auto ret = unlink(path.CStr());
+    if (ret < 0 && errno != ENOENT) {
+        return AOS_ERROR_WRAP(errno);
+    }
+
+    auto file = open(path.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (file < 0) {
+        return AOS_ERROR_WRAP(errno);
+    }
+
+    auto written = write(file, data, size);
+    if (written < 0) {
+        err = AOS_ERROR_WRAP(errno);
+    } else if ((size_t)written != size) {
+        err = AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
+    }
+
+    ret = close(file);
+    if (err.IsNone() && (ret < 0)) {
+        err = AOS_ERROR_WRAP(errno);
+    }
+
+    return err;
+}
+
+/***********************************************************************************************************************
+ * Setup
+ **********************************************************************************************************************/
+
+static void* Setup(void)
+{
+    zassert_true(aos::FS::MakeDirAll("/tmp/aos").IsNone(), "Can't create test folder");
+
+    return nullptr;
+}
+
+static void Cleanup(void*)
+{
+    zassert_true(aos::FS::RemoveAll("/tmp/aos").IsNone(), "Can't remove test folder");
+}
+
+ZTEST_SUITE(ocispec, NULL, Setup, NULL, NULL, Cleanup);
 
 /***********************************************************************************************************************
  * Tests
  **********************************************************************************************************************/
 
-ZTEST_SUITE(ocispec, NULL, NULL, NULL, NULL, NULL);
-
-ZTEST(ocispec, test_read_write_ImageSpec)
+ZTEST(ocispec, ImageSpec)
 {
-    aos::oci::ImageSpec writeImageSpec, readImageSpec;
+    struct TestImageSpec {
+        aos::oci::ImageSpec mImageSpec;
+        char                mContent[cJsonMaxContentSize];
+    };
 
-    writeImageSpec.mConfig.mCmd.PushBack("/bin/sh");
-    writeImageSpec.mConfig.mCmd.PushBack("hello_world.sh");
-    writeImageSpec.mConfig.mEntryPoint.PushBack("Entry1");
+    aos::StaticString<aos::oci::cMaxParamLen> envs[] = {"env0", "env1", "env2", "env3", "env4", "env5"};
+    aos::StaticString<aos::oci::cMaxParamLen> entries[] = {"entry0", "entry1", "entry2"};
+    aos::StaticString<aos::oci::cMaxParamLen> cmds[] = {"cmd0", "cmd1"};
 
-    auto ret = mkdir("/tmp/aos", S_IRWXU | S_IRWXG | S_IRWXO);
-    if (ret != 0) {
-        zassert_true(errno == EEXIST, "Can't create test folder");
+    TestImageSpec testData[] = {
+        // empty
+        {
+            {},
+            "{\"config\":{\"Env\":[],\"Entrypoint\":[],\"Cmd\":[]}}",
+        },
+        // Env
+        {
+            {
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
+            },
+            "{\"config\":{\"Env\":[\"env0\",\"env1\",\"env2\",\"env3\",\"env4\",\"env5\"],"
+            "\"Entrypoint\":[],\"Cmd\":[]}}",
+        },
+        // Entrypoint
+        {{
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+
+         },
+            "{\"config\":{\"Env\":[],\"Entrypoint\":[\"entry0\",\"entry1\",\"entry2\"],\"Cmd\":[]}}"},
+        // Cmd
+        {{
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+
+         },
+            "{\"config\":{\"Env\":[],\"Entrypoint\":[],\"Cmd\":[\"cmd0\",\"cmd1\"]}}"},
+        // All fields
+        {{
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+
+         },
+            "{\"config\":{\"Env\":[\"env0\",\"env1\",\"env2\",\"env3\",\"env4\",\"env5\"],"
+            "\"Entrypoint\":[\"entry0\",\"entry1\",\"entry2\"],\"Cmd\":[\"cmd0\",\"cmd1\"]}}"},
+    };
+
+    // Save image spec
+
+    OCISpec ociSpec;
+
+    for (auto testItem : testData) {
+        auto err = ociSpec.SaveImageSpec(cImageSpecPath, testItem.mImageSpec);
+        zassert_true(err.IsNone(), "Can't save image spec: %s", err.Message());
+
+        aos::StaticBuffer<cJsonMaxContentSize> buffer;
+
+        auto result = ReadFile(cImageSpecPath, buffer);
+        zassert_true(result.mError.IsNone(), "Can't read image spec: %s", result.mError.Message());
+
+        zassert_true(strncmp(testItem.mContent, static_cast<const char*>(buffer.Get()), result.mValue) == 0,
+            "File content mismatch");
     }
 
-    auto err = gOCISpecHelper.SaveImageSpec(cImageSpecPath, writeImageSpec);
-    zassert_true(err.IsNone(), "Cant save image spec: %s", err.Message());
+    // Load image spec
 
-    err = gOCISpecHelper.LoadImageSpec(cImageSpecPath, readImageSpec);
-    zassert_true(err.IsNone(), "Cant load image spec: %s", err.Message());
+    for (auto testItem : testData) {
+        aos::oci::ImageSpec imageSpec {};
 
-    for (size_t i = 0; i < writeImageSpec.mConfig.mCmd.Size(); i++) {
-        zassert_equal(writeImageSpec.mConfig.mCmd[i], readImageSpec.mConfig.mCmd[i], "Incorrect value for cmd");
+        auto err = WriteFile(cImageSpecPath, testItem.mContent, strlen(testItem.mContent));
+        zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+        err = ociSpec.LoadImageSpec(cImageSpecPath, imageSpec);
+        zassert_true(err.IsNone(), "Can't load image spec: %s", err.Message());
+
+        zassert_true(imageSpec == testItem.mImageSpec, "Image spec mismatch");
     }
 
-    for (size_t i = 0; i < writeImageSpec.mConfig.mEntryPoint.Size(); i++) {
-        zassert_equal(writeImageSpec.mConfig.mEntryPoint[i], readImageSpec.mConfig.mEntryPoint[i],
-            "Incorrect value for entryPoint");
+    // Check file doesn't exist
+
+    auto ret = unlink(cImageSpecPath);
+    if (ret < 0 && errno != ENOENT) {
+        zassert_true(true, "Can't remove spec file: %s", strerror(errno));
     }
+
+    aos::oci::ImageSpec imageSpec;
+
+    auto err = ociSpec.LoadImageSpec(cImageSpecPath, imageSpec);
+    zassert_true(err.Is(ENOENT), "Wrong error: %s", err.Message());
+
+    // Check empty file
+
+    err = WriteFile(cImageSpecPath, "", 0);
+    zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+    err = ociSpec.LoadImageSpec(cImageSpecPath, imageSpec);
+    zassert_true(err.Is(EINVAL), "Wrong error: %s", err.Message());
+
+    // Check extra fields
+
+    TestImageSpec extraFieldsData
+        = {{
+               aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
+               aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+               aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+
+           },
+            "{\"config\":{\"Env\":[\"env0\",\"env1\",\"env2\",\"env3\",\"env4\",\"env5\"],"
+            "\"Entrypoint\":[\"entry0\",\"entry1\",\"entry2\"],\"Cmd\":[\"cmd0\",\"cmd1\"],"
+            "\"extraField\":123},\"extraField\":\"test\"}"};
+
+    imageSpec = aos::oci::ImageSpec();
+
+    err = WriteFile(cImageSpecPath, extraFieldsData.mContent, strlen(extraFieldsData.mContent));
+    zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+    err = ociSpec.LoadImageSpec(cImageSpecPath, imageSpec);
+    zassert_true(err.IsNone(), "Can't load image spec: %s", err.Message());
+
+    zassert_true(imageSpec == extraFieldsData.mImageSpec, "Image spec mismatch");
 }
 
-ZTEST(ocispec, test_read_write_RuntimeSpec)
+ZTEST(ocispec, RuntimeSpec)
 {
-    aos::oci::RuntimeSpec writeRuntimeSpec, readRuntimeSpec;
-    aos::oci::VM          writeVMConfig, readVMConfig;
+    struct TestRuntimeSpec {
+        aos::oci::RuntimeSpec mRuntimeSpec;
+        char                  mContent[cJsonMaxContentSize];
+    };
 
-    writeRuntimeSpec.mVM = &writeVMConfig;
-    readRuntimeSpec.mVM = &readVMConfig;
+    aos::oci::VM vmEmpty;
 
-    writeRuntimeSpec.mOCIVersion = "1.0.0";
+    aos::StaticString<aos::oci::cMaxParamLen> hypervisorParams[] = {"hyp0", "hyp1", "hyp2"};
+    aos::oci::VM                              vmWithHypervisor = {
+        {
+            "path0",
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(hypervisorParams, aos::ArraySize(hypervisorParams)),
+        },
+    };
 
-    writeVMConfig.mHypervisor.mPath = "HypPath";
-    writeVMConfig.mHypervisor.mParameters.PushBack("HypParam1");
-    writeVMConfig.mHypervisor.mParameters.PushBack("HypParam2");
+    aos::StaticString<aos::oci::cMaxParamLen> kernelParams[] = {"krnl0", "krnl1"};
+    aos::oci::VM                              vmWithKernel = {
+        {},
+        {
+            "path1",
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(kernelParams, aos::ArraySize(kernelParams)),
+        },
+    };
 
-    writeVMConfig.mKernel.mPath = "KerPath";
-    writeVMConfig.mKernel.mParameters.PushBack("KerParam1");
-    writeVMConfig.mKernel.mParameters.PushBack("KerParam2");
-    writeVMConfig.mKernel.mParameters.PushBack("KerParam3");
+    aos::StaticString<aos::oci::cMaxDTDevLen> dtdevs[] = {"dev0", "dev1", "dev2", "dev3"};
+    aos::oci::VMHWConfigIOMEM                 iomems[] = {{0, 1, 2}, {3, 4, 5}};
+    uint32_t                                  irqs[] = {1, 2, 3, 4, 5};
+    aos::oci::VM                              vmWithHWConfig = {
+        {},
+        {},
+        {
+            "path2",
+            3,
+            5,
+            aos::Array<aos::StaticString<aos::oci::cMaxDTDevLen>>(dtdevs, aos::ArraySize(dtdevs)),
+            aos::Array<aos::oci::VMHWConfigIOMEM>(iomems, aos::ArraySize(iomems)),
+            aos::Array<uint32_t>(irqs, aos::ArraySize(irqs)),
+        },
+    };
 
-    writeVMConfig.mHWConfig.mDeviceTree = "/path/to/device/tree";
-    writeVMConfig.mHWConfig.mVCPUs = 42;
-    writeVMConfig.mHWConfig.mMemKB = 8192;
-    writeVMConfig.mHWConfig.mDTDevs.PushBack("dev1");
-    writeVMConfig.mHWConfig.mDTDevs.PushBack("dev2");
-    writeVMConfig.mHWConfig.mDTDevs.PushBack("dev3");
-    writeVMConfig.mHWConfig.mIOMEMs.PushBack({1, 2, 3});
-    writeVMConfig.mHWConfig.mIOMEMs.PushBack({4, 5, 6});
-    writeVMConfig.mHWConfig.mIRQs.PushBack(1);
-    writeVMConfig.mHWConfig.mIRQs.PushBack(2);
-    writeVMConfig.mHWConfig.mIRQs.PushBack(3);
-    writeVMConfig.mHWConfig.mIRQs.PushBack(4);
+    aos::oci::VM vmWithAll = {
+        {
+            "path0",
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(hypervisorParams, aos::ArraySize(hypervisorParams)),
+        },
+        {
+            "path1",
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(kernelParams, aos::ArraySize(kernelParams)),
 
-    auto ret = mkdir("/tmp/aos", S_IRWXU | S_IRWXG | S_IRWXO);
-    if (ret != 0) {
-        zassert_true(errno == EEXIST, "Can't create test folder");
+        },
+        {
+            "path2",
+            3,
+            5,
+            aos::Array<aos::StaticString<aos::oci::cMaxDTDevLen>>(dtdevs, aos::ArraySize(dtdevs)),
+            aos::Array<aos::oci::VMHWConfigIOMEM>(iomems, aos::ArraySize(iomems)),
+            aos::Array<uint32_t>(irqs, aos::ArraySize(irqs)),
+        },
+    };
+
+    TestRuntimeSpec testData[] = {
+        // empty
+        {
+            {"", &vmEmpty},
+            "{\"ociVersion\":\"\",\"vm\":{"
+            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
+            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
+            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+        },
+        // ociVersion
+        {
+            {"1.0.0", &vmEmpty},
+            "{\"ociVersion\":\"1.0.0\",\"vm\":{"
+            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
+            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
+            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+        },
+        // hypervisor
+        {
+            {"", &vmWithHypervisor},
+            "{\"ociVersion\":\"\",\"vm\":{"
+            "\"hypervisor\":{\"path\":\"path0\",\"parameters\":[\"hyp0\",\"hyp1\",\"hyp2\"]},"
+            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
+            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+        },
+        // kernel
+        {
+            {"", &vmWithKernel},
+            "{\"ociVersion\":\"\",\"vm\":{"
+            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
+            "\"kernel\":{\"path\":\"path1\",\"parameters\":[\"krnl0\",\"krnl1\"]},"
+            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+        },
+        // hwConfig
+        {
+            {"", &vmWithHWConfig},
+            "{\"ociVersion\":\"\",\"vm\":{"
+            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
+            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
+            "\"hwConfig\":{\"deviceTree\":\"path2\",\"vcpus\":3,\"memKB\":5,"
+            "\"dtdevs\":[\"dev0\",\"dev1\",\"dev2\",\"dev3\"],"
+            "\"iomems\":[{\"firstGFN\":0,\"firstMFN\":1,\"nrMFNs\":2},{\"firstGFN\":3,\"firstMFN\":4,\"nrMFNs\":5}],"
+            "\"irqs\":[1,2,3,4,5]}}}",
+        },
+        // All fields
+        {
+            {"1.0.0", &vmWithAll},
+            "{\"ociVersion\":\"1.0.0\",\"vm\":{"
+            "\"hypervisor\":{\"path\":\"path0\",\"parameters\":[\"hyp0\",\"hyp1\",\"hyp2\"]},"
+            "\"kernel\":{\"path\":\"path1\",\"parameters\":[\"krnl0\",\"krnl1\"]},"
+            "\"hwConfig\":{\"deviceTree\":\"path2\",\"vcpus\":3,\"memKB\":5,"
+            "\"dtdevs\":[\"dev0\",\"dev1\",\"dev2\",\"dev3\"],"
+            "\"iomems\":[{\"firstGFN\":0,\"firstMFN\":1,\"nrMFNs\":2},{\"firstGFN\":3,\"firstMFN\":4,\"nrMFNs\":5}],"
+            "\"irqs\":[1,2,3,4,5]}}}",
+        },
+    };
+
+    // Save runtime spec
+
+    OCISpec ociSpec;
+
+    for (auto testItem : testData) {
+        auto err = ociSpec.SaveRuntimeSpec(cRuntimeSpecPath, testItem.mRuntimeSpec);
+        zassert_true(err.IsNone(), "Can't save runtime spec: %s", err.Message());
+
+        aos::StaticBuffer<cJsonMaxContentSize> buffer;
+
+        auto result = ReadFile(cRuntimeSpecPath, buffer);
+        zassert_true(result.mError.IsNone(), "Can't read runtime spec: %s", result.mError.Message());
+
+        zassert_true(strncmp(testItem.mContent, static_cast<const char*>(buffer.Get()), result.mValue) == 0,
+            "File content mismatch");
     }
 
-    auto err = gOCISpecHelper.SaveRuntimeSpec(cRuntimeSpecPath, writeRuntimeSpec);
-    zassert_true(err.IsNone(), "Cant save runtime spec: %s", err.Message());
+    // Load runtime spec
 
-    err = gOCISpecHelper.LoadRuntimeSpec(cRuntimeSpecPath, readRuntimeSpec);
-    zassert_true(err.IsNone(), "Cant load runtime spec: %s", err.Message());
+    for (auto testItem : testData) {
+        aos::oci::VM          vmSpec;
+        aos::oci::RuntimeSpec runtimeSpec {"", &vmSpec};
 
-    zassert_equal(writeRuntimeSpec.mOCIVersion, readRuntimeSpec.mOCIVersion, "Incorrect versions");
+        auto err = WriteFile(cRuntimeSpecPath, testItem.mContent, strlen(testItem.mContent));
+        zassert_true(err.IsNone(), "Can't write runtime file: %s", err.Message());
 
-    zassert_equal(writeVMConfig.mHypervisor.mPath, readVMConfig.mHypervisor.mPath, "Incorrect hypervisor path");
-    zassert_equal(writeVMConfig.mHypervisor.mParameters.Size(), readVMConfig.mHypervisor.mParameters.Size(),
-        "Incorrect hypervisor parameters count");
-    for (size_t i = 0; i < writeVMConfig.mHypervisor.mParameters.Size(); i++) {
-        zassert_equal(writeVMConfig.mHypervisor.mParameters[i], readVMConfig.mHypervisor.mParameters[i],
-            "Incorrect value hypervisor param");
+        err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
+        zassert_true(err.IsNone(), "Can't load runtime spec: %s", err.Message());
+
+        zassert_true(runtimeSpec == testItem.mRuntimeSpec, "Runtime spec mismatch");
     }
 
-    zassert_equal(writeVMConfig.mKernel.mPath, readVMConfig.mKernel.mPath, "Incorrect kernel path");
-    zassert_equal(writeVMConfig.mKernel.mParameters.Size(), readVMConfig.mKernel.mParameters.Size(),
-        "Incorrect kernel parameters count");
-    for (size_t i = 0; i < writeVMConfig.mKernel.mParameters.Size(); i++) {
-        zassert_equal(
-            writeVMConfig.mKernel.mParameters[i], readVMConfig.mKernel.mParameters[i], "Incorrect value kernel param");
+    // Check file doesn't exist
+
+    auto ret = unlink(cRuntimeSpecPath);
+    if (ret < 0 && errno != ENOENT) {
+        zassert_true(true, "Can't remove spec file: %s", strerror(errno));
     }
 
-    zassert_equal(
-        writeVMConfig.mHWConfig.mDeviceTree, readVMConfig.mHWConfig.mDeviceTree, "Incorrect device tree path");
-    zassert_equal(writeVMConfig.mHWConfig.mVCPUs, readVMConfig.mHWConfig.mVCPUs, "Incorrect vCPUs value");
-    zassert_equal(writeVMConfig.mHWConfig.mMemKB, readVMConfig.mHWConfig.mMemKB, "Incorrect memory value");
-    zassert_equal(
-        writeVMConfig.mHWConfig.mDTDevs.Size(), readVMConfig.mHWConfig.mDTDevs.Size(), "Incorrect DT devs count");
-    for (size_t i = 0; i < writeVMConfig.mHWConfig.mDTDevs.Size(); i++) {
-        zassert_equal(writeVMConfig.mHWConfig.mDTDevs[i], readVMConfig.mHWConfig.mDTDevs[i], "Incorrect DT dev");
-    }
-    zassert_equal(
-        writeVMConfig.mHWConfig.mIOMEMs.Size(), readVMConfig.mHWConfig.mIOMEMs.Size(), "Incorrect IOMEM count");
-    for (size_t i = 0; i < writeVMConfig.mHWConfig.mIOMEMs.Size(); i++) {
-        zassert_equal(writeVMConfig.mHWConfig.mIOMEMs[i], readVMConfig.mHWConfig.mIOMEMs[i], "Incorrect IOMEM");
-    }
-    zassert_equal(writeVMConfig.mHWConfig.mIRQs.Size(), readVMConfig.mHWConfig.mIRQs.Size(), "Incorrect IRQ count");
-    for (size_t i = 0; i < writeVMConfig.mHWConfig.mIRQs.Size(); i++) {
-        zassert_equal(writeVMConfig.mHWConfig.mIRQs[i], readVMConfig.mHWConfig.mIRQs[i], "Incorrect IRQ");
-    }
+    aos::oci::RuntimeSpec runtimeSpec {};
+
+    auto err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
+    zassert_true(err.Is(ENOENT), "Wrong error: %s", err.Message());
+
+    // Check empty file
+
+    err = WriteFile(cRuntimeSpecPath, "", 0);
+    zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+    err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
+    zassert_true(err.Is(EINVAL), "Wrong error: %d", err.Errno());
+
+    // VM spec without VM field
+
+    err = WriteFile(cRuntimeSpecPath, testData[5].mContent, strlen(testData[5].mContent));
+    zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+    err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
+    zassert_true(err.Is(aos::ErrorEnum::eNoMemory), "Wrong error: %s", err.Message());
+
+    // Check extra fields
+
+    TestRuntimeSpec extraFieldsData = {
+        {"1.0.0", &vmWithAll},
+        "{\"ociVersion\":\"1.0.0\",\"vm\":{"
+        "\"hypervisor\":{\"path\":\"path0\",\"parameters\":[\"hyp0\",\"hyp1\",\"hyp2\"],\"extraHypervisor\":\"1234\"},"
+        "\"kernel\":{\"path\":\"path1\",\"parameters\":[\"krnl0\",\"krnl1\"],\"extraKernel\":\"1234\"},"
+        "\"hwConfig\":{\"deviceTree\":\"path2\",\"vcpus\":3,\"memKB\":5,"
+        "\"dtdevs\":[\"dev0\",\"dev1\",\"dev2\",\"dev3\"],"
+        "\"iomems\":[{\"firstGFN\":0,\"firstMFN\":1,\"nrMFNs\":2},{\"firstGFN\":3,\"firstMFN\":4,\"nrMFNs\":5}],"
+        "\"irqs\":[1,2,3,4,5]},\"extraHWConfig\":\"1234\"},"
+        "\"extraField\":1234}",
+    };
+
+    aos::oci::VM vmSpec;
+
+    runtimeSpec.mVM = &vmSpec;
+
+    err = WriteFile(cRuntimeSpecPath, extraFieldsData.mContent, strlen(extraFieldsData.mContent));
+    zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+    err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
+    zassert_true(err.IsNone(), "Can't load runtime spec: %s", err.Message());
+
+    zassert_true(runtimeSpec == extraFieldsData.mRuntimeSpec, "Runtime spec mismatch");
 }
