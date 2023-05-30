@@ -73,8 +73,8 @@ target_sources_ifdef(
     src/domains/domd/domain_bins_gen3.S
 )
 
-# NOTE: Include source files for xenvm boards.
-target_sources_ifdef(CONFIG_BOARD_XENVM app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
+# NOTE: Include source files for qemu boards.
+target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
 
 # ######################################################################################################################
 # Versioning
@@ -123,7 +123,7 @@ set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${
 # Xen on QEMU
 # ######################################################################################################################
 
-if(CONFIG_BOARD MATCHES "xenvm")
+if(CONFIG_BOARD MATCHES "qemu_cortex_a53")
     set(xen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/xen)
 
     ExternalProject_Add(
@@ -148,8 +148,7 @@ if(CONFIG_BOARD MATCHES "xenvm")
         add_custom_command(
             TARGET hypervisor
             POST_BUILD
-            COMMAND ${utils_scripts_dir}/fix_dtb.sh ${utils_scripts_dir}/gicv2.tmpl ${ZEPHYR_BINARY_DIR}/virt_gicv2.dtb
-                    ${ZEPHYR_BINARY_DIR}/zephyr.bin
+            COMMAND dtc -I dts -O dtb -o ${ZEPHYR_BINARY_DIR}/virt_gicv3.dtb ${utils_scripts_dir}/xen_gicv3.dts
         )
     else()
         message(WARNING "No dtc program")
