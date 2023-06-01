@@ -118,40 +118,46 @@ ZTEST(ocispec, ImageSpec)
         // empty
         {
             {},
-            "{\"config\":{\"Env\":[],\"Entrypoint\":[],\"Cmd\":[]}}",
+            R"({"config":{"Env":[],"Entrypoint":[],"Cmd":[]}})",
         },
         // Env
         {
             {
                 aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
             },
-            "{\"config\":{\"Env\":[\"env0\",\"env1\",\"env2\",\"env3\",\"env4\",\"env5\"],"
-            "\"Entrypoint\":[],\"Cmd\":[]}}",
+            R"({"config":{"Env":["env0","env1","env2","env3","env4","env5"],)"
+            R"("Entrypoint":[],"Cmd":[]}})",
         },
         // Entrypoint
-        {{
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+        {
+            {
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
 
-         },
-            "{\"config\":{\"Env\":[],\"Entrypoint\":[\"entry0\",\"entry1\",\"entry2\"],\"Cmd\":[]}}"},
+            },
+            R"({"config":{"Env":[],"Entrypoint":["entry0","entry1","entry2"],"Cmd":[]}})",
+        },
         // Cmd
-        {{
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+        {
+            {
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
 
-         },
-            "{\"config\":{\"Env\":[],\"Entrypoint\":[],\"Cmd\":[\"cmd0\",\"cmd1\"]}}"},
+            },
+            R"({"config":{"Env":[],"Entrypoint":[],"Cmd":["cmd0","cmd1"]}})",
+        },
         // All fields
-        {{
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
-             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+        {
+            {
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
 
-         },
-            "{\"config\":{\"Env\":[\"env0\",\"env1\",\"env2\",\"env3\",\"env4\",\"env5\"],"
-            "\"Entrypoint\":[\"entry0\",\"entry1\",\"entry2\"],\"Cmd\":[\"cmd0\",\"cmd1\"]}}"},
+            },
+            R"({"config":{"Env":["env0","env1","env2","env3","env4","env5"],)"
+            R"("Entrypoint":["entry0","entry1","entry2"],"Cmd":["cmd0","cmd1"]}})",
+        },
     };
 
     // Save image spec
@@ -207,16 +213,17 @@ ZTEST(ocispec, ImageSpec)
 
     // Check extra fields
 
-    TestImageSpec extraFieldsData
-        = {{
-               aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
-               aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
-               aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+    TestImageSpec extraFieldsData = {
+        {
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
 
-           },
-            "{\"config\":{\"Env\":[\"env0\",\"env1\",\"env2\",\"env3\",\"env4\",\"env5\"],"
-            "\"Entrypoint\":[\"entry0\",\"entry1\",\"entry2\"],\"Cmd\":[\"cmd0\",\"cmd1\"],"
-            "\"extraField\":123},\"extraField\":\"test\"}"};
+        },
+        R"({"config":{"Env":["env0","env1","env2","env3","env4","env5"],)"
+        R"("Entrypoint":["entry0","entry1","entry2"],"Cmd":["cmd0","cmd1"],)"
+        R"("extraField":123},"extraField":"test"})",
+    };
 
     imageSpec = aos::oci::ImageSpec();
 
@@ -295,56 +302,56 @@ ZTEST(ocispec, RuntimeSpec)
         // empty
         {
             {"", &vmEmpty},
-            "{\"ociVersion\":\"\",\"vm\":{"
-            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
-            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
-            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+            R"({"ociVersion":"","vm":{)"
+            R"("hypervisor":{"path":"","parameters":[]},)"
+            R"("kernel":{"path":"","parameters":[]},)"
+            R"("hwConfig":{"deviceTree":"","vcpus":0,"memKB":0,"dtdevs":[],"iomems":[],"irqs":[]}}})",
         },
         // ociVersion
         {
             {"1.0.0", &vmEmpty},
-            "{\"ociVersion\":\"1.0.0\",\"vm\":{"
-            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
-            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
-            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+            R"({"ociVersion":"1.0.0","vm":{)"
+            R"("hypervisor":{"path":"","parameters":[]},)"
+            R"("kernel":{"path":"","parameters":[]},)"
+            R"("hwConfig":{"deviceTree":"","vcpus":0,"memKB":0,"dtdevs":[],"iomems":[],"irqs":[]}}})",
         },
         // hypervisor
         {
             {"", &vmWithHypervisor},
-            "{\"ociVersion\":\"\",\"vm\":{"
-            "\"hypervisor\":{\"path\":\"path0\",\"parameters\":[\"hyp0\",\"hyp1\",\"hyp2\"]},"
-            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
-            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+            R"({"ociVersion":"","vm":{)"
+            R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"]},)"
+            R"("kernel":{"path":"","parameters":[]},)"
+            R"("hwConfig":{"deviceTree":"","vcpus":0,"memKB":0,"dtdevs":[],"iomems":[],"irqs":[]}}})",
         },
         // kernel
         {
             {"", &vmWithKernel},
-            "{\"ociVersion\":\"\",\"vm\":{"
-            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
-            "\"kernel\":{\"path\":\"path1\",\"parameters\":[\"krnl0\",\"krnl1\"]},"
-            "\"hwConfig\":{\"deviceTree\":\"\",\"vcpus\":0,\"memKB\":0,\"dtdevs\":[],\"iomems\":[],\"irqs\":[]}}}",
+            R"({"ociVersion":"","vm":{)"
+            R"("hypervisor":{"path":"","parameters":[]},)"
+            R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"]},)"
+            R"("hwConfig":{"deviceTree":"","vcpus":0,"memKB":0,"dtdevs":[],"iomems":[],"irqs":[]}}})",
         },
         // hwConfig
         {
             {"", &vmWithHWConfig},
-            "{\"ociVersion\":\"\",\"vm\":{"
-            "\"hypervisor\":{\"path\":\"\",\"parameters\":[]},"
-            "\"kernel\":{\"path\":\"\",\"parameters\":[]},"
-            "\"hwConfig\":{\"deviceTree\":\"path2\",\"vcpus\":3,\"memKB\":5,"
-            "\"dtdevs\":[\"dev0\",\"dev1\",\"dev2\",\"dev3\"],"
-            "\"iomems\":[{\"firstGFN\":0,\"firstMFN\":1,\"nrMFNs\":2},{\"firstGFN\":3,\"firstMFN\":4,\"nrMFNs\":5}],"
-            "\"irqs\":[1,2,3,4,5]}}}",
+            R"({"ociVersion":"","vm":{)"
+            R"("hypervisor":{"path":"","parameters":[]},)"
+            R"("kernel":{"path":"","parameters":[]},)"
+            R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":5,)"
+            R"("dtdevs":["dev0","dev1","dev2","dev3"],)"
+            R"("iomems":[{"firstGFN":0,"firstMFN":1,"nrMFNs":2},{"firstGFN":3,"firstMFN":4,"nrMFNs":5}],)"
+            R"("irqs":[1,2,3,4,5]}}})",
         },
         // All fields
         {
             {"1.0.0", &vmWithAll},
-            "{\"ociVersion\":\"1.0.0\",\"vm\":{"
-            "\"hypervisor\":{\"path\":\"path0\",\"parameters\":[\"hyp0\",\"hyp1\",\"hyp2\"]},"
-            "\"kernel\":{\"path\":\"path1\",\"parameters\":[\"krnl0\",\"krnl1\"]},"
-            "\"hwConfig\":{\"deviceTree\":\"path2\",\"vcpus\":3,\"memKB\":5,"
-            "\"dtdevs\":[\"dev0\",\"dev1\",\"dev2\",\"dev3\"],"
-            "\"iomems\":[{\"firstGFN\":0,\"firstMFN\":1,\"nrMFNs\":2},{\"firstGFN\":3,\"firstMFN\":4,\"nrMFNs\":5}],"
-            "\"irqs\":[1,2,3,4,5]}}}",
+            R"({"ociVersion":"1.0.0","vm":{)"
+            R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"]},)"
+            R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"]},)"
+            R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":5,)"
+            R"("dtdevs":["dev0","dev1","dev2","dev3"],)"
+            R"("iomems":[{"firstGFN":0,"firstMFN":1,"nrMFNs":2},{"firstGFN":3,"firstMFN":4,"nrMFNs":5}],)"
+            R"("irqs":[1,2,3,4,5]}}})",
         },
     };
 
@@ -412,14 +419,14 @@ ZTEST(ocispec, RuntimeSpec)
 
     TestRuntimeSpec extraFieldsData = {
         {"1.0.0", &vmWithAll},
-        "{\"ociVersion\":\"1.0.0\",\"vm\":{"
-        "\"hypervisor\":{\"path\":\"path0\",\"parameters\":[\"hyp0\",\"hyp1\",\"hyp2\"],\"extraHypervisor\":\"1234\"},"
-        "\"kernel\":{\"path\":\"path1\",\"parameters\":[\"krnl0\",\"krnl1\"],\"extraKernel\":\"1234\"},"
-        "\"hwConfig\":{\"deviceTree\":\"path2\",\"vcpus\":3,\"memKB\":5,"
-        "\"dtdevs\":[\"dev0\",\"dev1\",\"dev2\",\"dev3\"],"
-        "\"iomems\":[{\"firstGFN\":0,\"firstMFN\":1,\"nrMFNs\":2},{\"firstGFN\":3,\"firstMFN\":4,\"nrMFNs\":5}],"
-        "\"irqs\":[1,2,3,4,5]},\"extraHWConfig\":\"1234\"},"
-        "\"extraField\":1234}",
+        R"({"ociVersion":"1.0.0","vm":{)"
+        R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"],"extraHypervisor":"1234"},)"
+        R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"],"extraKernel":"1234"},)"
+        R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":5,)"
+        R"("dtdevs":["dev0","dev1","dev2","dev3"],)"
+        R"("iomems":[{"firstGFN":0,"firstMFN":1,"nrMFNs":2},{"firstGFN":3,"firstMFN":4,"nrMFNs":5}],)"
+        R"("irqs":[1,2,3,4,5]},"extraHWConfig":"1234"},)"
+        R"("extraField":1234})",
     };
 
     aos::oci::VM vmSpec;
