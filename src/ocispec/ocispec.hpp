@@ -15,6 +15,39 @@
 // Image spec
 
 /**
+ * OCI content descriptor.
+ */
+
+struct ContentDescriptor {
+    const char* mediaType;
+    const char* digest;
+    int64_t     size;
+};
+
+/**
+ * OCI image manifest.
+ */
+struct ImageManifest {
+    int               schemaVersion;
+    const char*       mediaType;
+    ContentDescriptor config;
+    ContentDescriptor layers[aos::cMaxNumLayers];
+    size_t            layersLen;
+    ContentDescriptor aosService;
+};
+
+/**
+ * OCI image manifest bit fields.
+ */
+enum ImageManifestFields {
+    eImageManifestSchemaVersionField = BIT(0),
+    eImageManifestMediaTypeField = BIT(1),
+    eImageManifestConfigField = BIT(2),
+    eImageManifestLayersField = BIT(3),
+    eImageManifestAosServiceField = BIT(4),
+};
+
+/**
  * OCI image config.
  */
 struct ImageConfig {
@@ -107,6 +140,24 @@ struct RuntimeSpec {
  */
 class OCISpec : public aos::OCISpecItf {
 public:
+    /**
+     * Loads OCI image manifest.
+     *
+     * @param path file path.
+     * @param manifest image manifest.
+     * @return Error.
+     */
+    aos::Error LoadImageManifest(const aos::String& path, aos::oci::ImageManifest& manifest) override;
+
+    /**
+     * Saves OCI image manifest.
+     *
+     * @param path file path.
+     * @param manifest image manifest.
+     * @return Error.
+     */
+    aos::Error SaveImageManifest(const aos::String& path, const aos::oci::ImageManifest& manifest) override;
+
     /**
      * Loads OCI image spec.
      *

@@ -36,9 +36,9 @@ aos::Error App::Init()
         return err;
     }
 
-     if (!(err= mServiceManager.Init(mDownloader, mStorage)).IsNone()){
+    if (!(err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage)).IsNone()) {
         return err;
-     }
+    }
 
     if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage)).IsNone()) {
         return err;

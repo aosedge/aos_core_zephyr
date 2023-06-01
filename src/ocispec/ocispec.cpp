@@ -17,6 +17,23 @@
  * Vars
  **********************************************************************************************************************/
 
+// Image manifest
+
+const struct json_obj_descr ContentDescriptorDescr[] = {
+    JSON_OBJ_DESCR_PRIM(ContentDescriptor, mediaType, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(ContentDescriptor, digest, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(ContentDescriptor, size, JSON_TOK_NUMBER),
+};
+
+const struct json_obj_descr ImageManifestDescr[] = {
+    JSON_OBJ_DESCR_PRIM(ImageManifest, schemaVersion, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(ImageManifest, mediaType, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJECT(ImageManifest, config, ContentDescriptorDescr),
+    JSON_OBJ_DESCR_OBJ_ARRAY(ImageManifest, layers, aos::cMaxNumLayers, layersLen, ContentDescriptorDescr,
+        ARRAY_SIZE(ContentDescriptorDescr)),
+    JSON_OBJ_DESCR_OBJECT(ImageManifest, aosService, ContentDescriptorDescr),
+};
+
 // Image spec
 
 const struct json_obj_descr ImageConfigDescr[] = {
@@ -71,6 +88,100 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
+
+aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageManifest& manifest)
+{
+    aos::LockGuard lock(mMutex);
+
+    auto readRet = ReadFileContentToBuffer(path);
+    if (!readRet.mError.IsNone()) {
+        return readRet.mError;
+    }
+
+    auto jsonImageManifest = aos::UniquePtr<ImageManifest>(&mAllocator, new (&mAllocator) ImageManifest);
+
+    memset(jsonImageManifest.Get(), 0, sizeof(ImageManifest));
+
+    int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageManifestDescr,
+        ARRAY_SIZE(ImageManifestDescr), jsonImageManifest.Get());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
+
+    manifest.mSchemaVersion = jsonImageManifest->schemaVersion;
+    manifest.mMediaType = jsonImageManifest->mediaType;
+
+    // config
+
+    manifest.mConfig = {jsonImageManifest->config.mediaType, jsonImageManifest->config.digest,
+        static_cast<size_t>(jsonImageManifest->config.size)};
+
+    // layers
+
+    for (size_t i = 0; i < jsonImageManifest->layersLen; i++) {
+        manifest.mLayers.PushBack({jsonImageManifest->layers[i].mediaType, jsonImageManifest->layers[i].digest,
+            static_cast<size_t>(jsonImageManifest->layers[i].size)});
+    }
+
+    // aosService
+
+    if (ret & eImageManifestAosServiceField) {
+        if (manifest.mAosService == nullptr) {
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eNoMemory);
+        }
+
+        *manifest.mAosService = {jsonImageManifest->aosService.mediaType, jsonImageManifest->aosService.digest,
+            static_cast<size_t>(jsonImageManifest->aosService.size)};
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::ImageManifest& manifest)
+{
+    aos::LockGuard lock(mMutex);
+
+    auto jsonImageManifest = aos::UniquePtr<ImageManifest>(&mAllocator, new (&mAllocator) ImageManifest);
+
+    memset(jsonImageManifest.Get(), 0, sizeof(ImageManifest));
+
+    jsonImageManifest->aosService.mediaType = "";
+    jsonImageManifest->aosService.digest = "";
+
+    jsonImageManifest->schemaVersion = manifest.mSchemaVersion;
+    jsonImageManifest->mediaType = manifest.mMediaType.CStr();
+
+    // config
+
+    jsonImageManifest->config = {manifest.mConfig.mMediaType.CStr(), manifest.mConfig.mDigest.CStr(),
+        static_cast<int64_t>(manifest.mConfig.mSize)};
+
+    // layers
+
+    jsonImageManifest->layersLen = manifest.mLayers.Size();
+
+    for (size_t i = 0; i < jsonImageManifest->layersLen; i++) {
+        jsonImageManifest->layers[i] = {manifest.mLayers[i].mMediaType.CStr(), manifest.mLayers[i].mDigest.CStr(),
+            static_cast<int64_t>(manifest.mLayers[i].mSize)};
+    }
+
+    // aosService
+
+    if (manifest.mAosService) {
+        jsonImageManifest->aosService = {manifest.mAosService->mMediaType.CStr(), manifest.mAosService->mDigest.CStr(),
+            static_cast<int64_t>(manifest.mAosService->mSize)};
+    }
+
+    json_obj_encode_buf(ImageManifestDescr, ARRAY_SIZE(ImageManifestDescr), jsonImageManifest.Get(),
+        static_cast<char*>(mJsonFileBuffer.Get()), mJsonFileBuffer.Size());
+
+    auto err = WriteEncodedJsonBufferToFile(path);
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
 
 aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& imageSpec)
 {

@@ -18,6 +18,7 @@
 
 static constexpr size_t cJsonMaxContentSize = 4096;
 
+static constexpr auto cImageManifestPath = "/tmp/aos/manifest.json";
 static constexpr auto cImageSpecPath = "/tmp/aos/image.json";
 static constexpr auto cRuntimeSpecPath = "/tmp/aos/runtime.json";
 
@@ -102,6 +103,143 @@ ZTEST_SUITE(ocispec, NULL, Setup, NULL, NULL, Cleanup);
 /***********************************************************************************************************************
  * Tests
  **********************************************************************************************************************/
+
+ZTEST(ocispec, ImageManifest)
+{
+    struct TestImageManifest {
+        aos::oci::ImageManifest mImageManifest;
+        char                    mContent[cJsonMaxContentSize];
+    };
+
+    aos::oci::ContentDescriptor emptyAosService;
+    aos::oci::ContentDescriptor fullAosService = {"mediaType6", "digest6", 6};
+    aos::oci::ContentDescriptor layers[]
+        = {{"mediaType3", "digest3", 3}, {"mediaType4", "digest4", 4}, {"mediaType5", "digest5", 5}};
+
+    TestImageManifest testData[] = {
+        // empty
+        {
+            {0, "", {}, {}, &emptyAosService},
+            R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"","digest":"","size":0},)"
+            R"("layers":[],"aosService":{"mediaType":"","digest":"","size":0}})",
+        },
+        // schemaVersion and mediaType
+        {
+            {42, "mediaType1", {}, {}, &emptyAosService},
+            R"({"schemaVersion":42,"mediaType":"mediaType1","config":{"mediaType":"","digest":"","size":0},)"
+            R"("layers":[],"aosService":{"mediaType":"","digest":"","size":0}})",
+        },
+        // config
+        {
+            {0, "", {"mediaType2", "digest2", 2}, {}, &emptyAosService},
+            R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"mediaType2","digest":"digest2","size":2},)"
+            R"("layers":[],"aosService":{"mediaType":"","digest":"","size":0}})",
+        },
+        // layers
+        {
+            {0, "", {}, aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), &emptyAosService},
+            R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"","digest":"","size":0},)"
+            R"("layers":[{"mediaType":"mediaType3","digest":"digest3","size":3},)"
+            R"({"mediaType":"mediaType4","digest":"digest4","size":4},)"
+            R"({"mediaType":"mediaType5","digest":"digest5","size":5}],)"
+            R"("aosService":{"mediaType":"","digest":"","size":0}})",
+        },
+        // aosService
+        {
+            {0, "", {}, {}, &fullAosService},
+            R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"","digest":"","size":0},)"
+            R"("layers":[],"aosService":{"mediaType":"mediaType6","digest":"digest6","size":6}})",
+        },
+        // All fields
+        {
+            {42, "mediaType1", {"mediaType2", "digest2", 2},
+                aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), &fullAosService},
+            R"({"schemaVersion":42,"mediaType":"mediaType1",)"
+            R"("config":{"mediaType":"mediaType2","digest":"digest2","size":2},)"
+            R"("layers":[{"mediaType":"mediaType3","digest":"digest3","size":3},)"
+            R"({"mediaType":"mediaType4","digest":"digest4","size":4},)"
+            R"({"mediaType":"mediaType5","digest":"digest5","size":5}],)"
+            R"("aosService":{"mediaType":"mediaType6","digest":"digest6","size":6}})",
+        },
+    };
+
+    // Save image spec
+
+    OCISpec ociSpec;
+
+    for (auto testItem : testData) {
+        auto err = ociSpec.SaveImageManifest(cImageManifestPath, testItem.mImageManifest);
+        zassert_true(err.IsNone(), "Can't save image manifest: %s", err.Message());
+
+        aos::StaticBuffer<cJsonMaxContentSize> buffer;
+
+        auto result = ReadFile(cImageManifestPath, buffer);
+        zassert_true(result.mError.IsNone(), "Can't read image manifest: %s", result.mError.Message());
+
+        zassert_true(strncmp(testItem.mContent, static_cast<const char*>(buffer.Get()), result.mValue) == 0,
+            "File content mismatch");
+    }
+
+    // Load image spec
+
+    for (auto testItem : testData) {
+        aos::oci::ContentDescriptor aosService;
+        aos::oci::ImageManifest     imageManifest {0, "", {}, {}, &aosService};
+
+        auto err = WriteFile(cImageManifestPath, testItem.mContent, strlen(testItem.mContent));
+        zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
+
+        err = ociSpec.LoadImageManifest(cImageManifestPath, imageManifest);
+        zassert_true(err.IsNone(), "Can't load image manifest: %s", err.Message());
+
+        zassert_true(imageManifest == testItem.mImageManifest, "Image manifest mismatch");
+    }
+
+    // Check file doesn't exist
+
+    auto ret = unlink(cImageManifestPath);
+    if (ret < 0 && errno != ENOENT) {
+        zassert_true(true, "Can't remove manifest file: %s", strerror(errno));
+    }
+
+    aos::oci::ImageManifest imageManifest;
+
+    auto err = ociSpec.LoadImageManifest(cImageManifestPath, imageManifest);
+    zassert_true(err.Is(ENOENT), "Wrong error: %s", err.Message());
+
+    // Check empty file
+
+    err = WriteFile(cImageManifestPath, "", 0);
+    zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
+
+    err = ociSpec.LoadImageManifest(cImageManifestPath, imageManifest);
+    zassert_true(err.Is(EINVAL), "Wrong error: %s", err.Message());
+
+    // Check extra fields
+
+    TestImageManifest extraFieldsData = {
+        {42, "mediaType1", {"mediaType2", "digest2", 2},
+            aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), &fullAosService},
+        R"({"schemaVersion":42,"mediaType":"mediaType1","extraField1":1,)"
+        R"("config":{"mediaType":"mediaType2","digest":"digest2","size":2,"extraField2":2},)"
+        R"("layers":[{"mediaType":"mediaType3","digest":"digest3","size":3,"extraField3":3},)"
+        R"({"mediaType":"mediaType4","digest":"digest4","size":4,"extraField4":4},)"
+        R"({"mediaType":"mediaType5","digest":"digest5","size":5,"extraField5":5}],)"
+        R"("aosService":{"mediaType":"mediaType6","digest":"digest6","size":6"extraField6":6}})",
+    };
+
+    aos::oci::ContentDescriptor aosService;
+
+    imageManifest.mAosService = &aosService;
+
+    err = WriteFile(cImageManifestPath, extraFieldsData.mContent, strlen(extraFieldsData.mContent));
+    zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
+
+    err = ociSpec.LoadImageManifest(cImageManifestPath, imageManifest);
+    zassert_true(err.IsNone(), "Can't load image manifest: %s", err.Message());
+
+    zassert_true(imageManifest == extraFieldsData.mImageManifest, "Image manifest mismatch");
+}
 
 ZTEST(ocispec, ImageSpec)
 {
