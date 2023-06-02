@@ -111,7 +111,7 @@ ZTEST(ocispec, ImageManifest)
         char                    mContent[cJsonMaxContentSize];
     };
 
-    aos::oci::ContentDescriptor emptyAosService;
+    aos::oci::ContentDescriptor emptyAosService {};
     aos::oci::ContentDescriptor fullAosService = {"mediaType6", "digest6", 6};
     aos::oci::ContentDescriptor layers[]
         = {{"mediaType3", "digest3", 3}, {"mediaType4", "digest4", 4}, {"mediaType5", "digest5", 5}};
@@ -183,7 +183,7 @@ ZTEST(ocispec, ImageManifest)
     // Load image spec
 
     for (auto testItem : testData) {
-        aos::oci::ContentDescriptor aosService;
+        aos::oci::ContentDescriptor aosService {};
         aos::oci::ImageManifest     imageManifest {0, "", {}, {}, &aosService};
 
         auto err = WriteFile(cImageManifestPath, testItem.mContent, strlen(testItem.mContent));
@@ -193,6 +193,29 @@ ZTEST(ocispec, ImageManifest)
         zassert_true(err.IsNone(), "Can't load image manifest: %s", err.Message());
 
         zassert_true(imageManifest == testItem.mImageManifest, "Image manifest mismatch");
+    }
+
+    // Check missing fields
+
+    char testMissingData[][cJsonMaxContentSize] = {
+        // empty manifest
+        {R"({})"},
+        // empty aosService
+        {R"({"aosService":{}})"},
+    };
+
+    for (auto testItem : testMissingData) {
+        aos::oci::ContentDescriptor aosService;
+        aos::oci::ImageManifest     imageManifest {0, "", {}, {}, &aosService};
+        aos::oci::ImageManifest     emptyManifest {0, "", {}, {}, &emptyAosService};
+
+        auto err = WriteFile(cImageManifestPath, testItem, strlen(testItem));
+        zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
+
+        err = ociSpec.LoadImageManifest(cImageManifestPath, imageManifest);
+        zassert_true(err.IsNone(), "Can't load image manifest: %s", err.Message());
+
+        zassert_true(imageManifest == emptyManifest, "Image manifest mismatch");
     }
 
     // Check file doesn't exist
@@ -228,7 +251,7 @@ ZTEST(ocispec, ImageManifest)
         R"("aosService":{"mediaType":"mediaType6","digest":"digest6","size":6"extraField6":6}})",
     };
 
-    aos::oci::ContentDescriptor aosService;
+    aos::oci::ContentDescriptor aosService {};
 
     imageManifest.mAosService = &aosService;
 
@@ -329,6 +352,26 @@ ZTEST(ocispec, ImageSpec)
         zassert_true(imageSpec == testItem.mImageSpec, "Image spec mismatch");
     }
 
+    // Check missing fields
+
+    char testMissingData[][cJsonMaxContentSize] = {
+        // empty image spec
+        {R"({})"},
+    };
+
+    for (auto testItem : testMissingData) {
+        aos::oci::ImageSpec imageSpec;
+        aos::oci::ImageSpec emptySpec;
+
+        auto err = WriteFile(cImageSpecPath, testItem, strlen(testItem));
+        zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
+
+        err = ociSpec.LoadImageSpec(cImageSpecPath, imageSpec);
+        zassert_true(err.IsNone(), "Can't load image spec: %s", err.Message());
+
+        zassert_true(imageSpec == emptySpec, "Image spec mismatch");
+    }
+
     // Check file doesn't exist
 
     auto ret = unlink(cImageSpecPath);
@@ -381,7 +424,7 @@ ZTEST(ocispec, RuntimeSpec)
         char                  mContent[cJsonMaxContentSize];
     };
 
-    aos::oci::VM vmEmpty;
+    aos::oci::VM vmEmpty {};
 
     aos::StaticString<aos::oci::cMaxParamLen> hypervisorParams[] = {"hyp0", "hyp1", "hyp2"};
     aos::oci::VM                              vmWithHypervisor = {
@@ -513,7 +556,7 @@ ZTEST(ocispec, RuntimeSpec)
     // Load runtime spec
 
     for (auto testItem : testData) {
-        aos::oci::VM          vmSpec;
+        aos::oci::VM          vmSpec {};
         aos::oci::RuntimeSpec runtimeSpec {"", &vmSpec};
 
         auto err = WriteFile(cRuntimeSpecPath, testItem.mContent, strlen(testItem.mContent));
@@ -523,6 +566,29 @@ ZTEST(ocispec, RuntimeSpec)
         zassert_true(err.IsNone(), "Can't load runtime spec: %s", err.Message());
 
         zassert_true(runtimeSpec == testItem.mRuntimeSpec, "Runtime spec mismatch");
+    }
+
+    // Check missing fields
+
+    char testMissingData[][cJsonMaxContentSize] = {
+        // empty runtime spec
+        {R"({})"},
+        // empty VM
+        {R"({"vm":{}})"},
+    };
+
+    for (auto testItem : testMissingData) {
+        aos::oci::VM          vmSpec {};
+        aos::oci::RuntimeSpec runtimeSpec {"", &vmSpec};
+        aos::oci::RuntimeSpec emptySpec {"", &vmEmpty};
+
+        auto err = WriteFile(cRuntimeSpecPath, testItem, strlen(testItem));
+        zassert_true(err.IsNone(), "Can't write runtime file: %s", err.Message());
+
+        err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
+        zassert_true(err.IsNone(), "Can't load runtime spec: %s", err.Message());
+
+        zassert_true(runtimeSpec == emptySpec, "Runtime spec mismatch");
     }
 
     // Check file doesn't exist
@@ -567,7 +633,7 @@ ZTEST(ocispec, RuntimeSpec)
         R"("extraField":1234})",
     };
 
-    aos::oci::VM vmSpec;
+    aos::oci::VM vmSpec {};
 
     runtimeSpec.mVM = &vmSpec;
 

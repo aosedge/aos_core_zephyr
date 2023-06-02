@@ -105,6 +105,12 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
 
     memset(jsonImageManifest.Get(), 0, sizeof(ImageManifest));
 
+    jsonImageManifest->mediaType = "";
+    jsonImageManifest->config.mediaType = "";
+    jsonImageManifest->config.digest = "";
+    jsonImageManifest->aosService.mediaType = "";
+    jsonImageManifest->aosService.digest = "";
+
     int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageManifestDescr,
         ARRAY_SIZE(ImageManifestDescr), jsonImageManifest.Get());
     if (ret < 0) {
@@ -289,6 +295,11 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
     auto jsonRuntimeSpec = aos::UniquePtr<RuntimeSpec>(&mAllocator, new (&mAllocator) RuntimeSpec);
 
     memset(jsonRuntimeSpec.Get(), 0, sizeof(RuntimeSpec));
+
+    jsonRuntimeSpec->ociVersion = "";
+    jsonRuntimeSpec->vm.hypervisor.path = "";
+    jsonRuntimeSpec->vm.kernel.path = "";
+    jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
 
     int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, RuntimeSpecDescr,
         ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec.Get());
