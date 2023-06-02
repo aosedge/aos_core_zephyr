@@ -120,42 +120,6 @@ zephyr_get_compile_options_for_lang_as_string(CXX options)
 set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${options}")
 
 # ######################################################################################################################
-# Xen on QEMU
-# ######################################################################################################################
-
-if(CONFIG_BOARD MATCHES "qemu_cortex_a53")
-    set(xen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/xen)
-
-    ExternalProject_Add(
-        hypervisor
-        GIT_REPOSITORY https://github.com/xen-project/xen
-        GIT_TAG RELEASE-4.17.0
-        SOURCE_DIR ${xen_build_dir}
-        BUILD_IN_SOURCE 1
-        CONFIGURE_COMMAND ./configure --disable-docs --disable-tools --disable-stubdom
-        BUILD_COMMAND ${MAKE} make -C ${xen_build_dir} CONFIG_QEMU_XEN=y CONFIG_DEBUG=y XSM_ENABLE=y
-                      XEN_TARGET_ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} HOSTCC=gcc
-        INSTALL_COMMAND cp ${xen_build_dir}/xen/xen ${ZEPHYR_BINARY_DIR}
-        BUILD_BYPRODUCTS ${ZEPHYR_BINARY_DIR}/xen
-        DEPENDS app
-    )
-
-    add_dependencies(hypervisor zephyr_final)
-
-    set(utils_scripts_dir ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-
-    if(DTC)
-        add_custom_command(
-            TARGET hypervisor
-            POST_BUILD
-            COMMAND dtc -I dts -O dtb -o ${ZEPHYR_BINARY_DIR}/virt_gicv3.dtb ${utils_scripts_dir}/xen_gicv3.dts
-        )
-    else()
-        message(WARNING "No dtc program")
-    endif()
-endif()
-
-# ######################################################################################################################
 # aos_core_lib_cpp
 # ######################################################################################################################
 
