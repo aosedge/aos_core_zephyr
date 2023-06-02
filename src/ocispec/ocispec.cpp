@@ -11,6 +11,7 @@
 
 #include <aos/common/tools/memory.hpp>
 
+#include "log.hpp"
 #include "ocispec.hpp"
 
 /***********************************************************************************************************************
@@ -93,6 +94,8 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Load image manifest: " << path;
+
     auto readRet = ReadFileContentToBuffer(path);
     if (!readRet.mError.IsNone()) {
         return readRet.mError;
@@ -141,6 +144,8 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Save image manifest: " << path;
+
     auto jsonImageManifest = aos::UniquePtr<ImageManifest>(&mAllocator, new (&mAllocator) ImageManifest);
 
     memset(jsonImageManifest.Get(), 0, sizeof(ImageManifest));
@@ -187,6 +192,8 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Load image spec: " << path;
+
     auto readRet = ReadFileContentToBuffer(path);
     if (!readRet.mError.IsNone()) {
         return readRet.mError;
@@ -226,6 +233,8 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
 aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::ImageSpec& imageSpec)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Save image spec: " << path;
 
     auto jsonImageSpec = aos::UniquePtr<ImageSpec>(&mAllocator, new (&mAllocator) ImageSpec);
 
@@ -269,6 +278,8 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
 aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSpec& runtimeSpec)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Load runtime spec: " << path;
 
     auto readRet = ReadFileContentToBuffer(path);
     if (!readRet.mError.IsNone()) {
@@ -328,6 +339,8 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Save runtime spec: " << path;
 
     auto jsonRuntimeSpec = aos::UniquePtr<RuntimeSpec>(&mAllocator, new (&mAllocator) RuntimeSpec);
 
