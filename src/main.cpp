@@ -14,6 +14,7 @@
 #include "app/app.hpp"
 #include "logger/logger.hpp"
 #include "version.hpp"
+#include "bsp/mount.h"
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
 #include <domains/dom_runner.h>
@@ -24,6 +25,12 @@ int main(void)
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
     printk("*** Aos core size: %lu ***\n", sizeof(App));
+
+#ifdef CONFIG_AOS_MOUNT_LFS_MMC
+    if (int ret = littlefs_mount()) {
+        printk("failed to mount littlefs (%d)\n", ret);
+    }
+#endif
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
     auto rc = create_domains();
