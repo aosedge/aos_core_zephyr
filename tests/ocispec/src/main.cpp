@@ -104,7 +104,7 @@ ZTEST_SUITE(ocispec, NULL, Setup, NULL, NULL, Cleanup);
  * Tests
  **********************************************************************************************************************/
 
-ZTEST(ocispec, ImageManifest)
+ZTEST(ocispec, test_ImageManifest)
 {
     struct TestImageManifest {
         aos::oci::ImageManifest mImageManifest;
@@ -264,7 +264,7 @@ ZTEST(ocispec, ImageManifest)
     zassert_true(imageManifest == extraFieldsData.mImageManifest, "Image manifest mismatch");
 }
 
-ZTEST(ocispec, ImageSpec)
+ZTEST(ocispec, test_ImageSpec)
 {
     struct TestImageSpec {
         aos::oci::ImageSpec mImageSpec;
@@ -417,7 +417,7 @@ ZTEST(ocispec, ImageSpec)
     zassert_true(imageSpec == extraFieldsData.mImageSpec, "Image spec mismatch");
 }
 
-ZTEST(ocispec, RuntimeSpec)
+ZTEST(ocispec, test_RuntimeSpec)
 {
     struct TestRuntimeSpec {
         aos::oci::RuntimeSpec mRuntimeSpec;
