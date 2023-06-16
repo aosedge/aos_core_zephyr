@@ -15,7 +15,9 @@ extern "C" {
 
 typedef uint16_t domid_t;
 
-struct vch_handle { };
+struct vch_handle {
+    bool blocking;
+};
 
 /**
  * Set up vchannel, allocate & grant page(s), initialize vchannel object

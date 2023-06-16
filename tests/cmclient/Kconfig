@@ -13,6 +13,14 @@ config AOS_SM_VCHAN_PATH
 	string "Path to the SM vchan"
 	default "/vchan/sm"
 
+config AOS_SM_VCHAN_TX_PATH
+	string "Path to the SM vchan"
+	default "/vchan/sm_tx"
+
+config AOS_SM_VCHAN_RX_PATH
+	string "Path to the SM vchan"
+	default "/vchan/sm_rx"
+
 config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
 	default "/aos/runtime"
