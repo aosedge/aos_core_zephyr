@@ -12,9 +12,9 @@
 #include <aos/common/version.hpp>
 
 #include "app/app.hpp"
+#include "bsp/mount.h"
 #include "logger/logger.hpp"
 #include "version.hpp"
-#include "bsp/mount.h"
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
 #include <domains/dom_runner.h>

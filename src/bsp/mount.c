@@ -12,13 +12,13 @@ static struct fs_mount_t mp = {
 
 int littlefs_mount()
 {
-	static const char *disk_mount_pt = "/aos";
-	static const char *disk_pdrv = CONFIG_MMC_VOLUME_NAME;
+    static const char* disk_mount_pt = "/aos";
+    static const char* disk_pdrv = CONFIG_MMC_VOLUME_NAME;
 
     printk("Mounting littlefs...");
 
-	mp.storage_dev = (void *)disk_pdrv;
-	mp.mnt_point = disk_mount_pt;
+    mp.storage_dev = (void*)disk_pdrv;
+    mp.mnt_point = disk_mount_pt;
 
-	return fs_mount(&mp);
+    return fs_mount(&mp);
 }
