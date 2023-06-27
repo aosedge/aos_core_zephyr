@@ -29,12 +29,15 @@ bool                                 gReadHead = true;
 bool                                 gShutdown = false;
 bool                                 gReadyToRead = true;
 bool                                 gReadyToCheck = false;
+uint8_t                              gConnectionCount = 0;
 VChanMessageHeader                   gCurrentHeader;
 servicemanager_v3_SMOutgoingMessages gReceivedMessage;
 servicemanager_v3_SMIncomingMessages gSendMessage;
 uint8_t                              gSendBuffer[servicemanager_v3_SMIncomingMessages_size];
 aos::Mutex                           gWaitMessageMutex;
 aos::ConditionalVariable             gWaitMessageCondVar(gWaitMessageMutex);
+aos::Mutex                           gConnectionMutex;
+aos::ConditionalVariable             gConnectionCondVar(gConnectionMutex);
 aos::Mutex                           gReadMutex;
 aos::ConditionalVariable             gReadCondVar(gReadMutex);
 size_t                               gCurrentSendBufferSize;
@@ -75,17 +78,12 @@ int vch_open(domid_t domain, const char* path, size_t min_rs, size_t min_ws, str
 
 int vch_connect(domid_t domain, const char* path, struct vch_handle* h)
 {
-    printk("[test] Connection Done\n");
-    {
-        UniqueLock lock(gWaitMessageMutex);
-        gReadyToCheck = true;
-        gWaitMessageCondVar.NotifyOne();
-    }
+    printk("[test] Connection Done %s\n", path);
+    UniqueLock lock(gConnectionMutex);
 
-    {
-        UniqueLock lock(gReadMutex);
-        gReadCondVar.Wait([&] { return gReadyToRead; });
-        gReadyToRead = false;
+    gConnectionCount++;
+    if (gConnectionCount == 2) {
+        gConnectionCondVar.NotifyOne();
     }
 
     return 0;
@@ -449,15 +447,8 @@ ZTEST(cmclient, test_node_config)
 
     // wait open
     {
-        UniqueLock lock(gWaitMessageMutex);
-        gWaitMessageCondVar.Wait([&] { return gReadyToCheck; });
-        gReadyToCheck = false;
-    }
-
-    {
-        UniqueLock lock(gReadMutex);
-        gReadyToRead = true;
-        gReadCondVar.NotifyOne();
+        UniqueLock lock(gConnectionMutex);
+        gConnectionCondVar.Wait([&] { return gConnectionCount > 1; });
     }
 
     // Wait node config
