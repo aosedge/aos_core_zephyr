@@ -12,12 +12,15 @@
 #include <aos/common/version.hpp>
 
 #include "app/app.hpp"
-#include "bsp/mount.h"
 #include "logger/logger.hpp"
 #include "version.hpp"
 
+#if defined(CONFIG_AOS_MOUNT_LFS_MMC)
+#include "bsp/mount.h"
+#endif
+
 #if !defined(CONFIG_NATIVE_APPLICATION)
-#include <domains/dom_runner.h>
+#include "domains/dom_runner.h"
 #endif
 
 int main(void)
@@ -27,15 +30,14 @@ int main(void)
     printk("*** Aos core size: %lu ***\n", sizeof(App));
 
 #ifdef CONFIG_AOS_MOUNT_LFS_MMC
-    if (int ret = littlefs_mount()) {
+    if (auto ret = littlefs_mount()) {
         printk("failed to mount littlefs (%d)\n", ret);
     }
 #endif
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
-    auto rc = create_domains();
-    if (rc) {
-        printk("failed to create domain (%d)\n", rc);
+    if (auto ret = create_domains()) {
+        printk("failed to create domain (%d)\n", ret);
     }
 #endif
 
