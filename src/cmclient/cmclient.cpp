@@ -202,10 +202,10 @@ aos::Error CMClient::RunReader()
 
             vch_close(&mSMVChanHandlerReader);
 
+            NotifyWriteFail();
+
             if (!err.IsNone()) {
                 LOG_ERR() << "Error processing messages: " << err;
-
-                continue;
             }
         }
     });
