@@ -23,7 +23,7 @@ config AOS_STORAGE_DIR
 
 config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
-	default "/aos/runtime"
+	default "/tmp/aos/runtime"
 
 config AOS_SERVICES_DIR
 	string "Aos services dir"
