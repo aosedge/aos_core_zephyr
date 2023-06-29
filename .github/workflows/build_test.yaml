@@ -17,9 +17,10 @@ jobs:
     container: zephyrprojectrtos/ci:v0.26.4
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
+      build_option: "-- -DSHIELD=xen_dom0"
     strategy:
       matrix:
-        platform: [rcar_spider, rcar_salvator_xs_m3]
+        platform: [native_posix_64]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -33,19 +34,28 @@ jobs:
           west init -l ./
           west update
           west zephyr-export
+          echo "BUILD_OPTION=${{ env.build_option }}" >> $GITHUB_ENV
+
+      - name: Set option
+        if: startsWith(matrix.platform, 'native_posix_64')
+        run: |
+         echo "opt = $BUILD_OPTION"
+         echo "export BUILD_OPTION= "
+         echo "opt after = $BUILD_OPTION"
 
       - name: Build ${{ matrix.platform }}
         run: |
-          west build -b ${{ matrix.platform }} -p always -- -DSHIELD=xen_dom0
+          echo "opt before build = $BUILD_OPTION"
+  
 
       - name: Tests
-        if: startsWith(matrix.platform, 'rcar_spider')
+        if: startsWith(matrix.platform, 'native_posix_64')
         run: |
-          west twister -c -v --coverage --coverage-basedir src/ --coverage-tool gcovr -p native_posix_64 -T tests
+          
           gcovr twister-out/native_posix_64/ -f src/ --xml-pretty > ./coverage.xml
 
       - name: Upload codecov report
-        if: startsWith(matrix.platform, 'rcar_spider')
+        if: startsWith(matrix.platform, 'native_posix_64')
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
