@@ -57,3 +57,7 @@ manifest:
       path: modules/crypto/tinycrypt
       groups:
         - crypto
+
+    - name: zephyr-optee-client
+      remote: xen-troops
+      revision: soafee_1.1_wip
