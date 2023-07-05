@@ -19,7 +19,7 @@ class ResourceManager : public aos::NonCopyable {
 public:
     /**
      * Get current unit config version.
-     * 
+     *
      * @param version  [out] param to store version.
      * @return aos::Error.
      */
@@ -27,7 +27,7 @@ public:
 
     /**
      * Check new unit configuration.
-     * 
+     *
      * @param version unit config version
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
@@ -36,7 +36,7 @@ public:
 
     /**
      * Update unit configuration.
-     * 
+     *
      * @param version unit config version.
      * @param unitConfig string with unit configuration.
      * @return aos::Error.

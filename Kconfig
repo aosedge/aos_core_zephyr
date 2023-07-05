@@ -9,9 +9,13 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_SM_VCHAN_PATH
+config AOS_SM_VCHAN_TX_PATH
 	string "Path to the SM vchan"
-	default "/local/domain/1/tmp/vchan/sm"
+	default "/local/domain/1/tmp/vchan/sm_tx"
+
+config AOS_SM_VCHAN_RX_PATH
+	string "Path to the SM vchan"
+	default "/local/domain/1/tmp/vchan/sm_rx"
 
 config AOS_STORAGE_DIR
 	string "Path to the storage"
@@ -19,7 +23,7 @@ config AOS_STORAGE_DIR
 
 config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
-	default "/aos/runtime"
+	default "/tmp/aos/runtime"
 
 config AOS_SERVICES_DIR
 	string "Aos services dir"
@@ -48,5 +52,9 @@ config AOS_TOTAL_RAM
 config AOS_PARTITION_SIZE
 	int "Partition size"
 	default 209715200
+
+config AOS_MOUNT_LFS_MMC
+	bool "Mount LFS on MMC"
+	default y
 
 source "Kconfig"

@@ -14,9 +14,9 @@
 static char* domd_dtdevs[] = {
     "/soc/dma-controller@e7350000",
     "/soc/dma-controller@e7351000",
-    "/soc/mmc@ee140000",
     "/soc/ethernet@e68c0000",
     "/soc/pcie@e65d0000",
+    "/soc/scsi@e6860000",
 };
 static char* dt_passthrough_nodes[] = {
     "/extal",
@@ -24,6 +24,7 @@ static char* dt_passthrough_nodes[] = {
     "/pcie_bus",
     "/scif",
     "/soc",
+    "/ufs30_refclk_v",
     "/regulator-1p8v",
     "/regulator-3p3v",
     "/reserved-memory",
@@ -35,21 +36,22 @@ static struct xen_domain_iomem domd_iomems[] = {
     {.first_mfn = 0xe6160, .nr_mfns = 0x4}, /* RST */
     {.first_mfn = 0xe6180, .nr_mfns = 0x4}, /* SYSC */
     {.first_mfn = 0xe6500, .nr_mfns = 0x1}, {.first_mfn = 0xe66d8, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6860, .nr_mfns = 0x1}, /* UFS HCD */
     {.first_mfn = 0xe68c0, .nr_mfns = 0x20}, /* EtherAVB */
     {.first_mfn = 0xe6444, .nr_mfns = 0x3}, /* EtherAVB */
     {.first_mfn = 0xe6550, .nr_mfns = 0x1}, {.first_mfn = 0xe6e60, .nr_mfns = 0x1},
     {.first_mfn = 0xe7350, .nr_mfns = 0x1}, {.first_mfn = 0xe7300, .nr_mfns = 0x10},
     {.first_mfn = 0xe7351, .nr_mfns = 0x1}, {.first_mfn = 0xe7310, .nr_mfns = 0x10},
-    {.first_mfn = 0xee140, .nr_mfns = 0x2}, {.first_mfn = 0xfff00, .nr_mfns = 0x1},
-    {.first_mfn = 0xffd60, .nr_mfns = 0x1}, {.first_mfn = 0xffc10, .nr_mfns = 0x10},
-    {.first_mfn = 0xffd61, .nr_mfns = 0x1}, {.first_mfn = 0xffc20, .nr_mfns = 0x10},
-    {.first_mfn = 0xffd62, .nr_mfns = 0x1}, {.first_mfn = 0xffd70, .nr_mfns = 0x10},
-    {.first_mfn = 0xffd63, .nr_mfns = 0x1}, {.first_mfn = 0xffd80, .nr_mfns = 0x10},
-    {.first_mfn = 0xe65d3, .nr_mfns = 0x2}, {.first_mfn = 0xe65d5, .nr_mfns = 0x2},
-    {.first_mfn = 0xe65d6, .nr_mfns = 0x1}, {.first_mfn = 0xe65d7, .nr_mfns = 0x1},
-    {.first_mfn = 0xe6198, .nr_mfns = 0x1}, {.first_mfn = 0xe61a0, .nr_mfns = 0x1},
-    {.first_mfn = 0xe61a0, .nr_mfns = 0x1}, {.first_mfn = 0xe61b0, .nr_mfns = 0x1},
-    {.first_mfn = 0xe6260, .nr_mfns = 0x10}, {.first_mfn = 0xdfd91, .nr_mfns = 0x1},
+    {.first_mfn = 0xfff00, .nr_mfns = 0x1}, {.first_mfn = 0xffd60, .nr_mfns = 0x1},
+    {.first_mfn = 0xffc10, .nr_mfns = 0x10}, {.first_mfn = 0xffd61, .nr_mfns = 0x1},
+    {.first_mfn = 0xffc20, .nr_mfns = 0x10}, {.first_mfn = 0xffd62, .nr_mfns = 0x1},
+    {.first_mfn = 0xffd70, .nr_mfns = 0x10}, {.first_mfn = 0xffd63, .nr_mfns = 0x1},
+    {.first_mfn = 0xffd80, .nr_mfns = 0x10}, {.first_mfn = 0xe65d3, .nr_mfns = 0x2},
+    {.first_mfn = 0xe65d5, .nr_mfns = 0x2}, {.first_mfn = 0xe65d6, .nr_mfns = 0x1},
+    {.first_mfn = 0xe65d7, .nr_mfns = 0x1}, {.first_mfn = 0xe6198, .nr_mfns = 0x1},
+    {.first_mfn = 0xe61a0, .nr_mfns = 0x1}, {.first_mfn = 0xe61a0, .nr_mfns = 0x1},
+    {.first_mfn = 0xe61b0, .nr_mfns = 0x1}, {.first_mfn = 0xe6260, .nr_mfns = 0x10},
+    {.first_mfn = 0xdfd91, .nr_mfns = 0x1},
     //	{ .first_gfn = 0x47fc7, .first_mfn = 0x37fc7, .nr_mfns = 0x2},
 };
 
@@ -62,6 +64,8 @@ static uint32_t domd_irqs[] = {
     856,
     // gpio@e6051980
     857,
+    // scsi@e6860000 (UFS)
+    267,
     // i2c@e6500000
     270,
     // i2c@e66d8000
@@ -108,8 +112,6 @@ static uint32_t domd_irqs[] = {
     154,
     153,
     159,
-    // mmc@ee140000
-    268,
     // dma-controller@ffd60000
     64,
     65,

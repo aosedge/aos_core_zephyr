@@ -25,6 +25,7 @@ public:
         eStorage,
         eResourceMgr,
         eDownloader,
+        eOCISpec,
     };
 
     /**

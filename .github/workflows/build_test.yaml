@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+      - feature_*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: zephyrprojectrtos/ci:v0.26.4
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    strategy:
+      matrix:
+        platform: [rcar_spider, rcar_salvator_xs_m3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Initialize
+        run: |
+          sudo apt update
+          sudo apt install libprotobuf-dev -y
+          west init -l ./
+          west update
+          west zephyr-export
+
+      - name: Build ${{ matrix.platform }}
+        run: |
+          west build -b ${{ matrix.platform }} -p always -- -DSHIELD=xen_dom0
+
+      - name: Tests
+        if: startsWith(matrix.platform, 'rcar_spider')
+        run: |
+          west twister -c -v --coverage --coverage-basedir src/ --coverage-tool gcovr -p native_posix_64 -T tests
+          gcovr twister-out/native_posix_64/ -f src/ --xml-pretty > ./coverage.xml
+
+      - name: Upload codecov report
+        if: startsWith(matrix.platform, 'rcar_spider')
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml

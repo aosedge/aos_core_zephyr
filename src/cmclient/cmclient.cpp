@@ -26,8 +26,13 @@ using namespace aos::sm::launcher;
 
 CMClient::~CMClient()
 {
-    atomic_set_bit(&mFinishReadTrigger, 0);
-    mThread.Join();
+    atomic_set_bit(&mState, eFinish);
+    vch_close(&mSMVChanHandlerWriter);
+    mWriterCondVar.NotifyOne();
+    vch_close(&mSMVChanHandlerReader);
+
+    mThreadWriter.Join();
+    mThreadReader.Join();
 }
 
 aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader)
@@ -39,25 +44,12 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
     mResourceManager = &resourceManager;
     mDownloader = &downloader;
 
-    auto err = mThread.Run([this](void*) {
-        while (true) {
-            ConnectToCM();
-
-            auto err = ProcessMessages();
-            if (!err.IsNone()) {
-                LOG_ERR() << "Error processing messages: " << err;
-
-                continue;
-            }
-
-            break;
-        }
-    });
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
+    auto ret = RunWriter();
+    if (!ret.IsNone()) {
+        return ret;
     }
 
-    return aos::ErrorEnum::eNone;
+    return RunReader();
 }
 
 aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances)
@@ -130,37 +122,113 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
  * Private
  **********************************************************************************************************************/
 
-void CMClient::ConnectToCM()
+void CMClient::ConnectToCM(vch_handle& vchanHandler, const aos::String& vchanPath)
 {
-    do {
-        auto ret = vch_connect(cDomdID, cSMVChanPath, &mSMVChanHandler);
+    while (true) {
+        LOG_DBG() << "Connecting to vchan: " << vchanPath << ", on dom: " << cDomdID;
+
+        int ret = 0;
+
+        {
+            aos::LockGuard lock(mMutex);
+
+            ret = vch_connect(cDomdID, vchanPath.CStr(), &vchanHandler);
+        }
+
         if (ret != 0) {
-            LOG_WRN() << "Can't connect to SM vchan error: " << aos::Error(ret);
+            LOG_WRN() << "Can't connect to SM vchan error: " << AOS_ERROR_WRAP(ret);
 
             sleep(cConnectionTimeoutSec);
 
             continue;
         }
 
+        vchanHandler.blocking = true;
+
         break;
-    } while (true);
+    };
+}
 
-    SendNodeConfiguration();
+aos::Error CMClient::RunWriter()
+{
+    auto err = mThreadWriter.Run([this](void*) {
+        while (true) {
+            ConnectToCM(mSMVChanHandlerWriter, cSMVChanRxPath);
 
-    auto err = mLauncher->RunLastInstances();
+            auto err = mLauncher->RunLastInstances();
+            if (!err.IsNone()) {
+                LOG_ERR() << "Can't run last instances: " << err;
+            }
+
+            err = SendNodeConfiguration();
+            if (!err.IsNone()) {
+                LOG_ERR() << "Can't send node configuration: " << err;
+            }
+
+            {
+                aos::LockGuard lock(mMutex);
+
+                mWriterCondVar.Wait(
+                    [this] { return atomic_test_bit(&mState, eFail) || atomic_test_bit(&mState, eFinish); });
+
+                if (atomic_test_bit(&mState, eFinish)) {
+                    break;
+                }
+
+                atomic_clear_bit(&mState, eFail);
+
+                vch_close(&mSMVChanHandlerWriter);
+            }
+        }
+    });
     if (!err.IsNone()) {
-        LOG_ERR() << "Can't run last instances: " << err;
+        return AOS_ERROR_WRAP(err);
     }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::RunReader()
+{
+    auto err = mThreadReader.Run([this](void*) {
+        while (true) {
+            ConnectToCM(mSMVChanHandlerReader, cSMVChanTxPath);
+
+            auto err = ProcessMessages();
+
+            if (atomic_test_bit(&mState, eFinish)) {
+                break;
+            }
+
+            vch_close(&mSMVChanHandlerReader);
+
+            NotifyWriteFail();
+
+            if (!err.IsNone()) {
+                LOG_ERR() << "Error processing messages: " << err;
+            }
+        }
+    });
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error CMClient::ProcessMessages()
 {
     VChanMessageHeader header;
 
-    while (!atomic_test_bit(&mFinishReadTrigger, 0)) {
+    while (!atomic_test_bit(&mState, eFinish)) {
         auto err = ReadDataFromVChan(&header, sizeof(VChanMessageHeader));
         if (!err.IsNone()) {
             return err;
+        }
+
+        if (header.dataSize > servicemanager_v3_SMIncomingMessages_size) {
+            LOG_ERR() << "Message is too big";
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
         }
 
         err = ReadDataFromVChan(mReceiveBuffer.Get(), header.dataSize);
@@ -177,8 +245,7 @@ aos::Error CMClient::ProcessMessages()
         }
 
         if (0 != memcmp(calculatedDigest, header.sha256, sizeof(SHA256Digest))) {
-            LOG_ERR() << "SHA256 mismatch";
-            continue;
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidChecksum);
         }
 
         mIncomingMessage = servicemanager_v3_SMIncomingMessages_init_zero;
@@ -234,7 +301,7 @@ aos::Error CMClient::ProcessMessages()
     return aos::ErrorEnum::eNone;
 }
 
-void CMClient::SendNodeConfiguration()
+aos::Error CMClient::SendNodeConfiguration()
 {
     aos::LockGuard lock(mMutex);
 
@@ -258,8 +325,10 @@ void CMClient::SendNodeConfiguration()
 
     auto err = SendPBMessageToVChan();
     if (!err.IsNone()) {
-        LOG_ERR() << "Can't send node configuration: " << err;
+        return err;
     }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error CMClient::SendPBMessageToVChan()
@@ -286,18 +355,25 @@ aos::Error CMClient::SendPBMessageToVChan()
         return err;
     }
 
-    return SendBufferToVChan(static_cast<uint8_t*>(mSendBuffer.Get()), header.dataSize);
+    err = SendBufferToVChan(static_cast<uint8_t*>(mSendBuffer.Get()), header.dataSize);
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error CMClient::SendBufferToVChan(const uint8_t* buffer, size_t msgSize)
 {
-    for (size_t offset = 0; offset < msgSize;) {
-        auto ret = vch_write(&mSMVChanHandler, buffer + offset, msgSize - offset);
-        if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
-        }
+    if (atomic_test_bit(&mState, eFinish)) {
+        return aos::ErrorEnum::eNone;
+    }
 
-        offset += ret;
+    auto ret = vch_write(&mSMVChanHandlerWriter, buffer, msgSize);
+    if (ret < 0) {
+        NotifyWriteFail();
+
+        return AOS_ERROR_WRAP(ret);
     }
 
     return aos::ErrorEnum::eNone;
@@ -522,7 +598,6 @@ void CMClient::ProcessImageContentInfo()
 
 void CMClient::ProcessImageContentChunk()
 {
-
     aos::BufferAllocator<> allocator(mReceiveBuffer);
 
     auto chunk = aos::MakeUnique<FileChunk>(&allocator);
@@ -543,23 +618,16 @@ void CMClient::ProcessImageContentChunk()
 
 aos::Error CMClient::ReadDataFromVChan(void* des, size_t size)
 {
-    size_t readSize = 0;
-
-    while (readSize < size && !atomic_test_bit(&mFinishReadTrigger, 0)) {
-        aos::LockGuard lock(mMutex);
-
-        auto read = vch_read(&mSMVChanHandler, reinterpret_cast<uint8_t*>(des) + readSize, size - readSize);
-        if (read < 0) {
-            return AOS_ERROR_WRAP(read);
-        }
-
-        if (read == 0) {
-            k_yield();
-            continue;
-        }
-
-        readSize += read;
+    auto read = vch_read(&mSMVChanHandlerReader, reinterpret_cast<uint8_t*>(des), size);
+    if (read < 0) {
+        return AOS_ERROR_WRAP(read);
     }
 
     return aos::ErrorEnum::eNone;
+}
+
+void CMClient::NotifyWriteFail()
+{
+    atomic_set_bit(&mState, eFail);
+    mWriterCondVar.NotifyOne();
 }

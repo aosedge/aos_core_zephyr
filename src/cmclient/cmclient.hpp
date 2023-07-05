@@ -36,12 +36,7 @@ public:
     /**
      * Creates CM client.
      */
-    CMClient()
-        : mLauncher(nullptr)
-        , mThread()
-    {
-        atomic_clear_bit(&mFinishReadTrigger, 0);
-    }
+    CMClient() = default;
 
     /**
      * Destructor.
@@ -84,7 +79,8 @@ public:
 private:
     static constexpr auto cConnectionTimeoutSec = 5;
     static constexpr auto cDomdID = CONFIG_AOS_DOMD_ID;
-    static constexpr auto cSMVChanPath = CONFIG_AOS_SM_VCHAN_PATH;
+    static constexpr auto cSMVChanTxPath = CONFIG_AOS_SM_VCHAN_TX_PATH;
+    static constexpr auto cSMVChanRxPath = CONFIG_AOS_SM_VCHAN_RX_PATH;
     static constexpr auto cNodeID = CONFIG_AOS_NODE_ID;
     static constexpr auto cNodeType = CONFIG_AOS_NODE_TYPE;
     static constexpr auto cNumCPUs = CONFIG_AOS_NUM_CPU;
@@ -92,10 +88,15 @@ private:
     static constexpr auto cPartitionSize = CONFIG_AOS_PARTITION_SIZE;
     static constexpr auto CReadDelayUSec = 50000;
 
+    enum State { eFail = 1, eFinish = 2 };
+
     aos::Error                       ProcessMessages();
-    void                             ConnectToCM();
-    void                             SendNodeConfiguration();
+    void                             ConnectToCM(vch_handle& vchanHandler, const aos::String& vchanPath);
+    aos::Error                       RunWriter();
+    aos::Error                       RunReader();
+    aos::Error                       SendNodeConfiguration();
     aos::Error                       SendPBMessageToVChan();
+    void                             NotifyWriteFail();
     aos::Error                       SendBufferToVChan(const uint8_t* buffer, size_t msgSize);
     aos::Error                       CalculateSha256(const aos::Buffer& buffer, size_t size, SHA256Digest& digest);
     servicemanager_v3_InstanceStatus InstanceStatusToPB(const aos::InstanceStatus& instanceStatus) const;
@@ -107,15 +108,18 @@ private:
     void                             ProcessImageContentChunk();
     aos::Error                       ReadDataFromVChan(void* des, size_t size);
 
-    aos::sm::launcher::LauncherItf*                              mLauncher;
-    ResourceManager*                                             mResourceManager;
-    DownloadReceiverItf*                                         mDownloader;
-    aos::Thread<>                                                mThread;
-    atomic_t                                                     mFinishReadTrigger;
-    vch_handle                                                   mSMVChanHandler;
+    aos::sm::launcher::LauncherItf*                              mLauncher = {};
+    ResourceManager*                                             mResourceManager = {};
+    DownloadReceiverItf*                                         mDownloader = {};
+    aos::Thread<>                                                mThreadWriter = {};
+    aos::Thread<>                                                mThreadReader = {};
+    atomic_t                                                     mState = {};
+    vch_handle                                                   mSMVChanHandlerWriter;
+    vch_handle                                                   mSMVChanHandlerReader;
     servicemanager_v3_SMIncomingMessages                         mIncomingMessage;
     servicemanager_v3_SMOutgoingMessages                         mOutgoingMessage;
     aos::Mutex                                                   mMutex;
+    aos::ConditionalVariable                                     mWriterCondVar {mMutex};
     aos::StaticBuffer<servicemanager_v3_SMOutgoingMessages_size> mSendBuffer;
     aos::StaticBuffer<aos::Max(size_t(servicemanager_v3_SMIncomingMessages_size),
         sizeof(aos::InstanceInfoStaticArray) + sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray))>

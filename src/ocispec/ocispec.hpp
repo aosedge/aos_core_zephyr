@@ -8,22 +8,156 @@
 #ifndef OCISPEC_HPP_
 #define OCISPEC_HPP_
 
+#include <aos/common/ocispec.hpp>
+#include <aos/common/tools/allocator.hpp>
 #include <aos/common/tools/thread.hpp>
 
-#include "ocijsonspec.hpp"
+// Image spec
+
+/**
+ * OCI content descriptor.
+ */
+
+struct ContentDescriptor {
+    const char* mediaType;
+    const char* digest;
+    int64_t     size;
+};
+
+/**
+ * OCI image manifest.
+ */
+struct ImageManifest {
+    int               schemaVersion;
+    const char*       mediaType;
+    ContentDescriptor config;
+    ContentDescriptor layers[aos::cMaxNumLayers];
+    size_t            layersLen;
+    ContentDescriptor aosService;
+};
+
+/**
+ * OCI image manifest bit fields.
+ */
+enum ImageManifestFields {
+    eImageManifestSchemaVersionField = BIT(0),
+    eImageManifestMediaTypeField = BIT(1),
+    eImageManifestConfigField = BIT(2),
+    eImageManifestLayersField = BIT(3),
+    eImageManifestAosServiceField = BIT(4),
+};
+
+/**
+ * OCI image config.
+ */
+struct ImageConfig {
+    const char* Cmd[aos::oci::cMaxParamCount];
+    size_t      cmdLen;
+    const char* Env[aos::oci::cMaxParamCount];
+    size_t      envLen;
+    const char* Entrypoint[aos::oci::cMaxParamCount];
+    size_t      entrypointLen;
+};
+
+/**
+ * OCI image specification.
+ */
+struct ImageSpec {
+    ImageConfig config;
+};
+
+// Runtime spec
+
+/**
+ * Contains information about the hypervisor to use for a virtual machine.
+ */
+struct VMHypervisor {
+    const char* path;
+    const char* parameters[aos::oci::cMaxParamCount];
+    size_t      parametersLen;
+};
+
+/**
+ * Contains information about the kernel to use for a virtual machine.
+ */
+struct VMKernel {
+    const char* path;
+    const char* parameters[aos::oci::cMaxParamCount];
+    size_t      parametersLen;
+};
+
+/**
+ * Contains information about IOMEMs.
+ */
+struct VMHWConfigIOMEM {
+    uint64_t firstGFN;
+    uint64_t firstMFN;
+    uint64_t nrMFNs;
+};
+
+/**
+ * Contains information about HW configuration.
+ */
+struct VMHWConfig {
+    const char*     deviceTree;
+    uint32_t        vcpus;
+    uint64_t        memKB;
+    const char*     dtdevs[aos::oci::cMaxDTDevsCount];
+    size_t          dtdevsLen;
+    VMHWConfigIOMEM iomems[aos::oci::cMaxIOMEMsCount];
+    size_t          iomemsLen;
+    uint32_t        irqs[aos::oci::cMaxIRQsCount];
+    size_t          irqsLen;
+};
+
+/**
+ * Contains information for virtual-machine-based containers.
+ */
+struct VM {
+    VMHypervisor hypervisor;
+    VMKernel     kernel;
+    VMHWConfig   hwConfig;
+};
+
+/**
+ * OCI runtime specification bit fields.
+ */
+enum RuntimeSpecFields {
+    eRuntimeOCIVersionField = BIT(0),
+    eRuntimeVMField = BIT(1),
+};
+
+/**
+ * OCI runtime specification.
+ */
+struct RuntimeSpec {
+    const char* ociVersion;
+    VM          vm;
+};
 
 /**
  * OCISpec instance.
  */
 class OCISpec : public aos::OCISpecItf {
 public:
-    OCISpec()
-        : mJsonFileBuffer()
-        , mBufferMutex()
-        , mRuntimeSpec()
-        , mImageSpec()
-    {
-    }
+    /**
+     * Loads OCI image manifest.
+     *
+     * @param path file path.
+     * @param manifest image manifest.
+     * @return Error.
+     */
+    aos::Error LoadImageManifest(const aos::String& path, aos::oci::ImageManifest& manifest) override;
+
+    /**
+     * Saves OCI image manifest.
+     *
+     * @param path file path.
+     * @param manifest image manifest.
+     * @return Error.
+     */
+    aos::Error SaveImageManifest(const aos::String& path, const aos::oci::ImageManifest& manifest) override;
+
     /**
      * Loads OCI image spec.
      *
@@ -63,12 +197,12 @@ public:
 private:
     static constexpr size_t cJsonMaxContentSize = 4096;
 
-    aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path, size_t maxContentSize);
-    aos::Error             WriteEncodedJsonBufferToFile(const aos::String& path, size_t len);
+    aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path);
+    aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path);
 
-    aos::StaticBuffer<cJsonMaxContentSize> mJsonFileBuffer;
-    aos::Mutex                             mBufferMutex;
-    RuntimeSpec                            mRuntimeSpec;
-    ImageSpec                              mImageSpec;
+    aos::Mutex                                                             mMutex;
+    aos::StaticBuffer<cJsonMaxContentSize>                                 mJsonFileBuffer;
+    aos::StaticAllocator<aos::Max(sizeof(ImageSpec), sizeof(RuntimeSpec))> mAllocator;
 };
+
 #endif

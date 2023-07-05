@@ -1,12 +1,25 @@
+/*
+ * Copyright (C) 2023 Renesas Electronics Corporation.
+ * Copyright (C) 2023 EPAM Systems, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <mem.h>
 
+&mmc0 {
+	disk {
+		status = "okay";
+	};
+	status = "okay";
+};
+
 / {
-  	fstab {
+	fstab {
 		compatible = "zephyr,fstab";
 		storage: storage {
 			compatible = "zephyr,fstab,littlefs";
-			mount-point = "/aos";
+			mount-point = "/tmp";
 			partition = <&storage_partition>;
 			automount;
 			read-size = <16>;
@@ -16,6 +29,7 @@
 			block-cycles = <512>;
 		};
 	};
+
 	flashcontroller0: flashcontroller {
 		compatible = "zephyr,sim-flash";
 		label = "FLASH_SIMULATOR";
@@ -31,10 +45,10 @@
 				compatible = "fixed-partitions";
 				#address-cells = <1>;
 				#size-cells = <1>;
-			/*
-			 * Storage partition will be used by FCB/LittleFS/NVS
-			 * if enabled.
-			 */
+				/*
+				* Storage partition will be used by FCB/LittleFS/NVS
+				* if enabled.
+				*/
 				storage_partition: partition@1000 {
 					label = "storage";
 					reg = <0x00001000 0x02000000>;
@@ -42,8 +56,4 @@
 			};
 		};
 	};
-};
-
-&ram {
-	reg = <0x00 0x60000000 0x00 DT_SIZE_M(256)>;
 };

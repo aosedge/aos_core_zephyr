@@ -39,7 +39,7 @@ add_definitions(-include aoscoreconfig.hpp)
 # ######################################################################################################################
 
 # Add stack usage warning
-target_compile_options(app PRIVATE -Wstack-usage=1024)
+target_compile_options(app PRIVATE -Wstack-usage=2048)
 
 # ######################################################################################################################
 # Taget
@@ -69,12 +69,14 @@ target_sources_ifdef(
 # NOTE: Include source files for DomD support for Gen3 board.
 # Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
 target_sources_ifdef(
-    CONFIG_BOARD_RCAR_SALVATOR_XS_M3_2X4G app PRIVATE src/domains/domd/domd_cfg_gen3.c
-    src/domains/domd/domain_bins_gen3.S
+    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_gen3.c src/domains/domd/domain_bins_gen3.S
 )
 
-# NOTE: Include source files for xenvm boards.
-target_sources_ifdef(CONFIG_BOARD_XENVM app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
+# NOTE: Include source files for qemu boards.
+target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
+
+# NOTE: Include source files for LFS on MMC support
+target_sources_ifdef(CONFIG_AOS_MOUNT_LFS_MMC app PRIVATE src/bsp/mount.c)
 
 # ######################################################################################################################
 # Versioning
@@ -118,43 +120,6 @@ zephyr_get_compile_definitions_for_lang_as_string(CXX definitions)
 zephyr_get_compile_options_for_lang_as_string(CXX options)
 
 set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${options}")
-
-# ######################################################################################################################
-# Xen on QEMU
-# ######################################################################################################################
-
-if(CONFIG_BOARD MATCHES "xenvm")
-    set(xen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/xen)
-
-    ExternalProject_Add(
-        hypervisor
-        GIT_REPOSITORY https://github.com/xen-project/xen
-        GIT_TAG RELEASE-4.17.0
-        SOURCE_DIR ${xen_build_dir}
-        BUILD_IN_SOURCE 1
-        CONFIGURE_COMMAND ./configure --disable-docs --disable-tools --disable-stubdom
-        BUILD_COMMAND ${MAKE} make -C ${xen_build_dir} CONFIG_QEMU_XEN=y CONFIG_DEBUG=y XSM_ENABLE=y
-                      XEN_TARGET_ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} HOSTCC=gcc
-        INSTALL_COMMAND cp ${xen_build_dir}/xen/xen ${ZEPHYR_BINARY_DIR}
-        BUILD_BYPRODUCTS ${ZEPHYR_BINARY_DIR}/xen
-        DEPENDS app
-    )
-
-    add_dependencies(hypervisor zephyr_final)
-
-    set(utils_scripts_dir ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-
-    if(DTC)
-        add_custom_command(
-            TARGET hypervisor
-            POST_BUILD
-            COMMAND ${utils_scripts_dir}/fix_dtb.sh ${utils_scripts_dir}/gicv2.tmpl ${ZEPHYR_BINARY_DIR}/virt_gicv2.dtb
-                    ${ZEPHYR_BINARY_DIR}/zephyr.bin
-        )
-    else()
-        message(WARNING "No dtc program")
-    endif()
-endif()
 
 # ######################################################################################################################
 # aos_core_lib_cpp

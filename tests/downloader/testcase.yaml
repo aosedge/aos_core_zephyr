@@ -3,5 +3,5 @@ tests:
     tags: downloader
     timeout: 500
     integration_platforms:
-      - native_posix
-    platform_allow: native_posix
+      - native_posix_64
+    platform_allow: native_posix_64
