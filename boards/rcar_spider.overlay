@@ -15,6 +15,14 @@
 };
 
 / {
+	firmware {
+		tee {
+		compatible = "linaro,optee-tz";
+		method = "smc";
+		status = "okay";
+		};
+	};
+
 	fstab {
 		compatible = "zephyr,fstab";
 		storage: storage {
