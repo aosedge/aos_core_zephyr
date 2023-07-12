@@ -19,8 +19,10 @@
 #include "cmclient/cmclient.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
+#include "mockconnectionsubscriber.hpp"
 #include "mockdownloader.hpp"
 #include "mocklauncher.hpp"
+#include "mockresourcemonitor.hpp"
 
 static constexpr char testVersion[6] = "1.0.1";
 
@@ -29,6 +31,7 @@ bool                                 gReadHead = true;
 bool                                 gShutdown = false;
 bool                                 gReadyToRead = true;
 bool                                 gReadyToCheck = false;
+bool                                 gWriteError = false;
 uint8_t                              gConnectionCount = 0;
 VChanMessageHeader                   gCurrentHeader;
 servicemanager_v3_SMOutgoingMessages gReceivedMessage;
@@ -139,6 +142,10 @@ int vch_read(struct vch_handle* h, void* buf, size_t size)
 int vch_write(struct vch_handle* h, const void* buf, size_t size)
 {
     printk("[test] Start write %d header %d \n", size, gWaitHeader);
+
+    if (gWriteError) {
+        return -1;
+    }
 
     if (gWaitHeader) {
         gWaitHeader = false;
@@ -347,6 +354,65 @@ void testRunInstances()
     }
 }
 
+void testNodeMonitoring()
+{
+    aos::monitoring::NodeMonitoringData monitoringData;
+    monitoringData.mNodeID = "NodeID";
+    monitoringData.mMonitoringData.mCPU = 42;
+    monitoringData.mMonitoringData.mRAM = 43;
+    aos::monitoring::PartitionInfo partitionInfo;
+    partitionInfo.mName = "PartitionName";
+    partitionInfo.mUsedSize = 45;
+
+    monitoringData.mMonitoringData.mDisk.PushBack(partitionInfo);
+
+    aos::monitoring::InstanceMonitoringData instanceMonitoringData;
+    instanceMonitoringData.mInstanceID = "InstanceID";
+    instanceMonitoringData.mMonitoringData.mCPU = 44;
+    instanceMonitoringData.mMonitoringData.mRAM = 45;
+
+    monitoringData.mServiceInstances.PushBack(instanceMonitoringData);
+
+    gTestCMClient.SendMonitoringData(monitoringData);
+
+    {
+        UniqueLock lock(gWaitMessageMutex);
+        gWaitMessageCondVar.Wait([&] { return gReadyToCheck; });
+        gReadyToCheck = false;
+    }
+
+    zassert_equal(gReceivedMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_monitoring_tag,
+        "Node monitoring expected");
+
+    zassert_equal(gReceivedMessage.SMOutgoingMessage.node_monitoring.monitoring_data.cpu,
+        monitoringData.mMonitoringData.mCPU, "Incorrect CPU");
+    zassert_equal(gReceivedMessage.SMOutgoingMessage.node_monitoring.monitoring_data.ram,
+        monitoringData.mMonitoringData.mRAM, "Incorrect RAM");
+
+    zassert_equal(
+        gReceivedMessage.SMOutgoingMessage.node_monitoring.monitoring_data.disk_count, 1, "Incorrect disk count");
+
+    zassert_equal(gReceivedMessage.SMOutgoingMessage.node_monitoring.monitoring_data.disk[0].used_size,
+        partitionInfo.mUsedSize, "Incorrect used size");
+    zassert_equal(gReceivedMessage.SMOutgoingMessage.node_monitoring.monitoring_data.disk[0].name, partitionInfo.mName,
+        "Incorrect name");
+
+    zassert_equal(
+        gReceivedMessage.SMOutgoingMessage.node_monitoring.instance_monitoring_count, 1, "Incorrect instances count");
+
+    zassert_equal(gReceivedMessage.SMOutgoingMessage.node_monitoring.instance_monitoring[0].monitoring_data.cpu,
+        instanceMonitoringData.mMonitoringData.mCPU, "Incorrect instance CPU");
+    zassert_equal(gReceivedMessage.SMOutgoingMessage.node_monitoring.instance_monitoring[0].monitoring_data.ram,
+        instanceMonitoringData.mMonitoringData.mRAM, "Incorrect instance RAM");
+
+    gWriteError = true;
+
+    auto err = gTestCMClient.SendMonitoringData(monitoringData);
+    zassert_false(err.IsNone(), "Error expected");
+
+    gWriteError = false;
+}
+
 void testImageDownloadInstances()
 {
     printk("[test] ----------- GetUnitConfigInfo ---------------- \n");
@@ -438,11 +504,16 @@ ZTEST_SUITE(cmclient, NULL, NULL, NULL, NULL, NULL);
 
 ZTEST(cmclient, test_node_config)
 {
-    ResourceManager mockResourceManager;
+    ResourceManager          mockResourceManager;
+    MockResourceMonitor      mockResourceMonitor;
+    MockConnectionSubscriber mockConnectionSubscriber;
 
     aos::Log::SetCallback(TestLogCallback);
 
-    auto err = gTestCMClient.Init(gMockLauncher, mockResourceManager, gMockDownloader);
+    auto err = gTestCMClient.Subscribes(&mockConnectionSubscriber);
+    zassert_true(err.IsNone(), "subscribe error: %s", err.Message());
+
+    gTestCMClient.Init(gMockLauncher, mockResourceManager, gMockDownloader, mockResourceMonitor);
     zassert_true(err.IsNone(), "init error: %s", err.Message());
 
     // wait open
@@ -450,6 +521,13 @@ ZTEST(cmclient, test_node_config)
         UniqueLock lock(gConnectionMutex);
         gConnectionCondVar.Wait([&] { return gConnectionCount > 1; });
     }
+
+    // wait onConnect notification
+    sleep(1);
+
+    zassert_true(mockConnectionSubscriber.IsConnected(), "Connection expected");
+
+    gTestCMClient.Unsubscribes(&mockConnectionSubscriber);
 
     // Wait node config
     {
@@ -467,6 +545,7 @@ ZTEST(cmclient, test_node_config)
     testUpdateUnitConfig();
     testRunInstances();
     testImageDownloadInstances();
+    testNodeMonitoring();
 
     // release read tread to shutdown
     UniqueLock lock(gReadMutex);
