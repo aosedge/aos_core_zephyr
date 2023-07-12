@@ -8,6 +8,7 @@
 #ifndef APP_HPP_
 #define APP_HPP_
 
+#include <aos/common/resourcemonitor.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
 #include <aos/sm/launcher.hpp>
@@ -15,6 +16,7 @@
 
 #include "cmclient/cmclient.hpp"
 #include "ocispec/ocispec.hpp"
+#include "resourceusageprovider/resourceusageprovider.hpp"
 #include "runner/runner.hpp"
 #include "storage/storage.hpp"
 
@@ -46,6 +48,8 @@ private:
     Downloader                              mDownloader;
     OCISpec                                 mJsonOciSpec;
     aos::sm::servicemanager::ServiceManager mServiceManager;
+    aos::monitoring::ResourceMonitor        mResourceMonitor;
+    ResourceUsageProvider                   mResourceUsageProvider;
 };
 
 #endif

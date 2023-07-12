@@ -40,11 +40,20 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage)).IsNone()) {
+    if (!(err = mResourceUsageProvider.Init()).IsNone()) {
         return err;
     }
 
-    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader)).IsNone()) {
+    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCMClient, mCMClient)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage, mResourceMonitor))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader, mResourceMonitor)).IsNone()) {
         return err;
     }
 
