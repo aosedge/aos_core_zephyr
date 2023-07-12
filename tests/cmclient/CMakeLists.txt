@@ -41,4 +41,4 @@ target_include_directories(app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp src/mocklauncher.cpp src/mockdownloader.cpp ../../src/cmclient/cmclient.cpp)
+target_sources(app PRIVATE src/main.cpp src/mocklauncher.cpp src/mockdownloader.cpp src/mockresourcemonitor.cpp src/mockconnectionsubscriber.cpp  ../../src/cmclient/cmclient.cpp)
