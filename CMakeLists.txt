@@ -27,6 +27,17 @@ if(BOARD MATCHES "native_posix*")
     zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} mocks/include)
 endif()
 
+if(TA_DEPLOY_DIR)
+    set(TA_BIN_DIRECTORY ta_bin)
+    set(GENERATED_DIRECTORY ta_table)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/prepare_ta.sh -t ${CMAKE_CURRENT_SOURCE_DIR} -f ${TA_DEPLOY_DIR} -b
+                ${TA_BIN_DIRECTORY} -g ${GENERATED_DIRECTORY}
+    )
+    include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/${TA_BIN_DIRECTORY})
+    target_sources(app PRIVATE ${GENERATED_DIRECTORY}/ta_table.c ${GENERATED_DIRECTORY}/ta_table.S)
+endif()
+
 # ######################################################################################################################
 # Definitions
 # ######################################################################################################################
