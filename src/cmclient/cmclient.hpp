@@ -19,9 +19,7 @@
 
 #include <pb_encode.h>
 #include <servicemanager.pb.h>
-extern "C" {
 #include <vch.h>
-}
 
 #include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
