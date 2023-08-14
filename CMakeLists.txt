@@ -57,6 +57,7 @@ target_sources(
             src/resourcemanager/resourcemanager.cpp
             src/ocispec/ocispec.cpp
             src/resourceusageprovider/resourceusageprovider.cpp
+            src/utils/checksum.cpp
 )
 
 # Enable vchannels and xrun mocks for native posix
@@ -136,7 +137,8 @@ ExternalProject_Add(
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
                -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
     SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
-    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a ${aoscore_build_dir}/lib/libaoscommoncpp.a
+    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a
+                     ${aoscore_build_dir}/lib/libaoscommoncpp.a
     DEPENDS zephyr_interface
 )
 
