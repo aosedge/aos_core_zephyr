@@ -1,10 +1,12 @@
-name: Build
+name: Build and test
 
 on:
   push:
     branches:
       - main
       - develop
+      - feature_*
+
   pull_request:
     branches:
       - main
@@ -14,12 +16,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: zephyrprojectrtos/ci:v0.26.4
+    container: zephyrprojectrtos/ci:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
+
     strategy:
       matrix:
-        platform: [rcar_spider, rcar_salvator_xs_m3]
+        platform:
+          [rcar_spider, rcar_salvator_xs_m3, native_posix, native_posix_64]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -35,17 +40,28 @@ jobs:
           west zephyr-export
 
       - name: Build ${{ matrix.platform }}
+        if: "!startsWith(matrix.platform, 'native')"
         run: |
           west build -b ${{ matrix.platform }} -p always -- -DSHIELD=xen_dom0
 
-      - name: Tests
-        if: startsWith(matrix.platform, 'rcar_spider')
+      - name: Build ${{ matrix.platform }}
+        if: startsWith(matrix.platform, 'native')
         run: |
-          west twister -c -v --coverage --coverage-basedir src/ --coverage-tool gcovr -p native_posix_64 -T tests
-          gcovr twister-out/native_posix_64/ -f src/ --xml-pretty > ./coverage.xml
+          west build -b ${{ matrix.platform }} -p always
+
+      - name: Test ${{ matrix.platform }}
+        if: matrix.platform == 'native_posix'
+        run: |
+          west twister -c -v -p ${{ matrix.platform }} -T tests
+
+      - name: Test ${{ matrix.platform }}
+        if: matrix.platform == 'native_posix_64'
+        run: |
+          west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests
+          gcovr twister-out/${{ matrix.platform }}/ -f src/ --xml-pretty > ./coverage.xml
 
       - name: Upload codecov report
-        if: startsWith(matrix.platform, 'rcar_spider')
+        if: startsWith(matrix.platform, 'native_posix_64')
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
