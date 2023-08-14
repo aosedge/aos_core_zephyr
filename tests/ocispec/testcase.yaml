@@ -3,6 +3,4 @@ tests:
     build_only: false
     tags: ocispec
     timeout: 500
-    integration_platforms:
-      - native_posix_64
-    platform_allow: native_posix_64
+    platform_allow: native_posix_64 native_posix
