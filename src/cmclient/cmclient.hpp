@@ -24,8 +24,6 @@
 #include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
-using SHA256Digest = uint8_t[32];
-
 /**
  * CM client instance.
  */
@@ -118,7 +116,6 @@ private:
     aos::Error                           SendPBMessageToVChan();
     void                                 NotifyWriteFail();
     aos::Error                           SendBufferToVChan(const uint8_t* buffer, size_t msgSize);
-    aos::Error                           CalculateSha256(const aos::Buffer& buffer, size_t size, SHA256Digest& digest);
     servicemanager_v3_InstanceStatus     InstanceStatusToPB(const aos::InstanceStatus& instanceStatus) const;
     servicemanager_v3_PartitionUsage     PartitionInfoToPB(const aos::monitoring::PartitionInfo& partitionUsage) const;
     servicemanager_v3_InstanceMonitoring InstanceMonitoringToPB(

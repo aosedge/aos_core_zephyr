@@ -8,8 +8,6 @@
 #include <unistd.h>
 
 #include <pb_decode.h>
-#include <tinycrypt/constants.h>
-#include <tinycrypt/sha256.h>
 #include <vchanapi.h>
 #include <zephyr/kernel.h>
 
@@ -17,6 +15,7 @@
 
 #include "cmclient.hpp"
 #include "log.hpp"
+#include "utils/checksum.hpp"
 
 using namespace aos::sm::launcher;
 
@@ -307,15 +306,13 @@ aos::Error CMClient::ProcessMessages()
             return err;
         }
 
-        SHA256Digest calculatedDigest;
-
-        err = CalculateSha256(mReceiveBuffer, header.dataSize, calculatedDigest);
-        if (!err.IsNone()) {
-            LOG_ERR() << "Can't calculate SHA256: " << err;
+        auto checksum = CalculateSha256(mReceiveBuffer.Get(), header.dataSize);
+        if (!checksum.mError.IsNone()) {
+            LOG_ERR() << "Can't calculate SHA256: " << checksum.mError;
             continue;
         }
 
-        if (0 != memcmp(calculatedDigest, header.sha256, sizeof(SHA256Digest))) {
+        if (aos::Buffer(header.sha256, aos::cSHA256Size) != checksum.mValue) {
             return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidChecksum);
         }
 
@@ -431,12 +428,14 @@ aos::Error CMClient::SendPBMessageToVChan()
 
     VChanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
 
-    auto err = CalculateSha256(mSendBuffer, header.dataSize, header.sha256);
-    if (!err.IsNone()) {
-        return err;
+    auto checksum = CalculateSha256(mSendBuffer.Get(), header.dataSize);
+    if (!checksum.mError.IsNone()) {
+        return checksum.mError;
     }
 
-    err = SendBufferToVChan((uint8_t*)&header, sizeof(VChanMessageHeader));
+    aos::Buffer(header.sha256, aos::cSHA256Size) = checksum.mValue;
+
+    auto err = SendBufferToVChan((uint8_t*)&header, sizeof(VChanMessageHeader));
     if (!err.IsNone()) {
         return err;
     }
@@ -459,28 +458,6 @@ aos::Error CMClient::SendBufferToVChan(const uint8_t* buffer, size_t msgSize)
     if (ret < 0) {
         NotifyWriteFail();
 
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    return aos::ErrorEnum::eNone;
-}
-
-aos::Error CMClient::CalculateSha256(const aos::Buffer& buffer, size_t msgSize, SHA256Digest& digest)
-{
-    tc_sha256_state_struct s;
-
-    auto ret = tc_sha256_init(&s);
-    if (TC_CRYPTO_SUCCESS != ret) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    ret = tc_sha256_update(&s, static_cast<uint8_t*>(buffer.Get()), msgSize);
-    if (TC_CRYPTO_SUCCESS != ret) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    ret = tc_sha256_final(digest, &s);
-    if (TC_CRYPTO_SUCCESS != ret) {
         return AOS_ERROR_WRAP(ret);
     }
 
