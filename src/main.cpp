@@ -46,7 +46,7 @@ int main(void)
     auto& app = App::Get();
 
     auto err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s", aos::StaticString<128>().Convert(err).CStr());
+    __ASSERT(err.IsNone(), "Error initializing application: %s", err.Message());
 
     return 0;
 }
