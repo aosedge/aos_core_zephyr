@@ -24,7 +24,7 @@ public:
     /**
      * Returns true if the subscriber is connected.
      */
-bool IsConnected() const;
+    bool IsConnected() const;
 
 private:
     bool connected {};
