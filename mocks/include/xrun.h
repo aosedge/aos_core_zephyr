@@ -9,9 +9,9 @@
 extern "C" {
 
 enum container_status {
-	RUNNING = 0,
-	PAUSED,
-	DESTROYED,
+    RUNNING = 0,
+    PAUSED,
+    DESTROYED,
 };
 
 /*
@@ -24,7 +24,7 @@ enum container_status {
  *
  * @return - 0 on success and errno on error
  */
-int xrun_run(const char *bundle, int console_socket, const char *container_id);
+int xrun_run(const char* bundle, int console_socket, const char* container_id);
 
 /*
  * @brief Pause runx container
@@ -33,7 +33,7 @@ int xrun_run(const char *bundle, int console_socket, const char *container_id);
  *
  * @return - 0 on success and errno on error
  */
-int xrun_pause(const char *container_id);
+int xrun_pause(const char* container_id);
 
 /*
  * @brief Resume to runx container
@@ -42,7 +42,7 @@ int xrun_pause(const char *container_id);
  *
  * @return - 0 on success and errno on error
  */
-int xrun_resume(const char *container_id);
+int xrun_resume(const char* container_id);
 
 /*
  * @brief Kill runx container
@@ -51,7 +51,7 @@ int xrun_resume(const char *container_id);
  *
  * @return - 0 on success and errno on error
  */
-int xrun_kill(const char *container_id);
+int xrun_kill(const char* container_id);
 
 /*
  * @brief Kill runx container
@@ -61,7 +61,7 @@ int xrun_kill(const char *container_id);
  *
  * @return 0 on success and errno on error
  */
-int xrun_state(const char *container_id, enum container_status *state);
+int xrun_state(const char* container_id, enum container_status* state);
 
 } // extern "C"
 
