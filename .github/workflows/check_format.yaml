@@ -1,4 +1,4 @@
-name: clang-format Check
+name: Check formatting
 
 on:
   push:
@@ -19,8 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Run clang-format style check for C/C++
+      - name: Run clang-format style check
         uses: jidicula/clang-format-action@v4.11.0
         with:
           clang-format-version: "15"
-          check-path: "src"
+
+      - name: Run cmake-format style check
+        run: |
+          python -m pip install --upgrade pip
+          pip install cmake_format
+          find . \( \( -not -path '*/build/*' \) -name '*.cmake' -or -name 'CMakeLists.txt' \) \
+            -exec cmake-format --check {} +;
