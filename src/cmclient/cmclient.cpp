@@ -373,9 +373,11 @@ aos::Error CMClient::SendNodeConfiguration()
 {
     aos::LockGuard lock(mMutex);
 
-    aos::monitoring::NodeInfo nodeInfo;
+    aos::BufferAllocator<> allocator(mSendBuffer);
 
-    auto err = mResourceMonitor->GetNodeInfo(nodeInfo);
+    auto nodeInfo = aos::MakeUnique<aos::monitoring::NodeInfo>(&allocator);
+
+    auto err = mResourceMonitor->GetNodeInfo(*nodeInfo);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -391,17 +393,17 @@ aos::Error CMClient::SendNodeConfiguration()
     config.runner_features_count = 1;
     strncpy(config.runner_features[0], "xrun", sizeof(config.runner_features[0]));
 
-    config.num_cpus = nodeInfo.mNumCPUs;
-    config.total_ram = nodeInfo.mTotalRAM;
-    config.partitions_count = nodeInfo.mPartitions.Size();
+    config.num_cpus = nodeInfo->mNumCPUs;
+    config.total_ram = nodeInfo->mTotalRAM;
+    config.partitions_count = nodeInfo->mPartitions.Size();
 
-    for (size_t i = 0; i < nodeInfo.mPartitions.Size(); ++i) {
-        strncpy(config.partitions[i].name, nodeInfo.mPartitions[i].mName.CStr(), sizeof(config.partitions[i].name));
-        config.partitions[i].total_size = nodeInfo.mPartitions[i].mTotalSize;
-        config.partitions[i].types_count = nodeInfo.mPartitions[i].mTypes.Size();
+    for (size_t i = 0; i < nodeInfo->mPartitions.Size(); ++i) {
+        strncpy(config.partitions[i].name, nodeInfo->mPartitions[i].mName.CStr(), sizeof(config.partitions[i].name));
+        config.partitions[i].total_size = nodeInfo->mPartitions[i].mTotalSize;
+        config.partitions[i].types_count = nodeInfo->mPartitions[i].mTypes.Size();
 
-        for (size_t j = 0; j < nodeInfo.mPartitions[i].mTypes.Size(); ++j) {
-            strncpy(config.partitions[i].types[j], nodeInfo.mPartitions[i].mTypes[j].CStr(),
+        for (size_t j = 0; j < nodeInfo->mPartitions[i].mTypes.Size(); ++j) {
+            strncpy(config.partitions[i].types[j], nodeInfo->mPartitions[i].mTypes[j].CStr(),
                 sizeof(config.partitions[i].types[j]));
         }
     }

@@ -144,8 +144,10 @@ private:
     aos::Mutex                                                       mMutex;
     aos::ConditionalVariable                                         mWriterCondVar {mMutex};
     aos::StaticArray<aos::ConnectionSubscriberItf*, cMaxSubscribers> mConnectionSubscribers;
-    aos::StaticBuffer<servicemanager_v3_SMOutgoingMessages_size>     mSendBuffer;
-    aos::StaticBuffer<aos::Max(size_t(servicemanager_v3_SMIncomingMessages_size),
+    aos::StaticBuffer<aos::Max(
+        static_cast<size_t>(servicemanager_v3_SMOutgoingMessages_size), sizeof(aos::monitoring::NodeInfo))>
+        mSendBuffer;
+    aos::StaticBuffer<aos::Max(static_cast<size_t>(servicemanager_v3_SMIncomingMessages_size),
         sizeof(aos::InstanceInfoStaticArray) + sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray))>
         mReceiveBuffer;
 };
