@@ -67,7 +67,6 @@ static char* dt_passthrough_nodes[] = {
     "/can",
     "/scif",
     "/pcie_bus",
-    "/msiof-ref-clock",
     "/soc",
     "/audio-clkout",
     "/avb-mch@ec5a0100",
@@ -98,6 +97,7 @@ static char* dt_passthrough_nodes[] = {
     "/reserved-memory",
     "/mmngr",
     "/mmngrbuf",
+    "/__symbols__",
 };
 
 static struct xen_domain_iomem domd_iomems[] = {
@@ -127,10 +127,6 @@ static struct xen_domain_iomem domd_iomems[] = {
     {.first_mfn = 0xe6e68, .nr_mfns = 0x1},
     {.first_mfn = 0xfea80, .nr_mfns = 0x10},
     {.first_mfn = 0xfeaa0, .nr_mfns = 0x10},
-    {.first_mfn = 0xee200, .nr_mfns = 0x1},
-    {.first_mfn = 0x08000, .nr_mfns = 0x2000},
-    {.first_mfn = 0x0a000, .nr_mfns = 0x2000},
-    {.first_mfn = 0xee208, .nr_mfns = 0x1},
     {.first_mfn = 0xe6ef0, .nr_mfns = 0x1},
     {.first_mfn = 0xe6ef1, .nr_mfns = 0x1},
     {.first_mfn = 0xe6ef2, .nr_mfns = 0x1},
@@ -209,8 +205,6 @@ static uint32_t domd_irqs[] = {
     42,
     // gpio@e6055800
     43,
-    // mfis-as
-    212,
     // interrupt-controller@e61c0000
     32,
     33,
@@ -256,8 +250,6 @@ static uint32_t domd_irqs[] = {
     216,
     // csi2@feaa0000
     278,
-    // rpc0@ee200000
-    70,
     // video@e6ef0000
     220,
     // video@e6ef1000
