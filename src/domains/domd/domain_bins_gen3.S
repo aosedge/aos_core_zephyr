@@ -18,5 +18,9 @@ GDATA(__dtb_ipl_start)
 GDATA(__dtb_ipl_end)
 __dtb_ipl_start:
 .align 8
-.incbin	 "ipl_gen3.dtb"
+#if defined(CONFIG_BOARD_RCAR_SALVATOR_XS_M3)
+.incbin	 "ipl_salvator_m3.dtb"
+#else
+#error "No Domain-D dtb for target board!"
+#endif
 __dtb_ipl_end:
