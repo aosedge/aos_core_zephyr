@@ -20,6 +20,8 @@ __dtb_ipl_start:
 .align 8
 #if defined(CONFIG_BOARD_RCAR_SALVATOR_XS_M3)
 .incbin	 "ipl_salvator_m3.dtb"
+#elif defined(CONFIG_BOARD_RCAR_H3ULCB_CA57)
+.incbin	 "ipl_h3ulcb.dtb"
 #else
 #error "No Domain-D dtb for target board!"
 #endif
