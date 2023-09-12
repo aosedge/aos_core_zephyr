@@ -82,7 +82,12 @@ target_sources_ifdef(
 # NOTE: Include source files for DomD support for Gen3 board.
 # Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
 target_sources_ifdef(
-    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c src/domains/domd/domain_bins_gen3.S
+    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c
+    src/domains/domd/domain_bins_gen3.S
+)
+
+target_sources_ifdef(
+    CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c src/domains/domd/domain_bins_gen3.S
 )
 
 # NOTE: Include source files for qemu boards.
