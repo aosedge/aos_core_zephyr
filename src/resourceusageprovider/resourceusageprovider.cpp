@@ -67,17 +67,18 @@ aos::Error ResourceUsageProvider::GetNodeInfo(aos::monitoring::NodeInfo& nodeInf
 aos::Error ResourceUsageProvider::GetNodeMonitoringData(
     const aos::String& nodeID, aos::monitoring::MonitoringData& monitoringData)
 {
-    constexpr int  cDom0id = 0;
     xenstat_domain domain;
 
-    int ret = xstat_getdominfo(&domain, cDom0id, 1);
+    int ret = xstat_getdominfo(&domain, cDom0ID, 1);
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
 
     monitoringData.mRAM = domain.cur_mem;
     monitoringData.mCPU = 0;
+
     timeval curTime {};
+
     gettimeofday(&curTime, nullptr);
 
     if (mPrevNodeCPUTime != 0) {
