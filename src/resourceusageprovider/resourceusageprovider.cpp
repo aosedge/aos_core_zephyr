@@ -89,7 +89,7 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
     }
 
     LOG_DBG() << "Get node monitoring data: "
-              << ", RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
+              << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
 
     mPrevNodeCPUTime = domain.cpu_ns;
     mPrevTime = curTime;
