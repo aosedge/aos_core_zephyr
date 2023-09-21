@@ -51,6 +51,7 @@ private:
     static constexpr auto cNodeID = CONFIG_AOS_NODE_ID;
     static constexpr auto cDiskPartitionPoint = CONFIG_AOS_DISK_MOUNT_POINT;
     static constexpr auto cDiskPartitionName = "Aos";
+    static constexpr auto cDom0ID = 0;
 
     struct InstanceCPUData {
         InstanceCPUData(
