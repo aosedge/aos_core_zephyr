@@ -45,6 +45,8 @@ public:
      */
     aos::Error Init(const aos::String& path)
     {
+        mFileName = path;
+
         mFd = open(path.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (mFd < 0) {
             return AOS_ERROR_WRAP(errno);
@@ -67,6 +69,11 @@ public:
             if (nwrite != sizeof(Header)) {
                 return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
             }
+        }
+
+        auto err = Sync();
+        if (!err.IsNone()) {
+            return err;
         }
 
         return aos::ErrorEnum::eNone;
@@ -118,6 +125,11 @@ public:
         ssize_t nwrite = write(mFd, &record, sizeof(Record));
         if (nwrite != sizeof(Record)) {
             return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+        }
+
+        auto err = Sync();
+        if (!err.IsNone()) {
+            return err;
         }
 
         return aos::ErrorEnum::eNone;
@@ -179,6 +191,11 @@ public:
             return AOS_ERROR_WRAP(errno);
         }
 
+        auto err = Sync();
+        if (!err.IsNone()) {
+            return err;
+        }
+
         return aos::ErrorEnum::eNotFound;
     }
 
@@ -221,6 +238,11 @@ public:
             ssize_t nwrite = write(mFd, &record, sizeof(Record));
             if (nwrite != sizeof(Record)) {
                 return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+            }
+
+            auto err = Sync();
+            if (!err.IsNone()) {
+                return err;
             }
 
             return aos::ErrorEnum::eNone;
@@ -308,6 +330,25 @@ public:
     }
 
 private:
+    // Currently, zephyr doesn't provide Posix API (fsync) to flush the file correctly. We have to
+    // rewrite this class using zephyr FS API. As workaround, we just reopen the file.
+    aos::Error Sync()
+    {
+        if (mFd >= 0) {
+            auto ret = close(mFd);
+            if (ret < 0) {
+                return AOS_ERROR_WRAP(errno);
+            }
+        }
+
+        mFd = open(mFileName.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        if (mFd < 0) {
+            return AOS_ERROR_WRAP(errno);
+        }
+
+        return aos::ErrorEnum::eNone;
+    }
+
     struct Header {
         uint64_t mVersion;
         uint8_t  mReserved[256];
@@ -320,7 +361,8 @@ private:
         uint8_t mChecksum[aos::cSHA256Size];
     };
 
-    int mFd {-1};
+    aos::StaticString<aos::cFilePathLen> mFileName;
+    int                                  mFd {-1};
 };
 
 #endif
