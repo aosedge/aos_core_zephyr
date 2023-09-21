@@ -19,7 +19,7 @@ public:
      * Local log modules.
      */
     enum class Module {
-        eApp = static_cast<int>(aos::LogLevelEnum::eNumLevels),
+        eApp = static_cast<int>(aos::LogModuleEnum::eNumModules),
         eCMClient,
         eRunner,
         eStorage,
