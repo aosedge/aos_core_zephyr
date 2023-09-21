@@ -59,6 +59,7 @@ LOG_CALLBACK(servicemanager);
 LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
 LOG_CALLBACK(resourceusageprovider);
+LOG_CALLBACK(monitoring);
 
 /***********************************************************************************************************************
  * Public
@@ -106,6 +107,16 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         break;
 
+    case static_cast<int>(Module::eOCISpec):
+        log_ocispec::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eResourceProvider):
+        log_resourceusageprovider::LogCallback(level, message);
+
+        break;
+
     case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
         log_launcher::LogCallback(level, message);
 
@@ -116,13 +127,8 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         break;
 
-    case static_cast<int>(Module::eOCISpec):
-        log_ocispec::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eResourceProvider):
-        log_resourceusageprovider::LogCallback(level, message);
+    case static_cast<int>(aos::LogModuleEnum::eCommonMonitoring):
+        log_monitoring::LogCallback(level, message);
 
         break;
 
