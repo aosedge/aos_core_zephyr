@@ -512,6 +512,8 @@ servicemanager_v3_InstanceMonitoring CMClient::InstanceMonitoringToPB(
     pbMonitoring.has_monitoring_data = true;
     pbMonitoring.monitoring_data.cpu = instanceMonitoring.mMonitoringData.mCPU;
     pbMonitoring.monitoring_data.ram = instanceMonitoring.mMonitoringData.mRAM;
+    pbMonitoring.monitoring_data.in_traffic = instanceMonitoring.mMonitoringData.mInTraffic;
+    pbMonitoring.monitoring_data.out_traffic = instanceMonitoring.mMonitoringData.mOutTraffic;
 
     pbMonitoring.monitoring_data.disk_count = instanceMonitoring.mMonitoringData.mDisk.Size();
     for (size_t i = 0; i < instanceMonitoring.mMonitoringData.mDisk.Size(); i++) {
