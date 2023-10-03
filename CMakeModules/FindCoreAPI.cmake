@@ -14,11 +14,20 @@
 
 function(GENERATE_API CORE_API_DIR)
     set(NANOPB_OPTIONS "-I${CMAKE_CURRENT_BINARY_DIR}")
-    set(NANOPB_IMPORT_DIRS ${CORE_API_DIR}/proto/servicemanager/v3 /usr/include/)
+
+    find_program(PROTO_EXEC NAMES protoc)
+    if(NOT PROTO_EXEC)
+        message(FATAL_ERROR "Can't find protoc.")
+    endif()
+
+    cmake_path(SET PROTO_INCLUDE NORMALIZE ${PROTO_EXEC}/../../include)
+
+    set(NANOPB_IMPORT_DIRS ${CORE_API_DIR}/proto/servicemanager/v3 ${PROTO_INCLUDE})
 
     nanopb_generate_cpp(SM_PROTO_SRCS SM_PROTO_HDRS ${CORE_API_DIR}/proto/servicemanager/v3/servicemanager.proto)
+
     nanopb_generate_cpp(
-        TIME_PROTO_SRCS TIME_PROTO_HDRS RELPATH /usr/include /usr/include/google/protobuf/timestamp.proto
+        TIME_PROTO_SRCS TIME_PROTO_HDRS RELPATH ${PROTO_INCLUDE} ${PROTO_INCLUDE}/google/protobuf/timestamp.proto
     )
 
     target_sources(app PRIVATE ${SM_PROTO_SRCS} ${TIME_PROTO_SRCS})

@@ -34,7 +34,7 @@ jobs:
       - name: Initialize
         run: |
           sudo apt update
-          sudo apt install libprotobuf-dev -y
+          ln -ns /opt/protoc/include/google /usr/local/include
           west init -l ./
           west update
           west zephyr-export
