@@ -17,6 +17,10 @@ config AOS_SM_VCHAN_RX_PATH
 	string "Path to the SM vchan"
 	default "/local/domain/1/tmp/vchan/sm_rx"
 
+config AOS_REBOOT_XEN_STORE_PATH
+	string "Path to user reboot request"
+	default "/local/domain/1/control/user-reboot"
+
 config AOS_STORAGE_DIR
 	string "Path to the storage"
 	default "/aos/storage"
