@@ -93,8 +93,8 @@ target_sources_ifdef(
 # NOTE: Include source files for qemu boards.
 target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
 
-# NOTE: Include source files for LFS on MMC support
-target_sources_ifdef(CONFIG_AOS_MOUNT_LFS_MMC app PRIVATE src/bsp/mount.c)
+# NOTE: Include HW-specific source file
+target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
 
 # ######################################################################################################################
 # Versioning
