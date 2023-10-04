@@ -57,10 +57,6 @@ config AOS_PARTITION_SIZE
 	int "Partition size"
 	default 209715200
 
-config AOS_MOUNT_LFS_MMC
-	bool "Mount LFS on MMC"
-	default y
-
 config AOS_DISK_MOUNT_POINT
 	string "Disk mount point"
 	default "/aos"
