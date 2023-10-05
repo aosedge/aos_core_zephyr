@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         platform:
-          [rcar_spider, rcar_salvator_xs_m3, native_posix, native_posix_64]
+          [rcar_spider, rcar_salvator_xs_m3, rcar_h3ulcb_ca57, native_posix, native_posix_64]
 
     steps:
       - name: Checkout
