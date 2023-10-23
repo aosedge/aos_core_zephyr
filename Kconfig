@@ -9,13 +9,13 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_SM_VCHAN_TX_PATH
-	string "Path to the SM vchan"
-	default "/local/domain/1/tmp/vchan/sm_tx"
+config AOS_VCHAN_TX_PATH
+	string "Path to the TX vchan"
+	default "/local/domain/1/tmp/vchan/aos_tx"
 
-config AOS_SM_VCHAN_RX_PATH
-	string "Path to the SM vchan"
-	default "/local/domain/1/tmp/vchan/sm_rx"
+config AOS_VCHAN_RX_PATH
+	string "Path to the RX vchan"
+	default "/local/domain/1/tmp/vchan/aos_rx"
 
 config AOS_REBOOT_XEN_STORE_PATH
 	string "Path to user reboot request"
