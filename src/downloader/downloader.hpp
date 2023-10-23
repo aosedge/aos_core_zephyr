@@ -8,13 +8,13 @@
 #ifndef DOWNLOADER_HPP_
 #define DOWNLOADER_HPP_
 
-#include "aos/common/downloader.hpp"
-#include "aos/common/tools/array.hpp"
-#include "aos/common/tools/error.hpp"
-#include "aos/common/tools/string.hpp"
-#include "aos/common/tools/thread.hpp"
-#include "aos/common/tools/timer.hpp"
-#include "aos/common/types.hpp"
+#include <aos/common/downloader.hpp>
+#include <aos/common/tools/array.hpp>
+#include <aos/common/tools/error.hpp>
+#include <aos/common/tools/string.hpp>
+#include <aos/common/tools/thread.hpp>
+#include <aos/common/tools/timer.hpp>
+#include <aos/common/types.hpp>
 
 /**
  * Image content request.
