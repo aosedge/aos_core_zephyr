@@ -8,6 +8,8 @@
 #ifndef OCISPEC_HPP_
 #define OCISPEC_HPP_
 
+#include <zephyr/data/json.h>
+
 #include <aos/common/ocispec.hpp>
 #include <aos/common/tools/allocator.hpp>
 #include <aos/common/tools/thread.hpp>
@@ -19,9 +21,9 @@
  */
 
 struct ContentDescriptor {
-    const char* mediaType;
-    const char* digest;
-    int64_t     size;
+    const char*    mediaType;
+    const char*    digest;
+    json_obj_token size;
 };
 
 /**
@@ -90,9 +92,9 @@ struct VMKernel {
  * Contains information about IOMEMs.
  */
 struct VMHWConfigIOMEM {
-    uint64_t firstGFN;
-    uint64_t firstMFN;
-    uint64_t nrMFNs;
+    json_obj_token firstGFN;
+    json_obj_token firstMFN;
+    json_obj_token nrMFNs;
 };
 
 /**
@@ -101,7 +103,7 @@ struct VMHWConfigIOMEM {
 struct VMHWConfig {
     const char*     deviceTree;
     uint32_t        vcpus;
-    uint64_t        memKB;
+    json_obj_token  memKB;
     const char*     dtdevs[aos::oci::cMaxDTDevsCount];
     size_t          dtdevsLen;
     VMHWConfigIOMEM iomems[aos::oci::cMaxIOMEMsCount];
@@ -196,13 +198,15 @@ public:
 
 private:
     static constexpr size_t cJsonMaxContentSize = 4096;
+    static constexpr size_t cAllocationSize = 2048;
+    static constexpr size_t cMaxNumAllocations = 32;
 
     aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path);
     aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path);
 
-    aos::Mutex                                                             mMutex;
-    aos::StaticBuffer<cJsonMaxContentSize>                                 mJsonFileBuffer;
-    aos::StaticAllocator<aos::Max(sizeof(ImageSpec), sizeof(RuntimeSpec))> mAllocator;
+    aos::Mutex                                                mMutex;
+    aos::StaticBuffer<cJsonMaxContentSize>                    mJsonFileBuffer;
+    aos::StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
 };
 
 #endif

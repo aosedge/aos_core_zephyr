@@ -27,6 +27,17 @@ if(BOARD MATCHES "native_posix*")
     zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} mocks/include)
 endif()
 
+if(TA_DEPLOY_DIR)
+    set(TA_BIN_DIRECTORY ta_bin)
+    set(GENERATED_DIRECTORY ta_table)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/prepare_ta.sh -t ${CMAKE_CURRENT_SOURCE_DIR} -f ${TA_DEPLOY_DIR} -b
+                ${TA_BIN_DIRECTORY} -g ${GENERATED_DIRECTORY}
+    )
+    include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/${TA_BIN_DIRECTORY})
+    target_sources(app PRIVATE ${GENERATED_DIRECTORY}/ta_table.c ${GENERATED_DIRECTORY}/ta_table.S)
+endif()
+
 # ######################################################################################################################
 # Definitions
 # ######################################################################################################################
@@ -56,10 +67,12 @@ target_sources(
             src/downloader/downloader.cpp
             src/resourcemanager/resourcemanager.cpp
             src/ocispec/ocispec.cpp
+            src/resourceusageprovider/resourceusageprovider.cpp
+            src/utils/checksum.cpp
 )
 
 # Enable vchannels and xrun mocks for native posix
-target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp)
+target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
 
 # NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
 target_sources_ifdef(
@@ -69,14 +82,19 @@ target_sources_ifdef(
 # NOTE: Include source files for DomD support for Gen3 board.
 # Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
 target_sources_ifdef(
-    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_gen3.c src/domains/domd/domain_bins_gen3.S
+    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c
+    src/domains/domd/domain_bins_gen3.S
+)
+
+target_sources_ifdef(
+    CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c src/domains/domd/domain_bins_gen3.S
 )
 
 # NOTE: Include source files for qemu boards.
 target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
 
-# NOTE: Include source files for LFS on MMC support
-target_sources_ifdef(CONFIG_AOS_MOUNT_LFS_MMC app PRIVATE src/bsp/mount.c)
+# NOTE: Include HW-specific source file
+target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
 
 # ######################################################################################################################
 # Versioning
@@ -136,11 +154,21 @@ ExternalProject_Add(
                -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR} -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
     SOURCE_DIR ${APPLICATION_SOURCE_DIR}/../aos_core_lib_cpp
     BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a
+                     ${aoscore_build_dir}/lib/libaoscommoncpp.a
     DEPENDS zephyr_interface
 )
 
-# aossm
+# aoscommon
+add_library(aoscommon STATIC IMPORTED GLOBAL)
 
+add_dependencies(aoscommon aoscore)
+
+set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommoncpp.a)
+set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
+
+target_link_libraries(app PUBLIC aoscommon)
+
+# aossm
 file(MAKE_DIRECTORY ${aoscore_build_dir}/include)
 
 add_library(aossm STATIC IMPORTED GLOBAL)

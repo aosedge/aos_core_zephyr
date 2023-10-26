@@ -15,10 +15,18 @@
 };
 
 &ram {
-	reg = <0x00 0x60000000 0x00 DT_SIZE_M(256)>;
+	reg = <0x00 0x70000000 0x00 DT_SIZE_M(256)>;
 };
 
 / {
+	firmware {
+		tee {
+		compatible = "linaro,optee-tz";
+		method = "smc";
+		status = "okay";
+		};
+	};
+
 	fstab {
 		compatible = "zephyr,fstab";
 		storage: storage {

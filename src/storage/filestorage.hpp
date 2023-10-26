@@ -10,14 +10,14 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <tinycrypt/constants.h>
-#include <tinycrypt/sha256.h>
+
 #include <unistd.h>
 
-#include "aos/common/tools/error.hpp"
-#include "aos/common/tools/noncopyable.hpp"
-#include "aos/common/tools/string.hpp"
-#include "aos/common/types.hpp"
+#include <aos/common/tools/error.hpp>
+#include <aos/common/tools/noncopyable.hpp>
+#include <aos/common/tools/string.hpp>
+
+#include "utils/checksum.hpp"
 
 template <typename T>
 class FileStorage : public aos::NonCopyable {
@@ -45,6 +45,8 @@ public:
      */
     aos::Error Init(const aos::String& path)
     {
+        mFileName = path;
+
         mFd = open(path.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
         if (mFd < 0) {
             return AOS_ERROR_WRAP(errno);
@@ -56,17 +58,22 @@ public:
         }
 
         if (fileSize == 0) {
-            Header header;
+            Header header {};
 
-            auto err = CalculateSha256(header, sizeof(Header), header.mChecksum);
-            if (!err.IsNone()) {
-                return err;
+            auto checksum = CalculateSha256(&header, sizeof(Header) - aos::cSHA256Size);
+            if (!checksum.mError.IsNone()) {
+                return checksum.mError;
             }
 
             ssize_t nwrite = write(mFd, &header, sizeof(Header));
             if (nwrite != sizeof(Header)) {
                 return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
             }
+        }
+
+        auto err = Sync();
+        if (!err.IsNone()) {
+            return err;
         }
 
         return aos::ErrorEnum::eNone;
@@ -108,14 +115,21 @@ public:
         record.mData = data;
         record.mDeleted = 0;
 
-        auto err = CalculateSha256(data, sizeof(T), record.mChecksum);
-        if (!err.IsNone()) {
-            return err;
+        auto checksum = CalculateSha256(&record, sizeof(record) - aos::cSHA256Size);
+        if (!checksum.mError.IsNone()) {
+            return checksum.mError;
         }
+
+        aos::Buffer(record.mChecksum, aos::cSHA256Size) = checksum.mValue;
 
         ssize_t nwrite = write(mFd, &record, sizeof(Record));
         if (nwrite != sizeof(Record)) {
             return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+        }
+
+        auto err = Sync();
+        if (!err.IsNone()) {
+            return err;
         }
 
         return aos::ErrorEnum::eNone;
@@ -158,10 +172,12 @@ public:
 
             record.mData = data;
 
-            auto err = CalculateSha256(data, sizeof(T), record.mChecksum);
-            if (!err.IsNone()) {
-                return err;
+            auto checksum = CalculateSha256(&record, sizeof(record) - aos::cSHA256Size);
+            if (!checksum.mError.IsNone()) {
+                return checksum.mError;
             }
+
+            aos::Buffer(record.mChecksum, aos::cSHA256Size) = checksum.mValue;
 
             ssize_t nwrite = write(mFd, &record, sizeof(Record));
             if (nwrite != sizeof(Record)) {
@@ -173,6 +189,11 @@ public:
 
         if (nread < 0) {
             return AOS_ERROR_WRAP(errno);
+        }
+
+        auto err = Sync();
+        if (!err.IsNone()) {
+            return err;
         }
 
         return aos::ErrorEnum::eNotFound;
@@ -217,6 +238,11 @@ public:
             ssize_t nwrite = write(mFd, &record, sizeof(Record));
             if (nwrite != sizeof(Record)) {
                 return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+            }
+
+            auto err = Sync();
+            if (!err.IsNone()) {
+                return err;
             }
 
             return aos::ErrorEnum::eNone;
@@ -304,42 +330,39 @@ public:
     }
 
 private:
-    struct Header {
-        uint64_t                                    mVersion {};
-        uint8_t                                     mReserved[256] {};
-        aos::StaticArray<uint8_t, aos::cSHA256Size> mChecksum;
-    };
-
-    struct Record {
-        T                                           mData;
-        uint8_t                                     mDeleted;
-        aos::StaticArray<uint8_t, aos::cSHA256Size> mChecksum;
-    };
-
-    template <typename T1>
-    aos::Error CalculateSha256(const T1& data, size_t msgSize, aos::StaticArray<uint8_t, aos::cSHA256Size>& digest)
+    // Currently, zephyr doesn't provide Posix API (fsync) to flush the file correctly. We have to
+    // rewrite this class using zephyr FS API. As workaround, we just reopen the file.
+    aos::Error Sync()
     {
-        tc_sha256_state_struct s;
-
-        auto ret = tc_sha256_init(&s);
-        if (TC_CRYPTO_SUCCESS != ret) {
-            return AOS_ERROR_WRAP(ret);
+        if (mFd >= 0) {
+            auto ret = close(mFd);
+            if (ret < 0) {
+                return AOS_ERROR_WRAP(errno);
+            }
         }
 
-        ret = tc_sha256_update(&s, (const uint8_t*)(&data), msgSize);
-        if (TC_CRYPTO_SUCCESS != ret) {
-            return AOS_ERROR_WRAP(ret);
-        }
-
-        ret = tc_sha256_final(digest.Get(), &s);
-        if (TC_CRYPTO_SUCCESS != ret) {
-            return AOS_ERROR_WRAP(ret);
+        mFd = open(mFileName.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        if (mFd < 0) {
+            return AOS_ERROR_WRAP(errno);
         }
 
         return aos::ErrorEnum::eNone;
     }
 
-    int mFd {-1};
+    struct Header {
+        uint64_t mVersion;
+        uint8_t  mReserved[256];
+        uint8_t  mChecksum[aos::cSHA256Size];
+    };
+
+    struct Record {
+        T       mData;
+        uint8_t mDeleted;
+        uint8_t mChecksum[aos::cSHA256Size];
+    };
+
+    aos::StaticString<aos::cFilePathLen> mFileName;
+    int                                  mFd {-1};
 };
 
 #endif

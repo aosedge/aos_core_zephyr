@@ -17,6 +17,10 @@ config AOS_SM_VCHAN_RX_PATH
 	string "Path to the SM vchan"
 	default "/local/domain/1/tmp/vchan/sm_rx"
 
+config AOS_REBOOT_XEN_STORE_PATH
+	string "Path to user reboot request"
+	default "/local/domain/1/control/user-reboot"
+
 config AOS_STORAGE_DIR
 	string "Path to the storage"
 	default "/aos/storage"
@@ -53,8 +57,8 @@ config AOS_PARTITION_SIZE
 	int "Partition size"
 	default 209715200
 
-config AOS_MOUNT_LFS_MMC
-	bool "Mount LFS on MMC"
-	default y
+config AOS_DISK_MOUNT_POINT
+	string "Disk mount point"
+	default "/aos"
 
 source "Kconfig"

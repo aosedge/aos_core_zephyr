@@ -23,9 +23,7 @@ void vch_close(struct vch_handle* handle)
 
 int vch_read(struct vch_handle* handle, void* buf, size_t size)
 {
-    while(true) {
-
-    }
+    while (true) { }
 
     return 0;
 }

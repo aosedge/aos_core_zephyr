@@ -43,12 +43,16 @@ aos::Error Storage::AddInstance(const aos::InstanceInfo& instance)
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Add instance: " << instance.mInstanceIdent;
+
     return mInstanceDatabase.Add(ConvertInstanceInfo(instance));
 }
 
 aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Update instance: " << instance.mInstanceIdent;
 
     return mInstanceDatabase.Update(ConvertInstanceInfo(instance), [&instance](const InstanceInfo& data) {
         return data.mInstanceIdent.mInstance == instance.mInstanceIdent.mInstance
@@ -63,6 +67,8 @@ aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Remove instance: " << instanceIdent;
+
     return mInstanceDatabase.Remove([&instanceIdent](const InstanceInfo& data) {
         return data.mInstanceIdent.mInstance == instanceIdent.mInstance
             && strcmp(data.mInstanceIdent.mSubjectID, instanceIdent.mSubjectID.CStr()) == 0
@@ -75,6 +81,8 @@ aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
 aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get all instances";
 
     auto err = mInstanceDatabase.ReadRecords([&instances, this](const InstanceInfo& instanceInfo) -> aos::Error {
         auto instance = ConvertInstanceInfo(instanceInfo);
@@ -93,12 +101,16 @@ aos::Error Storage::AddService(const aos::sm::servicemanager::ServiceData& servi
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Add service: " << service.mServiceID;
+
     return mServiceDatabase.Add(ConvertServiceData(service));
 }
 
 aos::Error Storage::UpdateService(const aos::sm::servicemanager::ServiceData& service)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Update service: " << service.mServiceID;
 
     return mServiceDatabase.Update(ConvertServiceData(service),
         [&service](const ServiceData& data) { return strcmp(data.mServiceID, service.mServiceID.CStr()) == 0; });
@@ -108,6 +120,8 @@ aos::Error Storage::RemoveService(const aos::String& serviceID, uint64_t aosVers
 {
     aos::LockGuard lock(mMutex);
 
+    LOG_DBG() << "Remove service: " << serviceID;
+
     return mServiceDatabase.Remove([&serviceID, aosVersion](const ServiceData& data) {
         return strcmp(data.mServiceID, serviceID.CStr()) == 0 && data.mVersionInfo.mAosVersion == aosVersion;
     });
@@ -116,6 +130,8 @@ aos::Error Storage::RemoveService(const aos::String& serviceID, uint64_t aosVers
 aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceData>& services)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get all services";
 
     auto err = mServiceDatabase.ReadRecords([&services, this](const ServiceData& serviceData) -> aos::Error {
         auto service = ConvertServiceData(serviceData);
@@ -134,6 +150,8 @@ aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceDa
 aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(const aos::String& serviceID)
 {
     aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get service: " << serviceID;
 
     ServiceData serviceData;
 

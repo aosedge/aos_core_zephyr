@@ -262,6 +262,17 @@ ZTEST(ocispec, test_ImageManifest)
     zassert_true(err.IsNone(), "Can't load image manifest: %s", err.Message());
 
     zassert_true(imageManifest == extraFieldsData.mImageManifest, "Image manifest mismatch");
+
+    // Check max memory allocations
+
+    aos::oci::ImageManifest fullManifest = {1, "mediaType1", {"mediaType2", "digest2"}, {}, &fullAosService};
+
+    for (auto i = 0; i < aos::cMaxNumLayers; i++) {
+        fullManifest.mLayers.PushBack({"layerType", "layerDigest", i});
+    }
+
+    err = ociSpec.SaveImageManifest(cImageManifestPath, fullManifest);
+    zassert_true(err.IsNone(), "Can't save image manifest: %s", err.Message());
 }
 
 ZTEST(ocispec, test_ImageSpec)

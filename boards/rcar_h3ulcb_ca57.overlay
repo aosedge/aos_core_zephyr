@@ -7,11 +7,20 @@
 
 #include <mem.h>
 
-&mmc0 {
+/delete-node/ &sd0;
+/delete-node/ &vcc_sd0;
+/delete-node/ &vccq_sd0;
+/delete-node/ &gpio5;
+
+&emmc2 {
 	disk {
 		status = "okay";
 	};
 	status = "okay";
+};
+
+&ram {
+	reg = <0x00 0x70000000 0x00 DT_SIZE_M(256)>;
 };
 
 / {

@@ -8,8 +8,6 @@
 #include <unistd.h>
 
 #include <pb_decode.h>
-#include <tinycrypt/constants.h>
-#include <tinycrypt/sha256.h>
 #include <vchanapi.h>
 #include <zephyr/kernel.h>
 
@@ -17,6 +15,7 @@
 
 #include "cmclient.hpp"
 #include "log.hpp"
+#include "utils/checksum.hpp"
 
 using namespace aos::sm::launcher;
 
@@ -35,7 +34,8 @@ CMClient::~CMClient()
     mThreadReader.Join();
 }
 
-aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader)
+aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader,
+    aos::monitoring::ResourceMonitorItf& resourceMonitor)
 {
     LOG_DBG() << "Initialize CM client";
     LOG_INF() << "Node ID: " << cNodeID << ", node type: " << cNodeType;
@@ -43,6 +43,7 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
     mLauncher = &launcher;
     mResourceManager = &resourceManager;
     mDownloader = &downloader;
+    mResourceMonitor = &resourceMonitor;
 
     auto ret = RunWriter();
     if (!ret.IsNone()) {
@@ -118,6 +119,71 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
     return aos::ErrorEnum::eNone;
 }
 
+aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData)
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Send monitoring data";
+
+    mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_monitoring_tag;
+
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring
+        = servicemanager_v3_NodeMonitoring servicemanager_v3_NodeMonitoring_init_zero;
+
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.has_monitoring_data = true;
+
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.monitoring_data.cpu = monitoringData.mMonitoringData.mCPU;
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.monitoring_data.ram = monitoringData.mMonitoringData.mRAM;
+
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.monitoring_data.disk_count
+        = monitoringData.mMonitoringData.mDisk.Size();
+    for (size_t i = 0; i < monitoringData.mMonitoringData.mDisk.Size(); i++) {
+        mOutgoingMessage.SMOutgoingMessage.node_monitoring.monitoring_data.disk[i]
+            = PartitionInfoToPB(monitoringData.mMonitoringData.mDisk[i]);
+    }
+
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.instance_monitoring_count
+        = monitoringData.mServiceInstances.Size();
+    for (size_t i = 0; i < monitoringData.mServiceInstances.Size(); i++) {
+        mOutgoingMessage.SMOutgoingMessage.node_monitoring.instance_monitoring[i]
+            = InstanceMonitoringToPB(monitoringData.mServiceInstances[i]);
+    }
+
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.has_timestamp = true;
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.timestamp.seconds = monitoringData.mTimestamp.tv_sec;
+    mOutgoingMessage.SMOutgoingMessage.node_monitoring.timestamp.nanos = monitoringData.mTimestamp.tv_nsec;
+
+    auto err = SendPBMessageToVChan();
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::Subscribes(aos::ConnectionSubscriberItf* subscriber)
+{
+    aos::LockGuard lock(mMutex);
+
+    if (mConnectionSubscribers.Size() >= cMaxSubscribers) {
+        return aos::ErrorEnum::eOutOfRange;
+    }
+
+    mConnectionSubscribers.PushBack(subscriber);
+
+    return aos::ErrorEnum::eNone;
+}
+
+void CMClient::Unsubscribes(aos::ConnectionSubscriberItf* subscriber)
+{
+    aos::LockGuard lock(mMutex);
+
+    auto it = mConnectionSubscribers.Find(subscriber);
+    if (it.mError.IsNone()) {
+        mConnectionSubscribers.Remove(it.mValue);
+    }
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -160,6 +226,8 @@ aos::Error CMClient::RunWriter()
                 LOG_ERR() << "Can't run last instances: " << err;
             }
 
+            NotifyConnect();
+
             err = SendNodeConfiguration();
             if (!err.IsNone()) {
                 LOG_ERR() << "Can't send node configuration: " << err;
@@ -178,6 +246,8 @@ aos::Error CMClient::RunWriter()
                 atomic_clear_bit(&mState, eFail);
 
                 vch_close(&mSMVChanHandlerWriter);
+
+                NotifyDisconnect();
             }
         }
     });
@@ -236,15 +306,13 @@ aos::Error CMClient::ProcessMessages()
             return err;
         }
 
-        SHA256Digest calculatedDigest;
-
-        err = CalculateSha256(mReceiveBuffer, header.dataSize, calculatedDigest);
-        if (!err.IsNone()) {
-            LOG_ERR() << "Can't calculate SHA256: " << err;
+        auto checksum = CalculateSha256(mReceiveBuffer.Get(), header.dataSize);
+        if (!checksum.mError.IsNone()) {
+            LOG_ERR() << "Can't calculate SHA256: " << checksum.mError;
             continue;
         }
 
-        if (0 != memcmp(calculatedDigest, header.sha256, sizeof(SHA256Digest))) {
+        if (aos::Buffer(header.sha256, aos::cSHA256Size) != checksum.mValue) {
             return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidChecksum);
         }
 
@@ -305,6 +373,15 @@ aos::Error CMClient::SendNodeConfiguration()
 {
     aos::LockGuard lock(mMutex);
 
+    aos::BufferAllocator<> allocator(mSendBuffer);
+
+    auto nodeInfo = aos::MakeUnique<aos::monitoring::NodeInfo>(&allocator);
+
+    auto err = mResourceMonitor->GetNodeInfo(*nodeInfo);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_configuration_tag;
     mOutgoingMessage.SMOutgoingMessage.node_configuration
         = servicemanager_v3_NodeConfiguration servicemanager_v3_NodeConfiguration_init_zero;
@@ -315,15 +392,23 @@ aos::Error CMClient::SendNodeConfiguration()
     config.remote_node = true;
     config.runner_features_count = 1;
     strncpy(config.runner_features[0], "xrun", sizeof(config.runner_features[0]));
-    config.num_cpus = cNumCPUs;
-    config.total_ram = cTotalRAM;
-    config.partitions_count = 1;
-    strncpy(config.partitions[0].name, "aos", sizeof(config.partitions[0].name));
-    config.partitions[0].total_size = cPartitionSize;
-    config.partitions[0].types_count = 1;
-    strncpy(config.partitions[0].types[0], "services", sizeof(config.partitions[0].types[0]));
 
-    auto err = SendPBMessageToVChan();
+    config.num_cpus = nodeInfo->mNumCPUs;
+    config.total_ram = nodeInfo->mTotalRAM;
+    config.partitions_count = nodeInfo->mPartitions.Size();
+
+    for (size_t i = 0; i < nodeInfo->mPartitions.Size(); ++i) {
+        strncpy(config.partitions[i].name, nodeInfo->mPartitions[i].mName.CStr(), sizeof(config.partitions[i].name));
+        config.partitions[i].total_size = nodeInfo->mPartitions[i].mTotalSize;
+        config.partitions[i].types_count = nodeInfo->mPartitions[i].mTypes.Size();
+
+        for (size_t j = 0; j < nodeInfo->mPartitions[i].mTypes.Size(); ++j) {
+            strncpy(config.partitions[i].types[j], nodeInfo->mPartitions[i].mTypes[j].CStr(),
+                sizeof(config.partitions[i].types[j]));
+        }
+    }
+
+    err = SendPBMessageToVChan();
     if (!err.IsNone()) {
         return err;
     }
@@ -345,12 +430,14 @@ aos::Error CMClient::SendPBMessageToVChan()
 
     VChanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
 
-    auto err = CalculateSha256(mSendBuffer, header.dataSize, header.sha256);
-    if (!err.IsNone()) {
-        return err;
+    auto checksum = CalculateSha256(mSendBuffer.Get(), header.dataSize);
+    if (!checksum.mError.IsNone()) {
+        return checksum.mError;
     }
 
-    err = SendBufferToVChan((uint8_t*)&header, sizeof(VChanMessageHeader));
+    aos::Buffer(header.sha256, aos::cSHA256Size) = checksum.mValue;
+
+    auto err = SendBufferToVChan((uint8_t*)&header, sizeof(VChanMessageHeader));
     if (!err.IsNone()) {
         return err;
     }
@@ -379,28 +466,6 @@ aos::Error CMClient::SendBufferToVChan(const uint8_t* buffer, size_t msgSize)
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error CMClient::CalculateSha256(const aos::Buffer& buffer, size_t msgSize, SHA256Digest& digest)
-{
-    tc_sha256_state_struct s;
-
-    auto ret = tc_sha256_init(&s);
-    if (TC_CRYPTO_SUCCESS != ret) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    ret = tc_sha256_update(&s, static_cast<uint8_t*>(buffer.Get()), msgSize);
-    if (TC_CRYPTO_SUCCESS != ret) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    ret = tc_sha256_final(digest, &s);
-    if (TC_CRYPTO_SUCCESS != ret) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    return aos::ErrorEnum::eNone;
-}
-
 servicemanager_v3_InstanceStatus CMClient::InstanceStatusToPB(const aos::InstanceStatus& instanceStatus) const
 {
     servicemanager_v3_InstanceStatus pbStatus = servicemanager_v3_InstanceStatus_init_zero;
@@ -420,6 +485,42 @@ servicemanager_v3_InstanceStatus CMClient::InstanceStatusToPB(const aos::Instanc
     }
 
     return pbStatus;
+}
+
+servicemanager_v3_PartitionUsage CMClient::PartitionInfoToPB(const aos::monitoring::PartitionInfo& partitionUsage) const
+{
+    servicemanager_v3_PartitionUsage pbUsage = servicemanager_v3_PartitionUsage_init_zero;
+
+    pbUsage.used_size = partitionUsage.mUsedSize;
+    strncpy(pbUsage.name, partitionUsage.mName.CStr(), sizeof(pbUsage.name));
+
+    return pbUsage;
+}
+
+servicemanager_v3_InstanceMonitoring CMClient::InstanceMonitoringToPB(
+    const aos::monitoring::InstanceMonitoringData& instanceMonitoring) const
+{
+    servicemanager_v3_InstanceMonitoring pbMonitoring;
+
+    pbMonitoring.has_instance = true;
+    pbMonitoring.instance.instance = instanceMonitoring.mInstanceIdent.mInstance;
+    strncpy(pbMonitoring.instance.service_id, instanceMonitoring.mInstanceIdent.mServiceID.CStr(),
+        sizeof(pbMonitoring.instance.service_id));
+    strncpy(pbMonitoring.instance.subject_id, instanceMonitoring.mInstanceIdent.mSubjectID.CStr(),
+        sizeof(pbMonitoring.instance.subject_id));
+
+    pbMonitoring.has_monitoring_data = true;
+    pbMonitoring.monitoring_data.cpu = instanceMonitoring.mMonitoringData.mCPU;
+    pbMonitoring.monitoring_data.ram = instanceMonitoring.mMonitoringData.mRAM;
+    pbMonitoring.monitoring_data.in_traffic = instanceMonitoring.mMonitoringData.mInTraffic;
+    pbMonitoring.monitoring_data.out_traffic = instanceMonitoring.mMonitoringData.mOutTraffic;
+
+    pbMonitoring.monitoring_data.disk_count = instanceMonitoring.mMonitoringData.mDisk.Size();
+    for (size_t i = 0; i < instanceMonitoring.mMonitoringData.mDisk.Size(); i++) {
+        pbMonitoring.monitoring_data.disk[i] = PartitionInfoToPB(instanceMonitoring.mMonitoringData.mDisk[i]);
+    }
+
+    return pbMonitoring;
 }
 
 void CMClient::ProcessGetUnitConfigStatus()
@@ -630,4 +731,22 @@ void CMClient::NotifyWriteFail()
 {
     atomic_set_bit(&mState, eFail);
     mWriterCondVar.NotifyOne();
+}
+
+void CMClient::NotifyConnect()
+{
+    aos::LockGuard lock(mMutex);
+
+    for (auto& subscriber : mConnectionSubscribers) {
+        subscriber->OnConnect();
+    }
+}
+
+void CMClient::NotifyDisconnect()
+{
+    aos::LockGuard lock(mMutex);
+
+    for (auto& subscriber : mConnectionSubscribers) {
+        subscriber->OnDisconnect();
+    }
 }

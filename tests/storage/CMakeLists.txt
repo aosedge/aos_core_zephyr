@@ -20,5 +20,4 @@ target_include_directories(app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE
-    src/main.cpp ../../src/storage/storage.cpp)
+target_sources(app PRIVATE src/main.cpp ../../src/storage/storage.cpp ../../src/utils/checksum.cpp)

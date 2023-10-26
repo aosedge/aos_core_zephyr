@@ -5,9 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-extern "C" {
 #include <xrun.h>
-}
 
 #include "log.hpp"
 #include "runner.hpp"
