@@ -94,17 +94,18 @@ public:
 
         Record  record {};
         ssize_t nread {};
+        off_t   deletedRecordOffset {-1};
 
         while ((nread = read(mFd, &record, sizeof(Record))) == sizeof(Record)) {
-            if (record.mDeleted) {
-                off_t offset = -static_cast<off_t>(sizeof(Record));
+            if (!record.mDeleted && record.mData == data) {
+                return aos::ErrorEnum::eAlreadyExist;
+            }
 
-                ret = lseek(mFd, offset, SEEK_CUR);
-                if (ret < 0) {
+            if (deletedRecordOffset == -1 && record.mDeleted) {
+                deletedRecordOffset = lseek(mFd, 0, SEEK_CUR) - static_cast<off_t>(sizeof(Record));
+                if (deletedRecordOffset < 0) {
                     return AOS_ERROR_WRAP(errno);
                 }
-
-                break;
             }
         }
 
@@ -121,6 +122,13 @@ public:
         }
 
         aos::Buffer(record.mChecksum, aos::cSHA256Size) = checksum.mValue;
+
+        if (deletedRecordOffset >= 0) {
+            ret = lseek(mFd, deletedRecordOffset, SEEK_SET);
+            if (ret < 0) {
+                return AOS_ERROR_WRAP(errno);
+            }
+        }
 
         ssize_t nwrite = write(mFd, &record, sizeof(Record));
         if (nwrite != sizeof(Record)) {

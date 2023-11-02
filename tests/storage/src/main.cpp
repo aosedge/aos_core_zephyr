@@ -56,6 +56,10 @@ ZTEST(storage, test_AddUpdateRemoveInstance)
         zassert_equal(storage.AddInstance(instance), aos::ErrorEnum::eNone, "Failed to add instance");
     }
 
+    for (const auto& instance : instances) {
+        zassert_equal(storage.AddInstance(instance), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
+    }
+
     aos::StaticArray<aos::InstanceInfo, 2> instances2;
     zassert_equal(storage.GetAllInstances(instances2), aos::ErrorEnum::eNone, "Failed to get all instances");
 
@@ -127,6 +131,10 @@ ZTEST(storage, test_AddUpdateRemoveService)
 
     for (const auto& service : services) {
         zassert_equal(storage.AddService(service), aos::ErrorEnum::eNone, "Failed to add service");
+    }
+
+    for (const auto& service : services) {
+        zassert_equal(storage.AddService(service), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
     }
 
     aos::StaticArray<aos::sm::servicemanager::ServiceData, 2> services2;
