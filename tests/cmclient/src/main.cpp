@@ -19,6 +19,7 @@
 #include "cmclient/cmclient.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
+#include "mockclocksync.hpp"
 #include "mockconnectionsubscriber.hpp"
 #include "mockdownloader.hpp"
 #include "mocklauncher.hpp"
@@ -298,6 +299,21 @@ void testUpdateUnitConfig()
         "Incorrect unit config version");
 }
 
+void testSendClockSyncRequest()
+{
+    auto ret = gTestCMClient.SendClockSyncRequest();
+    zassert_true(ret.IsNone(), "Error send clock sync request: %s", ret.Message());
+
+    {
+        UniqueLock lock(gWaitMessageMutex);
+        gWaitMessageCondVar.Wait([&] { return gReadyToCheck; });
+        gReadyToCheck = false;
+    }
+
+    zassert_equal(gReceivedMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_clock_sync_request_tag,
+        "Clock sync request expected");
+}
+
 void testRunInstances()
 {
     gSendMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_run_instances_tag;
@@ -507,13 +523,14 @@ ZTEST(cmclient, test_node_config)
     ResourceManager          mockResourceManager;
     MockResourceMonitor      mockResourceMonitor;
     MockConnectionSubscriber mockConnectionSubscriber;
+    MockClockSync            mockClockSync;
 
     aos::Log::SetCallback(TestLogCallback);
 
     auto err = gTestCMClient.Subscribes(&mockConnectionSubscriber);
     zassert_true(err.IsNone(), "subscribe error: %s", err.Message());
 
-    gTestCMClient.Init(gMockLauncher, mockResourceManager, gMockDownloader, mockResourceMonitor);
+    gTestCMClient.Init(gMockLauncher, mockResourceManager, gMockDownloader, mockResourceMonitor, mockClockSync);
     zassert_true(err.IsNone(), "init error: %s", err.Message());
 
     // wait open
@@ -546,6 +563,7 @@ ZTEST(cmclient, test_node_config)
     testRunInstances();
     testImageDownloadInstances();
     testNodeMonitoring();
+    testSendClockSyncRequest();
 
     // release read tread to shutdown
     UniqueLock lock(gReadMutex);

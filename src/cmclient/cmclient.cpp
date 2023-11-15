@@ -35,7 +35,7 @@ CMClient::~CMClient()
 }
 
 aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManager, DownloadReceiverItf& downloader,
-    aos::monitoring::ResourceMonitorItf& resourceMonitor)
+    aos::monitoring::ResourceMonitorItf& resourceMonitor, ClockSyncItf& clockSync)
 {
     LOG_DBG() << "Initialize CM client";
     LOG_INF() << "Node ID: " << cNodeID << ", node type: " << cNodeType;
@@ -44,6 +44,7 @@ aos::Error CMClient::Init(LauncherItf& launcher, ResourceManager& resourceManage
     mResourceManager = &resourceManager;
     mDownloader = &downloader;
     mResourceMonitor = &resourceMonitor;
+    mClockSync = &clockSync;
 
     auto ret = RunWriter();
     if (!ret.IsNone()) {
@@ -358,6 +359,10 @@ aos::Error CMClient::ProcessMessages()
 
         case servicemanager_v3_SMIncomingMessages_image_content_tag:
             ProcessImageContentChunk();
+            break;
+
+        case servicemanager_v3_SMIncomingMessages_clock_sync_tag:
+            ProcessClockSync();
             break;
 
         default:
@@ -715,6 +720,34 @@ void CMClient::ProcessImageContentChunk()
     if (!err.IsNone()) {
         LOG_ERR() << "Can't receive file chunk: " << err;
     }
+}
+
+void CMClient::ProcessClockSync()
+{
+    timespec ts {
+        .tv_sec = mIncomingMessage.SMIncomingMessage.clock_sync.current_time.seconds,
+        .tv_nsec = mIncomingMessage.SMIncomingMessage.clock_sync.current_time.nanos,
+    };
+
+    auto ret = mClockSync->ProcessClockSync(ts);
+    if (!ret.IsNone()) {
+        LOG_ERR() << "Can't process clock sync: " << ret;
+
+        return;
+    }
+
+    LOG_DBG() << "Clock synced successfully";
+}
+
+aos::Error CMClient::SendClockSyncRequest()
+{
+    aos::LockGuard lock(mMutex);
+
+    mOutgoingMessage.which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_clock_sync_request_tag;
+    mOutgoingMessage.SMOutgoingMessage.clock_sync_request
+        = servicemanager_v3_ClockSyncRequest servicemanager_v3_ClockSyncRequest_init_zero;
+
+    return SendPBMessageToVChan();
 }
 
 aos::Error CMClient::ReadDataFromVChan(void* des, size_t size)

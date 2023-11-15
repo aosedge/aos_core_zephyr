@@ -21,6 +21,7 @@
 #include <servicemanager.pb.h>
 #include <vch.h>
 
+#include "clocksync/clocksync.hpp"
 #include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
@@ -30,6 +31,7 @@
 class CMClient : public aos::sm::launcher::InstanceStatusReceiverItf,
                  public DownloadRequesterItf,
                  public aos::monitoring::SenderItf,
+                 public ClockSyncSenderItf,
                  public aos::ConnectionPublisherItf,
                  private aos::NonCopyable {
 public:
@@ -50,7 +52,7 @@ public:
      * @return aos::Error.
      */
     aos::Error Init(aos::sm::launcher::LauncherItf& launcher, ResourceManager& resourceManager,
-        DownloadReceiverItf& downloader, aos::monitoring::ResourceMonitorItf& resourceMonitor);
+        DownloadReceiverItf& downloader, aos::monitoring::ResourceMonitorItf& resourceMonitor, ClockSyncItf& clockSync);
 
     /**
      * Sends instances run status.
@@ -85,6 +87,13 @@ public:
     aos::Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData) override;
 
     /**
+     * Sends clock sync request.
+     *
+     * @return Error
+     */
+    aos::Error SendClockSyncRequest() override;
+
+    /**
      * Subscribes the provided ConnectionSubscriberItf to this object.
      * @param subscriber The ConnectionSubscriberItf that wants to subscribe.
      */
@@ -103,6 +112,7 @@ private:
     static constexpr auto cSMVChanRxPath = CONFIG_AOS_SM_VCHAN_RX_PATH;
     static constexpr auto cNodeID = CONFIG_AOS_NODE_ID;
     static constexpr auto cNodeType = CONFIG_AOS_NODE_TYPE;
+    static constexpr auto cClockSyncPeriodSec = CONFIG_AOS_CLOCK_SYNC_PERIOD_SEC;
     static constexpr auto CReadDelayUSec = 50000;
     static constexpr auto cMaxSubscribers = 1;
 
@@ -128,12 +138,14 @@ private:
     void       ProcessRunInstancesMessage();
     void       ProcessImageContentInfo();
     void       ProcessImageContentChunk();
+    void       ProcessClockSync();
     aos::Error ReadDataFromVChan(void* des, size_t size);
 
     aos::sm::launcher::LauncherItf*                                  mLauncher = {};
     ResourceManager*                                                 mResourceManager = {};
     DownloadReceiverItf*                                             mDownloader = {};
     aos::monitoring::ResourceMonitorItf*                             mResourceMonitor = {};
+    ClockSyncItf*                                                    mClockSync = {};
     aos::Thread<>                                                    mThreadWriter = {};
     aos::Thread<>                                                    mThreadReader = {};
     atomic_t                                                         mState = {};

@@ -17,7 +17,8 @@ project(cmclient_test)
 # ######################################################################################################################
 
 # Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
+# Aos core configuration
+add_definitions(-include ${APPLICATION_SOURCE_DIR}/../../src/aoscoreconfig.hpp)
 
 # ######################################################################################################################
 #  Generate API
@@ -48,6 +49,7 @@ target_sources(
             src/mockdownloader.cpp
             src/mockconnectionsubscriber.cpp
             src/mockresourcemonitor.cpp
+            src/mockclocksync.cpp
             ../../src/cmclient/cmclient.cpp
             ../../src/utils/checksum.cpp
 )
