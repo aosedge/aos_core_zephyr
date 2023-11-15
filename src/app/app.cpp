@@ -48,12 +48,16 @@ aos::Error App::Init()
         return err;
     }
 
+    if (!(err = mClockSync.Init(mCMClient, mCMClient)).IsNone()) {
+        return err;
+    }
+
     if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage, mResourceMonitor))
              .IsNone()) {
         return err;
     }
 
-    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader, mResourceMonitor)).IsNone()) {
+    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader, mResourceMonitor, mClockSync)).IsNone()) {
         return err;
     }
 

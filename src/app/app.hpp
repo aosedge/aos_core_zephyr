@@ -14,6 +14,7 @@
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
+#include "clocksync/clocksync.hpp"
 #include "cmclient/cmclient.hpp"
 #include "ocispec/ocispec.hpp"
 #include "resourceusageprovider/resourceusageprovider.hpp"
@@ -50,6 +51,7 @@ private:
     aos::sm::servicemanager::ServiceManager mServiceManager;
     aos::monitoring::ResourceMonitor        mResourceMonitor;
     ResourceUsageProvider                   mResourceUsageProvider;
+    ClockSync                               mClockSync;
 };
 
 #endif
