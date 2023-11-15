@@ -60,6 +60,7 @@ LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
 LOG_CALLBACK(resourceusageprovider);
 LOG_CALLBACK(monitoring);
+LOG_CALLBACK(clocksync);
 
 /***********************************************************************************************************************
  * Public
@@ -129,6 +130,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(aos::LogModuleEnum::eCommonMonitoring):
         log_monitoring::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eClockSync):
+        log_clocksync::LogCallback(level, message);
 
         break;
 
