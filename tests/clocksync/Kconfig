@@ -1,0 +1,12 @@
+# Copyright (C) 2023 Renesas Electronics Corporation.
+# Copyright (C) 2023 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Aos zephyr application"
+
+config AOS_CLOCK_SYNC_PERIOD_SEC
+	int "Clock sync period in seconds"
+	default 1
+
+source "Kconfig"
