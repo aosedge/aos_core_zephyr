@@ -29,7 +29,7 @@
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
 // Add condition to enable it for zephyr only to avoid the error.
-#if defined(__ZEPHYR__)
+#if defined(__ZEPHYR__) && !defined(CONFIG_EXTERNAL_LIBCPP)
 /**
  * Use Aos new operators.
  */

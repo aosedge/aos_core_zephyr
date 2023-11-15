@@ -1,0 +1,28 @@
+# Copyright (C) 2023 Renesas Electronics Corporation.
+# Copyright (C) 2023 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Aos zephyr application"
+
+config AOS_DOMD_ID
+	int "DomD id"
+	default 1
+
+config AOS_VCHAN_TX_PATH
+	string "Path to the SM vchan"
+	default "/vchan/tx"
+
+config AOS_VCHAN_RX_PATH
+	string "Path to the SM vchan"
+	default "/vchan/rx"
+
+config AOS_RUNTIME_DIR
+	string "Aos runtime dir"
+	default "/aos/runtime"
+
+config AOS_SERVICES_DIR
+	string "Aos services dir"
+	default "/aos/services"
+
+source "Kconfig"
