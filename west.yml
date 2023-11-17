@@ -33,7 +33,7 @@ manifest:
 
     - name: aos_core_api
       remote: aoscloud
-      revision: v7.2.1
+      revision: 0b5a91b9f2a2480d2984a2879f54328f46fffbc4
 
     - name: zephyr-xenlib
       remote: xen-troops
