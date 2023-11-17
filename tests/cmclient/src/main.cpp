@@ -9,7 +9,7 @@
 #include <zephyr/ztest.h>
 
 #include <pb_decode.h>
-#include <servicemanager.pb.h>
+#include <proto/servicemanager/v3/servicemanager.pb.h>
 #include <tinycrypt/constants.h>
 #include <tinycrypt/sha256.h>
 #include <vchanapi.h>
