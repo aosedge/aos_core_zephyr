@@ -14,6 +14,12 @@ include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
 project(aoszephyrapp)
 
 # ######################################################################################################################
+# Config
+# ######################################################################################################################
+
+set(AOS_CORE_CONFIG aoscoreconfig.hpp)
+
+# ######################################################################################################################
 # Includes
 # ######################################################################################################################
 
@@ -43,7 +49,7 @@ endif()
 # ######################################################################################################################
 
 # Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
+add_definitions(-include ${AOS_CORE_CONFIG})
 
 # ######################################################################################################################
 # Compile options
@@ -124,7 +130,11 @@ add_dependencies(app version)
 
 find_package(CoreAPI)
 
-generate_api(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api)
+set(CORE_API_CXX_FLAGS -I${CMAKE_CURRENT_SOURCE_DIR}/src -I${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_lib_cpp/include
+                       -include ${CMAKE_BINARY_DIR}/zephyr/include/generated/autoconf.h -include ${AOS_CORE_CONFIG}
+)
+
+core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 
 # ######################################################################################################################
 # External libs
@@ -143,7 +153,7 @@ set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${
 # aos_core_lib_cpp
 # ######################################################################################################################
 
-set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error -include aoscoreconfig.hpp")
+set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error -include ${AOS_CORE_CONFIG}")
 set(aoscore_build_dir ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
 
 ExternalProject_Add(

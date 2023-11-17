@@ -18,7 +18,7 @@
 #include <aos/sm/launcher.hpp>
 
 #include <pb_encode.h>
-#include <servicemanager.pb.h>
+#include <proto/servicemanager/v3/servicemanager.pb.h>
 #include <vch.h>
 
 #include "downloader/downloader.hpp"
