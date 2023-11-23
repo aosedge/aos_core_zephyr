@@ -23,6 +23,7 @@
 
 #include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
+#include "vchan/vchan.hpp"
 
 /**
  * CM client instance.
@@ -109,7 +110,7 @@ private:
     enum State { eFail = 1, eFinish = 2 };
 
     aos::Error                           ProcessMessages();
-    void                                 ConnectToCM(vch_handle& vchanHandler, const aos::String& vchanPath);
+    void                                 ConnectToCM(Vchan& vchan, const aos::String& vchanPath);
     aos::Error                           RunWriter();
     aos::Error                           RunReader();
     aos::Error                           SendNodeConfiguration();
@@ -137,8 +138,8 @@ private:
     aos::Thread<>                                                    mThreadWriter = {};
     aos::Thread<>                                                    mThreadReader = {};
     atomic_t                                                         mState = {};
-    vch_handle                                                       mSMVChanHandlerWriter;
-    vch_handle                                                       mSMVChanHandlerReader;
+    Vchan                                                            mSMVChanWriter;
+    Vchan                                                            mSMVChanReader;
     servicemanager_v3_SMIncomingMessages                             mIncomingMessage;
     servicemanager_v3_SMOutgoingMessages                             mOutgoingMessage;
     aos::Mutex                                                       mMutex;

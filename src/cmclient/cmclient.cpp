@@ -26,9 +26,7 @@ using namespace aos::sm::launcher;
 CMClient::~CMClient()
 {
     atomic_set_bit(&mState, eFinish);
-    vch_close(&mSMVChanHandlerWriter);
     mWriterCondVar.NotifyOne();
-    vch_close(&mSMVChanHandlerReader);
 
     mThreadWriter.Join();
     mThreadReader.Join();
@@ -188,28 +186,28 @@ void CMClient::Unsubscribes(aos::ConnectionSubscriberItf* subscriber)
  * Private
  **********************************************************************************************************************/
 
-void CMClient::ConnectToCM(vch_handle& vchanHandler, const aos::String& vchanPath)
+void CMClient::ConnectToCM(Vchan& vchan, const aos::String& vchanPath)
 {
     while (true) {
         LOG_DBG() << "Connecting to vchan: " << vchanPath << ", on dom: " << cDomdID;
 
-        int ret = 0;
+        aos::Error err {};
 
         {
             aos::LockGuard lock(mMutex);
 
-            ret = vch_connect(cDomdID, vchanPath.CStr(), &vchanHandler);
+            err = vchan.Connect(cDomdID, vchanPath);
         }
 
-        if (ret != 0) {
-            LOG_WRN() << "Can't connect to SM vchan error: " << AOS_ERROR_WRAP(ret);
+        if (!err.IsNone()) {
+            LOG_WRN() << "Can't connect to SM vchan error: " << err;
 
             sleep(cConnectionTimeoutSec);
 
             continue;
         }
 
-        vchanHandler.blocking = true;
+        vchan.SetBlocking(true);
 
         break;
     };
@@ -219,7 +217,7 @@ aos::Error CMClient::RunWriter()
 {
     auto err = mThreadWriter.Run([this](void*) {
         while (true) {
-            ConnectToCM(mSMVChanHandlerWriter, cSMVChanRxPath);
+            ConnectToCM(mSMVChanWriter, cSMVChanRxPath);
 
             auto err = mLauncher->RunLastInstances();
             if (!err.IsNone()) {
@@ -245,7 +243,7 @@ aos::Error CMClient::RunWriter()
 
                 atomic_clear_bit(&mState, eFail);
 
-                vch_close(&mSMVChanHandlerWriter);
+                mSMVChanWriter.Disconnect();
 
                 NotifyDisconnect();
             }
@@ -262,7 +260,7 @@ aos::Error CMClient::RunReader()
 {
     auto err = mThreadReader.Run([this](void*) {
         while (true) {
-            ConnectToCM(mSMVChanHandlerReader, cSMVChanTxPath);
+            ConnectToCM(mSMVChanReader, cSMVChanTxPath);
 
             auto err = ProcessMessages();
 
@@ -270,7 +268,7 @@ aos::Error CMClient::RunReader()
                 break;
             }
 
-            vch_close(&mSMVChanHandlerReader);
+            mSMVChanReader.Disconnect();
 
             NotifyWriteFail();
 
@@ -456,14 +454,12 @@ aos::Error CMClient::SendBufferToVChan(const uint8_t* buffer, size_t msgSize)
         return aos::ErrorEnum::eNone;
     }
 
-    auto ret = vch_write(&mSMVChanHandlerWriter, buffer, msgSize);
-    if (ret < 0) {
+    auto err = mSMVChanWriter.Write(buffer, msgSize);
+    if (!err.IsNone()) {
         NotifyWriteFail();
-
-        return AOS_ERROR_WRAP(ret);
     }
 
-    return aos::ErrorEnum::eNone;
+    return err;
 }
 
 servicemanager_v3_InstanceStatus CMClient::InstanceStatusToPB(const aos::InstanceStatus& instanceStatus) const
@@ -717,14 +713,9 @@ void CMClient::ProcessImageContentChunk()
     }
 }
 
-aos::Error CMClient::ReadDataFromVChan(void* des, size_t size)
+aos::Error CMClient::ReadDataFromVChan(void* dest, size_t size)
 {
-    auto read = vch_read(&mSMVChanHandlerReader, reinterpret_cast<uint8_t*>(des), size);
-    if (read < 0) {
-        return AOS_ERROR_WRAP(read);
-    }
-
-    return aos::ErrorEnum::eNone;
+    return mSMVChanReader.Read(reinterpret_cast<uint8_t*>(dest), size);
 }
 
 void CMClient::NotifyWriteFail()
