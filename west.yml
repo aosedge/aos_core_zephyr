@@ -24,20 +24,24 @@ manifest:
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: b1ab92967739d06599231d0ee4f4c8d68a6681b0
+      revision: zephyr-v3.3.0-xt
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: v0.2.1
+      revision: develop
 
     - name: aos_core_api
       remote: aoscloud
-      revision: v7.2.1
+      revision: develop
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: ecc874c0b667f9080fb210e1acca25eab4500f6f
+      revision: main
+
+    - name: zephyr-optee-client
+      remote: xen-troops
+      revision: soafee_1.1_wip
 
     - name: littlefs
       remote: zephyrproject-rtos
@@ -57,7 +61,3 @@ manifest:
       path: modules/crypto/tinycrypt
       groups:
         - crypto
-
-    - name: zephyr-optee-client
-      remote: xen-troops
-      revision: 9e8e574639672d34b6452741b43537cb4b03eb90
