@@ -10,7 +10,7 @@
 GDATA(__img_ipl_start)
 GDATA(__img_ipl_end)
 __img_ipl_start:
-.incbin	 "ipl_spider.bin"
+.incbin CONFIG_DOMD_UBOOT_PATH
 __img_ipl_end:
 
 .section .data.dtb_ipl,"a"
@@ -18,5 +18,5 @@ GDATA(__dtb_ipl_start)
 GDATA(__dtb_ipl_end)
 __dtb_ipl_start:
 .align 8
-.incbin	 "ipl_spider.dtb"
+.incbin CONFIG_DOMD_DTB_PATH
 __dtb_ipl_end:

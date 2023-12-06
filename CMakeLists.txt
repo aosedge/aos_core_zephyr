@@ -26,7 +26,7 @@ set(AOS_CORE_CONFIG aoscoreconfig.hpp)
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
 if(CONFIG_BOARD MATCHES "rcar")
-    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
+    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(BOARD MATCHES "native_posix*")
@@ -82,18 +82,18 @@ target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp moc
 
 # NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
 target_sources_ifdef(
-    CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c src/domains/domd/domain_bins_spider.S
+    CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c src/domains/domd/domain_bins.S
 )
 
 # NOTE: Include source files for DomD support for Gen3 board.
 # Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
 target_sources_ifdef(
     CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c
-    src/domains/domd/domain_bins_gen3.S
+    src/domains/domd/domain_bins.S
 )
 
 target_sources_ifdef(
-    CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c src/domains/domd/domain_bins_gen3.S
+    CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c src/domains/domd/domain_bins.S
 )
 
 # NOTE: Include source files for qemu boards.
