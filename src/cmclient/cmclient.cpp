@@ -428,7 +428,7 @@ aos::Error CMClient::SendPBMessageToVChan()
         return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
 
-    VChanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
+    VChanMessageHeader header = {0, static_cast<uint32_t>(outStream.bytes_written)};
 
     auto checksum = CalculateSha256(mSendBuffer.Get(), header.mDataSize);
     if (!checksum.mError.IsNone()) {
