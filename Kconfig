@@ -61,4 +61,12 @@ config AOS_DISK_MOUNT_POINT
 	string "Disk mount point"
 	default "/aos"
 
+config DOMD_UBOOT_PATH
+	string "Location for Domain-D IPL binary"
+	default "prebuilt/ipl.bin"
+
+config DOMD_DTB_PATH
+	string "Location of Domain-D partial device-tree"
+	default "prebuilt/ipl.dtb"
+
 source "Kconfig"
