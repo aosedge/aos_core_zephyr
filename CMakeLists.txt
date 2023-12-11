@@ -69,6 +69,8 @@ target_sources(
             src/ocispec/ocispec.cpp
             src/resourceusageprovider/resourceusageprovider.cpp
             src/utils/checksum.cpp
+            src/vchan/vchan.cpp
+            src/vchan/tlsvchan.cpp
 )
 
 # Enable vchannels and xrun mocks for native posix
