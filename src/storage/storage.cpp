@@ -36,6 +36,11 @@ aos::Error Storage::Init()
         return AOS_ERROR_WRAP(err);
     }
 
+    auto certPath = aos::FS::JoinPath(cStoragePath, "cert.db");
+    if (!(err = mCertDatabase.Init(certPath)).IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     return aos::ErrorEnum::eNone;
 }
 
@@ -165,6 +170,83 @@ aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(cons
     return aos::RetWithError<aos::sm::servicemanager::ServiceData>(ConvertServiceData(serviceData));
 }
 
+aos::Error Storage::AddCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo)
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Add cert info: " << certType;
+
+    return mCertDatabase.Add(ConvertCertInfo(certType, certInfo));
+}
+
+aos::Error Storage::RemoveCertInfo(const aos::String& certType, const aos::String& certURL)
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Remove cert info: " << certType;
+
+    return mCertDatabase.Remove([&certType, &certURL](const CertInfo& data) {
+        return strcmp(data.mCertType, certType.CStr()) == 0 && strcmp(data.mCertURL, certURL.CStr()) == 0;
+    });
+}
+
+aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Remove all cert info: " << certType;
+
+    return mCertDatabase.Remove(
+        [&certType](const CertInfo& data) { return strcmp(data.mCertType, certType.CStr()) == 0; });
+}
+
+aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo)
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get cert info: " << certType;
+
+    auto err = mCertDatabase.ReadRecords([&certsInfo, &certType, this](const CertInfo& certInfo) -> aos::Error {
+        if (strcmp(certInfo.mCertType, certType.CStr()) == 0) {
+            auto cert = ConvertCertInfo(certInfo);
+
+            auto err = certsInfo.PushBack(cert);
+            if (!err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
+        }
+
+        return aos::ErrorEnum::eNone;
+    });
+
+    return err;
+}
+
+aos::Error Storage::GetCertInfo(
+    const aos::Array<uint8_t>& issuer, const aos::Array<uint8_t>& serial, aos::iam::certhandler::CertInfo& cert)
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get cert info by issuer and serial";
+
+    CertInfo certInfo;
+
+    auto err = mCertDatabase.ReadRecordByFilter(certInfo, [&issuer, &serial](const CertInfo& data) {
+        aos::Array<uint8_t> issuerArray(data.mIssuer, data.mIssuerSize);
+        aos::Array<uint8_t> serialArray(data.mSerial, data.mSerialSize);
+
+        return issuerArray == issuer && serialArray == serial;
+    });
+
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    cert = ConvertCertInfo(certInfo);
+
+    return aos::ErrorEnum::eNone;
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -225,4 +307,36 @@ aos::sm::servicemanager::ServiceData Storage::ConvertServiceData(const Storage::
     serviceData.mImagePath = service.mImagePath;
 
     return serviceData;
+}
+
+Storage::CertInfo Storage::ConvertCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo)
+{
+    CertInfo cert;
+
+    memcpy(cert.mIssuer, certInfo.mIssuer.Get(), certInfo.mIssuer.Size());
+    memcpy(cert.mSerial, certInfo.mSerial.Get(), certInfo.mSerial.Size());
+    strcpy(cert.mCertURL, certInfo.mCertURL.CStr());
+    strcpy(cert.mKeyURL, certInfo.mKeyURL.CStr());
+    strcpy(cert.mCertType, certType.CStr());
+    cert.mNotAfter   = certInfo.mNotAfter.UnixNano();
+    cert.mIssuerSize = certInfo.mIssuer.Size();
+    cert.mSerialSize = certInfo.mSerial.Size();
+
+    return cert;
+}
+
+aos::iam::certhandler::CertInfo Storage::ConvertCertInfo(const Storage::CertInfo& certInfo)
+{
+    aos::iam::certhandler::CertInfo cert;
+
+    aos::Array<uint8_t> issuer(certInfo.mIssuer, certInfo.mIssuerSize);
+    aos::Array<uint8_t> serial(certInfo.mSerial, certInfo.mSerialSize);
+
+    cert.mIssuer  = issuer;
+    cert.mSerial  = serial;
+    cert.mCertURL = certInfo.mCertURL;
+    cert.mKeyURL  = certInfo.mKeyURL;
+    cert.mNotAfter.Add(certInfo.mNotAfter);
+
+    return cert;
 }
