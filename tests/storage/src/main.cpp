@@ -13,6 +13,11 @@
 
 #include "storage/storage.hpp"
 
+static const aos::Array<uint8_t> StringToDN(const char* str)
+{
+    return aos::Array<uint8_t>(reinterpret_cast<const uint8_t*>(str), strlen(str) + 1);
+}
+
 ZTEST_SUITE(storage, NULL, NULL, NULL, NULL, NULL);
 
 void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
@@ -178,4 +183,91 @@ ZTEST(storage, test_AddUpdateRemoveService)
     zassert_equal(storage.GetAllServices(services2), aos::ErrorEnum::eNone, "Failed to get all services");
 
     zassert_equal(services2.Size(), 0, "Unexpected number of services");
+}
+
+ZTEST(storage, test_AddRemoveCertInfo)
+{
+    aos::Log::SetCallback(TestLogCallback);
+
+    Storage storage;
+
+    zassert_equal(storage.Init(), aos::ErrorEnum::eNone, "Failed to initialize storage");
+
+    aos::StaticArray<aos::iam::certhandler::CertInfo, 2> certInfos;
+
+    const aos::String certTypePkcs = "pkcs11";
+
+    aos::iam::certhandler::CertInfo certInfo;
+    certInfo.mIssuer  = StringToDN("issuer");
+    certInfo.mSerial  = StringToDN("serial");
+    certInfo.mCertURL = "cert_url";
+    certInfo.mKeyURL  = "key_url";
+
+    certInfos.PushBack(certInfo);
+
+    aos::iam::certhandler::CertInfo certInfo2;
+    certInfo2.mIssuer  = StringToDN("issuer2");
+    certInfo2.mSerial  = StringToDN("serial2");
+    certInfo2.mCertURL = "cert_url2";
+    certInfo2.mKeyURL  = "key_url2";
+
+    certInfos.PushBack(certInfo2);
+
+    const aos::String certTypeTpm = "tpm";
+
+    aos::iam::certhandler::CertInfo certInfoTpm;
+    certInfoTpm.mIssuer  = StringToDN("issuer_tpm");
+    certInfoTpm.mSerial  = StringToDN("serial_tpm");
+    certInfoTpm.mCertURL = "cert_url_tpm";
+    certInfoTpm.mKeyURL  = "key_url_tpm";
+
+    for (const auto& certInfo : certInfos) {
+        zassert_equal(storage.AddCertInfo(certTypePkcs, certInfo), aos::ErrorEnum::eNone, "Failed to add cert info");
+    }
+
+    aos::StaticArray<aos::iam::certhandler::CertInfo, 2> certInfos2;
+
+    zassert_equal(
+        storage.GetCertsInfo(certTypePkcs, certInfos2), aos::ErrorEnum::eNone, "Failed to get all cert infos");
+    zassert_equal(certInfos2.Size(), 2, "Unexpected number of cert infos");
+
+    for (const auto& certInfo : certInfos2) {
+        zassert_equal(certInfos.Find(certInfo).mError, aos::ErrorEnum::eNone, "Unexpected cert info");
+    }
+
+    zassert_equal(storage.AddCertInfo(certTypeTpm, certInfoTpm), aos::ErrorEnum::eNone, "Failed to add cert info");
+
+    certInfos2.Clear();
+
+    zassert_equal(storage.GetCertsInfo(certTypeTpm, certInfos2), aos::ErrorEnum::eNone, "Failed to get all cert infos");
+    zassert_equal(certInfos2.Size(), 1, "Unexpected number of cert infos");
+    zassert_equal(certInfos2[0] == certInfoTpm, true, "certInfoTpm != certInfos3[0]");
+
+    aos::iam::certhandler::CertInfo certInfoGet;
+
+    zassert_equal(storage.GetCertInfo(certInfoTpm.mIssuer, certInfoTpm.mSerial, certInfoGet), aos::ErrorEnum::eNone,
+        "Failed to get cert info");
+    zassert_equal(certInfoGet == certInfoTpm, true, "certInfoTpm != certInfoGet");
+    zassert_equal(
+        storage.RemoveCertInfo(certTypePkcs, certInfo.mCertURL), aos::ErrorEnum::eNone, "Failed to remove cert info");
+
+    certInfos2.Clear();
+
+    zassert_equal(
+        storage.GetCertsInfo(certTypePkcs, certInfos2), aos::ErrorEnum::eNone, "Failed to get all cert infos");
+    zassert_equal(certInfos2.Size(), 1, "Unexpected number of cert infos");
+    zassert_equal(certInfos2[0] == certInfo2, true, "certInfo2 != certInfos2[0]");
+    zassert_equal(storage.RemoveAllCertsInfo(certTypePkcs), aos::ErrorEnum::eNone, "Failed to remove all cert infos");
+
+    certInfos2.Clear();
+
+    zassert_equal(
+        storage.GetCertsInfo(certTypePkcs, certInfos2), aos::ErrorEnum::eNone, "Failed to get all cert infos");
+    zassert_equal(certInfos2.Size(), 0, "Unexpected number of cert infos");
+    zassert_equal(storage.RemoveAllCertsInfo(certTypeTpm), aos::ErrorEnum::eNone, "Failed to remove all cert infos");
+
+    certInfos2.Clear();
+
+    zassert_equal(storage.GetCertsInfo(certTypeTpm, certInfos2), aos::ErrorEnum::eNone, "Failed to get all cert infos");
+    zassert_equal(certInfos2.Size(), 0, "Unexpected number of cert infos");
 }
