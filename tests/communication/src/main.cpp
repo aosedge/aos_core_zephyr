@@ -15,6 +15,7 @@
 
 #include "communication/communication.hpp"
 
+#include "mocks/commchannelmock.hpp"
 #include "mocks/connectionsubscribermock.hpp"
 
 /***********************************************************************************************************************
@@ -25,11 +26,15 @@
  * Consts
  **********************************************************************************************************************/
 
+static constexpr auto cWaitTimeout = std::chrono::seconds {1};
+
 /***********************************************************************************************************************
  * Vars
  **********************************************************************************************************************/
 
-static Communication sCommunication;
+static CommChannelMock sOpenChannel;
+static CommChannelMock sSecureChannel;
+static Communication   sCommunication;
 
 /***********************************************************************************************************************
  * Setup
@@ -76,7 +81,7 @@ ZTEST_SUITE(
     []() -> void* {
         aos::Log::SetCallback(TestLogCallback);
 
-        auto err = sCommunication.Init();
+        auto err = sCommunication.Init(sOpenChannel, sSecureChannel);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
         return nullptr;
@@ -89,4 +94,17 @@ ZTEST_SUITE(
 
 ZTEST_F(communication, test_Connection)
 {
+    ConnectionSubscriberMock subscriber;
+
+    sCommunication.Subscribes(subscriber);
+
+    sSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
+
+    auto err = subscriber.WaitDisconnect(cWaitTimeout);
+    zassert_true(err.IsNone(), "Wait connection error: %s", err.Message());
+
+    err = subscriber.WaitConnect(cWaitTimeout);
+    zassert_true(err.IsNone(), "Wait connection error: %s", err.Message());
+
+    sCommunication.Unsubscribes(subscriber);
 }
