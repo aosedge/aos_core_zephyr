@@ -76,25 +76,19 @@ target_sources(
 # Enable vchannels and xrun mocks for native posix
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
 
-# NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
-target_sources_ifdef(
-    CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c src/domains/domd/domain_bins.S
-)
+# Include domain IPL and dtb for xen_dom0 shield
+target_sources_ifdef(CONFIG_SHIELD_XEN_DOM0 app PRIVATE src/domains/domd/domain_bins.S)
 
-# NOTE: Include source files for DomD support for Gen3 board.
-# Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
-target_sources_ifdef(
-    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c src/domains/domd/domain_bins.S
-)
+# Include source files for DomD support
 
-target_sources_ifdef(
-    CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c src/domains/domd/domain_bins.S
-)
+target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c)
+target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c)
+target_sources_ifdef(CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c)
 
-# NOTE: Include source files for qemu boards.
+# Include source files for qemu boards.
 target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
 
-# NOTE: Include HW-specific source file
+# Include HW-specific source file
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
 
 # ######################################################################################################################
