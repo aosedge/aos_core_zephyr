@@ -10,17 +10,23 @@
 
 #include "checksum.hpp"
 
-aos::RetWithError<aos::StaticBuffer<aos::cSHA256Size>> CalculateSha256(const void* data, size_t size)
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
+aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(const aos::Array<uint8_t>& data)
 {
-    tc_sha256_state_struct              s;
-    aos::StaticBuffer<aos::cSHA256Size> digest;
+    tc_sha256_state_struct                      s;
+    aos::StaticArray<uint8_t, aos::cSHA256Size> digest;
+
+    digest.Resize(aos::cSHA256Size);
 
     auto ret = tc_sha256_init(&s);
     if (TC_CRYPTO_SUCCESS != ret) {
         return {digest, AOS_ERROR_WRAP(ret)};
     }
 
-    ret = tc_sha256_update(&s, static_cast<const uint8_t*>(data), size);
+    ret = tc_sha256_update(&s, data.Get(), data.Size());
     if (TC_CRYPTO_SUCCESS != ret) {
         return {digest, AOS_ERROR_WRAP(ret)};
     }
