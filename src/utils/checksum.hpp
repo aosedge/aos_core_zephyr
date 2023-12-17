@@ -13,10 +13,9 @@
 /**
  * Calculates SHA-256.
  *
- * @param data pointer to data.
- * @param size data size.
- * @return aos::RetWithError<SHA256Digest>.
+ * @param data[in] data array.
+ * @return aos::RetWithError<aos::StaticArray<aos::cSHA256Size>>.
  */
-aos::RetWithError<aos::StaticBuffer<aos::cSHA256Size>> CalculateSha256(const void* data, size_t size);
+aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(const aos::Array<uint8_t>& data);
 
 #endif

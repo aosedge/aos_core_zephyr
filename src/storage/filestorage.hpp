@@ -60,9 +60,10 @@ public:
         if (fileSize == 0) {
             Header header {};
 
-            auto checksum = CalculateSha256(&header, sizeof(Header) - aos::cSHA256Size);
+            auto checksum = CalculateSha256(
+                aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(Header) - aos::cSHA256Size));
             if (!checksum.mError.IsNone()) {
-                return checksum.mError;
+                return AOS_ERROR_WRAP(checksum.mError);
             }
 
             ssize_t nwrite = write(mFd, &header, sizeof(Header));
@@ -113,15 +114,16 @@ public:
             return AOS_ERROR_WRAP(errno);
         }
 
-        record.mData = data;
+        record.mData    = data;
         record.mDeleted = 0;
 
-        auto checksum = CalculateSha256(&record, sizeof(record) - aos::cSHA256Size);
+        auto checksum = CalculateSha256(
+            aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(&record), sizeof(record) - aos::cSHA256Size));
         if (!checksum.mError.IsNone()) {
             return checksum.mError;
         }
 
-        aos::Buffer(record.mChecksum, aos::cSHA256Size) = checksum.mValue;
+        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(record.mChecksum), aos::cSHA256Size) = checksum.mValue;
 
         if (deletedRecordOffset >= 0) {
             ret = lseek(mFd, deletedRecordOffset, SEEK_SET);
@@ -180,12 +182,13 @@ public:
 
             record.mData = data;
 
-            auto checksum = CalculateSha256(&record, sizeof(record) - aos::cSHA256Size);
+            auto checksum = CalculateSha256(
+                aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(&record), sizeof(record) - aos::cSHA256Size));
             if (!checksum.mError.IsNone()) {
                 return checksum.mError;
             }
 
-            aos::Buffer(record.mChecksum, aos::cSHA256Size) = checksum.mValue;
+            aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(record.mChecksum), aos::cSHA256Size) = checksum.mValue;
 
             ssize_t nwrite = write(mFd, &record, sizeof(Record));
             if (nwrite != sizeof(Record)) {
