@@ -25,10 +25,10 @@ public:
     /**
      * Get current unit config version.
      *
-     * @param version  [out] param to store version.
+     * @param[out] version param to store version.
      * @return aos::Error.
      */
-    virtual aos::Error GetUnitConfigInfo(char* version) const = 0;
+    virtual aos::Error GetUnitConfigInfo(aos::String& version) const = 0;
 
     /**
      * Check new unit configuration.
@@ -37,7 +37,7 @@ public:
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
      */
-    virtual aos::Error CheckUnitConfig(const char* version, const char* unitConfig) const = 0;
+    virtual aos::Error CheckUnitConfig(const aos::String& version, const aos::String& unitConfig) const = 0;
 
     /**
      * Update unit configuration.
@@ -46,7 +46,7 @@ public:
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
      */
-    virtual aos::Error UpdateUnitConfig(const char* version, const char* unitConfig) = 0;
+    virtual aos::Error UpdateUnitConfig(const aos::String& version, const aos::String& unitConfig) = 0;
 };
 
 /**
@@ -58,10 +58,10 @@ public:
     /**
      * Get current unit config version.
      *
-     * @param version  [out] param to store version.
+     * @param[out] version param to store version.
      * @return aos::Error.
      */
-    aos::Error GetUnitConfigInfo(char* version) const override;
+    aos::Error GetUnitConfigInfo(aos::String& version) const override;
 
     /**
      * Check new unit configuration.
@@ -70,7 +70,7 @@ public:
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
      */
-    aos::Error CheckUnitConfig(const char* version, const char* unitConfig) const override;
+    aos::Error CheckUnitConfig(const aos::String& version, const aos::String& unitConfig) const override;
 
     /**
      * Update unit configuration.
@@ -79,10 +79,10 @@ public:
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
      */
-    aos::Error UpdateUnitConfig(const char* version, const char* unitConfig) override;
+    aos::Error UpdateUnitConfig(const aos::String& version, const aos::String& unitConfig) override;
 
 private:
-    static constexpr size_t cVersionLen = 10;
+    static constexpr auto cUnitConfigFilePath = CONFIG_AOS_UNIT_CONFIG_FILE;
 };
 
 #endif
