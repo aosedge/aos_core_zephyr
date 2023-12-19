@@ -13,6 +13,10 @@
 #include "log.hpp"
 #include "resourceusageprovider.hpp"
 
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
 aos::Error ResourceUsageProvider::Init()
 {
     LOG_DBG() << "Init resource usage provider";
@@ -24,8 +28,8 @@ aos::Error ResourceUsageProvider::Init()
         return AOS_ERROR_WRAP(ret);
     }
 
-    mNodeInfo.mNodeID = cNodeID;
-    mNodeInfo.mNumCPUs = xstat.num_cpus;
+    mNodeInfo.mNodeID   = cNodeID;
+    mNodeInfo.mNumCPUs  = xstat.num_cpus;
     mNodeInfo.mTotalRAM = xstat.tot_mem;
 
     aos::monitoring::PartitionInfo partitionInfo;
@@ -93,7 +97,7 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
               << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
 
     mPrevNodeCPUTime = domain.cpu_ns;
-    mPrevTime = curTime;
+    mPrevTime        = curTime;
 
     for (size_t i = 0; i < monitoringData.mDisk.Size(); ++i) {
         struct fs_statvfs sbuf;
@@ -155,13 +159,13 @@ aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
         }
 
         unsigned long long prevCPUTime = findInstanceCPUTime.mValue->mInstanceCPUTime;
-        auto               prevTime = findInstanceCPUTime.mValue->mInstancePrevTime;
+        auto               prevTime    = findInstanceCPUTime.mValue->mInstancePrevTime;
 
-        findInstanceCPUTime.mValue->mInstanceCPUTime = domain.cpu_ns;
+        findInstanceCPUTime.mValue->mInstanceCPUTime  = domain.cpu_ns;
         findInstanceCPUTime.mValue->mInstancePrevTime = curTime;
 
         auto cpuTimeDiff = domain.cpu_ns - prevCPUTime;
-        auto us_elapsed = (curTime.tv_sec - prevTime.tv_sec) * 1000000.0 + (curTime.tv_usec - prevTime.tv_usec);
+        auto us_elapsed  = (curTime.tv_sec - prevTime.tv_sec) * 1000000.0 + (curTime.tv_usec - prevTime.tv_usec);
 
         monitoringData.mCPU = ((cpuTimeDiff / 10.0) / us_elapsed);
 
