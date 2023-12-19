@@ -13,9 +13,11 @@
 #include "log.hpp"
 #include "resourcemanager.hpp"
 
-static constexpr auto cUnitConfigFilePath = CONFIG_AOS_UNIT_CONFIG_FILE;
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
 
-aos::Error ResourceManager::GetUnitConfigInfo(char* version) const
+aos::Error ResourceManager::GetUnitConfigInfo(aos::String& version) const
 {
     aos::Error err = aos::ErrorEnum::eNone;
 
@@ -24,9 +26,11 @@ aos::Error ResourceManager::GetUnitConfigInfo(char* version) const
         return AOS_ERROR_WRAP(errno);
     }
 
-    auto ret = read(file, version, cVersionLen);
+    auto ret = read(file, version.Get(), version.MaxSize());
     if (ret < 0) {
         err = AOS_ERROR_WRAP(errno);
+    } else {
+        version.Resize(ret);
     }
 
     ret = close(file);
@@ -37,12 +41,12 @@ aos::Error ResourceManager::GetUnitConfigInfo(char* version) const
     return err;
 }
 
-aos::Error ResourceManager::CheckUnitConfig(const char* version, const char* unitConfig) const
+aos::Error ResourceManager::CheckUnitConfig(const aos::String& version, const aos::String& unitConfig) const
 {
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error ResourceManager::UpdateUnitConfig(const char* version, const char* unitConfig)
+aos::Error ResourceManager::UpdateUnitConfig(const aos::String& version, const aos::String& unitConfig)
 {
     aos::Error err = aos::ErrorEnum::eNone;
 
@@ -51,10 +55,10 @@ aos::Error ResourceManager::UpdateUnitConfig(const char* version, const char* un
         return AOS_ERROR_WRAP(errno);
     }
 
-    auto written = write(file, version, strlen(version));
+    auto written = write(file, version.Get(), version.Size());
     if (written < 0) {
         err = AOS_ERROR_WRAP(written);
-    } else if ((size_t)written != strlen(version)) {
+    } else if ((size_t)written != version.Size()) {
         err = AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
 
