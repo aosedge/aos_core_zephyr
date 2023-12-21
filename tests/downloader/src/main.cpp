@@ -21,9 +21,9 @@
 using namespace aos;
 
 constexpr auto cDownloadPath = "download";
-constexpr auto cFileName = "test.txt";
-constexpr auto cDownloadUrl = "http://www.example.com";
-constexpr auto cData = "file content";
+constexpr auto cFileName     = "test.txt";
+constexpr auto cDownloadUrl  = "http://www.example.com";
+constexpr auto cData         = "file content";
 
 static Downloader downloader;
 
@@ -31,7 +31,7 @@ void sendImageContentInfo(void*)
 {
     aos::StaticArray<FileInfo, 32> files;
     FileInfo                       file {};
-    file.relativePath = cFileName;
+    file.mRelativePath = cFileName;
 
     files.PushBack(file);
 
@@ -39,10 +39,10 @@ void sendImageContentInfo(void*)
         "Failed to initialize downloader");
 
     aos::StaticArray<uint8_t, aos::cFileChunkSize> fileData {};
-    fileData.Resize(sizeof(cData));
-    memcpy(fileData.Get(), cData, sizeof(cData));
+    fileData.Resize(strlen(cData));
+    memcpy(fileData.Get(), cData, strlen(cData));
 
-    FileChunk chunk {1, file.relativePath, 1, 1, fileData};
+    FileChunk chunk {1, file.mRelativePath, 1, 1, fileData};
 
     zassert_equal(downloader.ReceiveFileChunk(chunk), aos::ErrorEnum::eNone, "Failed to receive file chunk");
 }
@@ -62,15 +62,15 @@ public:
             return aos::ErrorEnum::eNone;
         }
 
-        if (request.url != cDownloadUrl) {
+        if (request.mURL != cDownloadUrl) {
             return aos::ErrorEnum::eInvalidArgument;
         }
 
-        if (request.contentType != aos::DownloadContentEnum::eService) {
+        if (request.mContentType != aos::DownloadContentEnum::eService) {
             return aos::ErrorEnum::eInvalidArgument;
         }
 
-        if (request.requestID != 1) {
+        if (request.mRequestID != 1) {
             return aos::ErrorEnum::eInvalidArgument;
         }
 
@@ -110,12 +110,12 @@ ZTEST(downloader, test_download_image)
     zassert_false(file < 0, "Failed to open file");
 
     aos::StaticArray<uint8_t, aos::cFileChunkSize> fileData {};
-    fileData.Resize(sizeof(cData));
+    fileData.Resize(strlen(cData));
     auto ret = read(file, fileData.Get(), fileData.Size());
     close(file);
 
-    zassert_equal(ret, sizeof(cData), "Failed to read file");
-    zassert_equal(memcmp(fileData.Get(), cData, sizeof(cData)), 0, "File content is not equal to expected");
+    zassert_equal(ret, strlen(cData), "Failed to read file");
+    zassert_equal(memcmp(fileData.Get(), cData, strlen(cData)), 0, "File content is not equal to expected");
 }
 
 ZTEST(downloader, test_timeout_download_image)

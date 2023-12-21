@@ -20,38 +20,38 @@
  * Image content request.
  */
 struct ImageContentRequest {
-    aos::StaticString<aos::cURLLen> url;
-    uint64_t                        requestID;
-    aos::DownloadContent            contentType;
+    aos::StaticString<aos::cURLLen> mURL;
+    uint64_t                        mRequestID;
+    aos::DownloadContent            mContentType;
 };
 
 /**
  * File info.
  */
 struct FileInfo {
-    aos::StaticString<aos::cFilePathLen> relativePath;
-    aos::StaticBuffer<aos::cSHA256Size>  sha256;
-    uint64_t                             size;
+    aos::StaticString<aos::cFilePathLen>        mRelativePath;
+    aos::StaticArray<uint8_t, aos::cSHA256Size> mSHA256;
+    uint64_t                                    mSize;
 };
 
 /**
  * Image content info.
  */
 struct ImageContentInfo {
-    uint64_t                                 requestID;
-    aos::StaticArray<FileInfo, 32>           files;
-    aos::StaticString<aos::cErrorMessageLen> error;
+    uint64_t                                 mRequestID;
+    aos::StaticArray<FileInfo, 32>           mFiles;
+    aos::StaticString<aos::cErrorMessageLen> mError;
 };
 
 /**
  * File chunk.
  */
 struct FileChunk {
-    uint64_t                                       requestID;
-    aos::StaticString<aos::cFilePathLen>           relativePath;
-    uint64_t                                       partsCount;
-    uint64_t                                       part;
-    aos::StaticArray<uint8_t, aos::cFileChunkSize> data;
+    uint64_t                                       mRequestID;
+    aos::StaticString<aos::cFilePathLen>           mRelativePath;
+    uint64_t                                       mPartsCount;
+    uint64_t                                       mPart;
+    aos::StaticArray<uint8_t, aos::cFileChunkSize> mData;
 };
 
 /**
