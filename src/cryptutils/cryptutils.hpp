@@ -8,6 +8,8 @@
 #ifndef CRYPTUTILS_HPP_
 #define CRYPTUTILS_HPP_
 
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
 #include <mbedtls/x509_crt.h>
 
 #include "aos/common/crypto.hpp"
@@ -74,6 +76,23 @@ private:
     aos::Error GetX509CertIssuer(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
     aos::Error GetX509CertSerialNumber(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
     aos::Error GetX509CertExtensions(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
+
+    aos::Error ParsePrivateKey(
+        mbedtls_pk_context& pk, const aos::crypto::PrivateKey& privKey, mbedtls_ctr_drbg_context& ctrDrbg);
+
+    aos::Error InitializeCertificate(mbedtls_x509write_cert& cert, mbedtls_pk_context& pk,
+        mbedtls_ctr_drbg_context& ctr_drbg, mbedtls_entropy_context& entropy);
+    aos::Error SetCertificateProperties(mbedtls_x509write_cert& cert, mbedtls_pk_context& pk,
+        mbedtls_ctr_drbg_context& ctrDrbg, const aos::crypto::x509::Certificate& templ,
+        const aos::crypto::x509::Certificate& parent);
+    aos::Error WriteCertificatePem(
+        mbedtls_x509write_cert& cert, mbedtls_ctr_drbg_context& ctrDrbg, aos::Array<uint8_t>& pemCert);
+    aos::Error SetCertificateSerialNumber(
+        mbedtls_x509write_cert& cert, mbedtls_ctr_drbg_context& ctrDrbg, const aos::crypto::x509::Certificate& templ);
+    aos::Error SetCertificateSubjectKeyIdentifier(
+        mbedtls_x509write_cert& cert, const aos::crypto::x509::Certificate& templ);
+    aos::Error SetCertificateAuthorityKeyIdentifier(mbedtls_x509write_cert& cert,
+        const aos::crypto::x509::Certificate& templ, const aos::crypto::x509::Certificate& parent);
 };
 
 #endif
