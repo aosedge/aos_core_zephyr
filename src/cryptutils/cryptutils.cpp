@@ -81,6 +81,46 @@ aos::Error CryptUtils::PEMToX509Certs(
 aos::Error CryptUtils::CreateCSR(
     const aos::crypto::x509::CSR& templ, const aos::crypto::PrivateKey& privKey, aos::Array<uint8_t>& pemCSR)
 {
+    mbedtls_x509write_csr    csr;
+    mbedtls_pk_context       key;
+    mbedtls_entropy_context  entropy;
+    mbedtls_ctr_drbg_context ctrDrbg;
+
+    auto err = InitializeCSR(csr, key, ctrDrbg, entropy);
+    if (err != aos::ErrorEnum::eNone) {
+        return err;
+    }
+
+    auto cleanUpContext = [&]() {
+        mbedtls_x509write_csr_free(&csr);
+        mbedtls_pk_free(&key);
+        mbedtls_ctr_drbg_free(&ctrDrbg);
+        mbedtls_entropy_free(&entropy);
+    };
+
+    err = ParsePrivateKey(key, privKey, ctrDrbg);
+    if (err != aos::ErrorEnum::eNone) {
+        cleanUpContext();
+
+        return err;
+    }
+
+    err = SetCSRProperties(csr, key, templ);
+    if (err != aos::ErrorEnum::eNone) {
+        cleanUpContext();
+
+        return err;
+    }
+
+    err = WriteCSRPem(csr, ctrDrbg, pemCSR);
+    if (err != aos::ErrorEnum::eNone) {
+        cleanUpContext();
+
+        return err;
+    }
+
+    cleanUpContext();
+
     return aos::ErrorEnum::eNone;
 }
 
@@ -462,4 +502,94 @@ aos::Error CryptUtils::SetCertificateAuthorityKeyIdentifier(mbedtls_x509write_ce
     return AOS_ERROR_WRAP(mbedtls_x509write_crt_set_extension(&cert, MBEDTLS_OID_AUTHORITY_KEY_IDENTIFIER,
         MBEDTLS_OID_SIZE(MBEDTLS_OID_AUTHORITY_KEY_IDENTIFIER), 0, templ.mAuthorityKeyId.Get(),
         templ.mAuthorityKeyId.Size()));
+}
+
+aos::Error CryptUtils::InitializeCSR(mbedtls_x509write_csr& csr, mbedtls_pk_context& pk,
+    mbedtls_ctr_drbg_context& ctrDrbg, mbedtls_entropy_context& entropy)
+{
+    mbedtls_x509write_csr_init(&csr);
+    mbedtls_pk_init(&pk);
+    mbedtls_ctr_drbg_init(&ctrDrbg);
+    mbedtls_entropy_init(&entropy);
+
+    mbedtls_x509write_csr_set_md_alg(&csr, MBEDTLS_MD_SHA256);
+
+    const char* pers = "csr_generation";
+
+    return AOS_ERROR_WRAP(mbedtls_ctr_drbg_seed(
+        &ctrDrbg, mbedtls_entropy_func, &entropy, reinterpret_cast<const unsigned char*>(pers), strlen(pers)));
+}
+
+aos::Error CryptUtils::SetCSRProperties(
+    mbedtls_x509write_csr& csr, mbedtls_pk_context& pk, const aos::crypto::x509::CSR& templ)
+{
+    mbedtls_x509write_csr_set_key(&csr, &pk);
+
+    aos::StaticString<aos::crypto::cCertSubjSize> subject;
+    auto                                          err = DNToString(templ.mSubject, subject);
+    if (err != aos::ErrorEnum::eNone) {
+        return err;
+    }
+
+    auto ret = mbedtls_x509write_csr_set_subject_name(&csr, subject.CStr());
+    if (ret != 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
+
+    err = SetCSRAlternativeNames(csr, templ);
+    if (err != aos::ErrorEnum::eNone) {
+        return err;
+    }
+
+    return SetCSRExtraExtensions(csr, templ);
+}
+
+aos::Error CryptUtils::SetCSRAlternativeNames(mbedtls_x509write_csr& csr, const aos::crypto::x509::CSR& templ)
+{
+    mbedtls_x509_san_list   sanList[aos::crypto::cAltDNSNamesCount];
+    aos::crypto::x509::CSR& tmpl = const_cast<aos::crypto::x509::CSR&>(templ);
+    size_t                  dnsNameCount = tmpl.mDNSNames.Size();
+
+    for (size_t i = 0; i < tmpl.mDNSNames.Size(); i++) {
+        sanList[i].node.type = MBEDTLS_X509_SAN_DNS_NAME;
+        sanList[i].node.san.unstructured_name.tag = MBEDTLS_ASN1_IA5_STRING;
+        sanList[i].node.san.unstructured_name.len = tmpl.mDNSNames[i].Size();
+        sanList[i].node.san.unstructured_name.p = reinterpret_cast<unsigned char*>(tmpl.mDNSNames[i].Get());
+
+        sanList[i].next = (i < dnsNameCount - 1) ? &sanList[i + 1] : nullptr;
+    }
+
+    return AOS_ERROR_WRAP(mbedtls_x509write_csr_set_subject_alternative_name(&csr, sanList));
+}
+
+aos::Error CryptUtils::SetCSRExtraExtensions(mbedtls_x509write_csr& csr, const aos::crypto::x509::CSR& templ)
+{
+    for (const auto& extension : templ.mExtraExtensions) {
+        const char*          oid = extension.mId.CStr();
+        const unsigned char* value = extension.mValue.Get();
+        size_t               oidLen = extension.mId.Size();
+        size_t               valueLen = extension.mValue.Size();
+
+        int ret = mbedtls_x509write_csr_set_extension(&csr, oid, oidLen, 0, value, valueLen);
+        if (ret != 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CryptUtils::WriteCSRPem(
+    mbedtls_x509write_csr& csr, mbedtls_ctr_drbg_context& ctrDrbg, aos::Array<uint8_t>& pemCSR)
+{
+    unsigned char buffer[aos::crypto::cPemCSRSize];
+    auto          ret = mbedtls_x509write_csr_pem(&csr, buffer, sizeof(buffer), mbedtls_ctr_drbg_random, &ctrDrbg);
+    if (ret != 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
+
+    pemCSR.Resize(strlen(reinterpret_cast<const char*>(buffer)) + 1);
+    memcpy(pemCSR.Get(), buffer, pemCSR.Size());
+
+    return aos::ErrorEnum::eNone;
 }

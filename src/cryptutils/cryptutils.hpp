@@ -11,6 +11,7 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/x509_crt.h>
+#include <mbedtls/x509_csr.h>
 
 #include "aos/common/crypto.hpp"
 
@@ -93,6 +94,14 @@ private:
         mbedtls_x509write_cert& cert, const aos::crypto::x509::Certificate& templ);
     aos::Error SetCertificateAuthorityKeyIdentifier(mbedtls_x509write_cert& cert,
         const aos::crypto::x509::Certificate& templ, const aos::crypto::x509::Certificate& parent);
+
+    aos::Error InitializeCSR(mbedtls_x509write_csr& csr, mbedtls_pk_context& pk, mbedtls_ctr_drbg_context& ctrDrbg,
+        mbedtls_entropy_context& entropy);
+    aos::Error SetCSRProperties(
+        mbedtls_x509write_csr& csr, mbedtls_pk_context& pk, const aos::crypto::x509::CSR& templ);
+    aos::Error SetCSRAlternativeNames(mbedtls_x509write_csr& csr, const aos::crypto::x509::CSR& templ);
+    aos::Error SetCSRExtraExtensions(mbedtls_x509write_csr& csr, const aos::crypto::x509::CSR& templ);
+    aos::Error WriteCSRPem(mbedtls_x509write_csr& csr, mbedtls_ctr_drbg_context& ctrDrbg, aos::Array<uint8_t>& pemCSR);
 };
 
 #endif
