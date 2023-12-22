@@ -50,6 +50,11 @@ manifest:
       groups:
         - fs
 
+    - name: mbedtls
+      remote: zephyrproject-rtos
+      revision: 7053083b0cff8462464e3cbb826e87852fc03da6
+      path: modules/lib/mbedtls
+
     - name: nanopb
       remote: zephyrproject-rtos
       revision: 42fa8b211e946b90b9d968523fce7b1cfe27617e
