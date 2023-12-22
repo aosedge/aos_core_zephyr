@@ -8,6 +8,8 @@
 #ifndef CRYPTUTILS_HPP_
 #define CRYPTUTILS_HPP_
 
+#include <mbedtls/x509_crt.h>
+
 #include "aos/common/crypto.hpp"
 
 class CryptUtils : public aos::crypto::x509::ProviderItf {
@@ -67,6 +69,11 @@ public:
 
 private:
     aos::Error GetOIDString(aos::Array<uint8_t>& oid, aos::String& result);
+    aos::Error ParseX509Certs(mbedtls_x509_crt* currentCrt, aos::crypto::x509::Certificate& cert);
+    aos::Error GetX509CertSubject(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
+    aos::Error GetX509CertIssuer(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
+    aos::Error GetX509CertSerialNumber(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
+    aos::Error GetX509CertExtensions(aos::crypto::x509::Certificate& cert, mbedtls_x509_crt* crt);
 };
 
 #endif
