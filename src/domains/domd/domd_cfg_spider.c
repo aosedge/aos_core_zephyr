@@ -27,6 +27,7 @@ static char* dt_passthrough_nodes[] = {
     "/ufs30_refclk_v",
     "/regulator-1p8v",
     "/regulator-3p3v",
+    "/regulator-vcc-sdhi",
     "/reserved-memory",
 };
 
@@ -51,7 +52,7 @@ static struct xen_domain_iomem domd_iomems[] = {
     {.first_mfn = 0xe65d7, .nr_mfns = 0x1}, {.first_mfn = 0xe6198, .nr_mfns = 0x1},
     {.first_mfn = 0xe61a0, .nr_mfns = 0x1}, {.first_mfn = 0xe61a0, .nr_mfns = 0x1},
     {.first_mfn = 0xe61b0, .nr_mfns = 0x1}, {.first_mfn = 0xe6260, .nr_mfns = 0x10},
-    {.first_mfn = 0xdfd91, .nr_mfns = 0x1},
+    {.first_mfn = 0xdfd91, .nr_mfns = 0x1}, {.first_mfn = 0xe6078, .nr_mfns = 0x1},
     //	{ .first_gfn = 0x47fc7, .first_mfn = 0x37fc7, .nr_mfns = 0x2},
 };
 
@@ -59,11 +60,11 @@ static uint32_t domd_irqs[] = {
     // gpio@e6050180
     854,
     // gpio@e6050980
-    855,
+    858,
     // gpio@e6051180
-    856,
+    948,
     // gpio@e6051980
-    857,
+    952,
     // scsi@e6860000 (UFS)
     267,
     // i2c@e6500000
@@ -267,6 +268,7 @@ static ssize_t get_ipl_image_size(void* image_info, uint64_t* size)
 }
 
 struct xen_domain_cfg domd_cfg = {
+    .machine_dt_compat = "renesas,r8a779f0",
     .mem_kb = 0x100000, /* 1Gb */
 
     .flags = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),

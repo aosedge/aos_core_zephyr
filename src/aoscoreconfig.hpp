@@ -27,10 +27,15 @@
 
 #endif // CONFIG_POSIX_API
 
+// This config also used to generate proto options file. Using Aos new operator causes redefinition error.
+// Add condition to enable it for zephyr only to avoid the error.
+#if defined(__ZEPHYR__)
 /**
  * Use Aos new operators.
  */
 #define AOS_CONFIG_NEW_USE_AOS 1
+
+#endif
 
 /**
  * Set num SM installs to 1 as downloader supports only one thread right now.

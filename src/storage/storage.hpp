@@ -107,6 +107,18 @@ private:
         char     mServiceID[aos::cServiceIDLen];
         char     mSubjectID[aos::cSubjectIDLen];
         uint64_t mInstance;
+
+        /**
+         * Compares instance ident.
+         *
+         * @param instance ident to compare.
+         * @return bool.
+         */
+        bool operator==(const InstanceIdent& instance) const
+        {
+            return strcmp(mServiceID, instance.mServiceID) == 0 && strcmp(mSubjectID, instance.mSubjectID) == 0
+                && mInstance == instance.mInstance;
+        }
     };
 
     struct InstanceInfo {
@@ -115,12 +127,36 @@ private:
         uint64_t      mPriority;
         char          mStoragePath[aos::cFilePathLen];
         char          mStatePath[aos::cFilePathLen];
+
+        /**
+         * Compares instance info.
+         *
+         * @param instance info to compare.
+         * @return bool.
+         */
+        bool operator==(const InstanceInfo& rhs) const
+        {
+            return mInstanceIdent == rhs.mInstanceIdent && mPriority == rhs.mPriority && mUID == rhs.mUID
+                && strcmp(mStoragePath, rhs.mStoragePath) == 0 && strcmp(mStatePath, rhs.mStatePath) == 0;
+        }
     };
 
     struct VersionInfo {
         uint64_t mAosVersion;
         char     mVendorVersion[aos::cVendorVersionLen];
         char     mDescription[aos::cDescriptionLen];
+
+        /**
+         * Compares version info.
+         *
+         * @param version info to compare.
+         * @return bool.
+         */
+        bool operator==(const VersionInfo& rhs) const
+        {
+            return mAosVersion == rhs.mAosVersion && strcmp(mVendorVersion, rhs.mVendorVersion) == 0
+                && strcmp(mDescription, rhs.mDescription) == 0;
+        }
     };
 
     struct ServiceData {
@@ -128,6 +164,18 @@ private:
         char        mServiceID[aos::cServiceIDLen];
         char        mProviderID[aos::cProviderIDLen];
         char        mImagePath[aos::cFilePathLen];
+
+        /**
+         * Compares service data.
+         *
+         * @param service data to compare.
+         * @return bool.
+         */
+        bool operator==(const ServiceData& rhs) const
+        {
+            return mVersionInfo == rhs.mVersionInfo && strcmp(mServiceID, rhs.mServiceID) == 0
+                && strcmp(mProviderID, rhs.mProviderID) == 0 && strcmp(mImagePath, rhs.mImagePath) == 0;
+        }
     };
 
     InstanceInfo                         ConvertInstanceInfo(const aos::InstanceInfo& instance);

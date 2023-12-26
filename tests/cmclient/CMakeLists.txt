@@ -13,11 +13,17 @@ set(CMAKE_MODULE_PATH ${APPLICATION_SOURCE_DIR}/../../CMakeModules)
 project(cmclient_test)
 
 # ######################################################################################################################
+# Config
+# ######################################################################################################################
+
+set(AOS_CORE_CONFIG aoscoreconfig.hpp)
+
+# ######################################################################################################################
 # Definitions
 # ######################################################################################################################
 
 # Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
+add_definitions(-include ${AOS_CORE_CONFIG})
 
 # ######################################################################################################################
 #  Generate API
@@ -25,7 +31,12 @@ add_definitions(-include aoscoreconfig.hpp)
 
 find_package(CoreAPI)
 
-generate_api(${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_api)
+set(CORE_API_CXX_FLAGS
+    -I${APPLICATION_SOURCE_DIR}/../../src -I${APPLICATION_SOURCE_DIR}/../../../aos_core_lib_cpp/include -include
+    ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/autoconf.h -include ${AOS_CORE_CONFIG}
+)
+
+core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_api ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts)
 
 # ######################################################################################################################
 # Includes

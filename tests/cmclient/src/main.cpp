@@ -9,7 +9,7 @@
 #include <zephyr/ztest.h>
 
 #include <pb_decode.h>
-#include <servicemanager.pb.h>
+#include <proto/servicemanager/v3/servicemanager.pb.h>
 #include <tinycrypt/constants.h>
 #include <tinycrypt/sha256.h>
 #include <vchanapi.h>
@@ -122,10 +122,10 @@ int vch_read(struct vch_handle* h, void* buf, size_t size)
         err = tc_sha256_update(&s, gSendBuffer, outStream.bytes_written);
         zassert_false((TC_CRYPTO_SUCCESS != err), "Can't hash message: %d", err);
 
-        err = tc_sha256_final(header.sha256, &s);
+        err = tc_sha256_final(header.mSha256, &s);
         zassert_false((TC_CRYPTO_SUCCESS != err), "Can't finish hash message: %d", err);
 
-        header.dataSize = outStream.bytes_written;
+        header.mDataSize = outStream.bytes_written;
 
         memcpy(buf, static_cast<void*>(&header), sizeof(VChanMessageHeader));
         gCurrentSendBufferSize = outStream.bytes_written;
@@ -157,7 +157,7 @@ int vch_write(struct vch_handle* h, const void* buf, size_t size)
 
     gWaitHeader = true;
 
-    zassert_equal(size, gCurrentHeader.dataSize, "Header and message length mismatch");
+    zassert_equal(size, gCurrentHeader.mDataSize, "Header and message length mismatch");
 
     tc_sha256_state_struct s;
     uint8_t                sha256[32];
@@ -170,7 +170,7 @@ int vch_write(struct vch_handle* h, const void* buf, size_t size)
 
     ret = tc_sha256_final(sha256, &s);
     zassert_false((TC_CRYPTO_SUCCESS != ret), "Can't finish hash message: %d", ret);
-    zassert_false((0 != memcmp(sha256, gCurrentHeader.sha256, 32)), "Sha256 mismatch");
+    zassert_false((0 != memcmp(sha256, gCurrentHeader.mSha256, 32)), "Sha256 mismatch");
 
     gReceivedMessage = servicemanager_v3_SMOutgoingMessages servicemanager_v3_SMOutgoingMessages_init_zero;
 

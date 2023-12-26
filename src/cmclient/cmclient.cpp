@@ -296,29 +296,29 @@ aos::Error CMClient::ProcessMessages()
             return err;
         }
 
-        if (header.dataSize > servicemanager_v3_SMIncomingMessages_size) {
+        if (header.mDataSize > servicemanager_v3_SMIncomingMessages_size) {
             LOG_ERR() << "Message is too big";
             return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
         }
 
-        err = ReadDataFromVChan(mReceiveBuffer.Get(), header.dataSize);
+        err = ReadDataFromVChan(mReceiveBuffer.Get(), header.mDataSize);
         if (!err.IsNone()) {
             return err;
         }
 
-        auto checksum = CalculateSha256(mReceiveBuffer.Get(), header.dataSize);
+        auto checksum = CalculateSha256(mReceiveBuffer.Get(), header.mDataSize);
         if (!checksum.mError.IsNone()) {
             LOG_ERR() << "Can't calculate SHA256: " << checksum.mError;
             continue;
         }
 
-        if (aos::Buffer(header.sha256, aos::cSHA256Size) != checksum.mValue) {
+        if (aos::Buffer(header.mSha256, aos::cSHA256Size) != checksum.mValue) {
             return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidChecksum);
         }
 
         mIncomingMessage = servicemanager_v3_SMIncomingMessages_init_zero;
 
-        auto stream = pb_istream_from_buffer((const uint8_t*)mReceiveBuffer.Get(), header.dataSize);
+        auto stream = pb_istream_from_buffer((const uint8_t*)mReceiveBuffer.Get(), header.mDataSize);
 
         auto status = pb_decode(&stream, servicemanager_v3_SMIncomingMessages_fields, &mIncomingMessage);
         if (!status) {
@@ -428,21 +428,21 @@ aos::Error CMClient::SendPBMessageToVChan()
         return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
 
-    VChanMessageHeader header = {static_cast<uint32_t>(outStream.bytes_written)};
+    VChanMessageHeader header = {0, static_cast<uint32_t>(outStream.bytes_written)};
 
-    auto checksum = CalculateSha256(mSendBuffer.Get(), header.dataSize);
+    auto checksum = CalculateSha256(mSendBuffer.Get(), header.mDataSize);
     if (!checksum.mError.IsNone()) {
         return checksum.mError;
     }
 
-    aos::Buffer(header.sha256, aos::cSHA256Size) = checksum.mValue;
+    aos::Buffer(header.mSha256, aos::cSHA256Size) = checksum.mValue;
 
     auto err = SendBufferToVChan((uint8_t*)&header, sizeof(VChanMessageHeader));
     if (!err.IsNone()) {
         return err;
     }
 
-    err = SendBufferToVChan(static_cast<uint8_t*>(mSendBuffer.Get()), header.dataSize);
+    err = SendBufferToVChan(static_cast<uint8_t*>(mSendBuffer.Get()), header.mDataSize);
     if (!err.IsNone()) {
         return err;
     }

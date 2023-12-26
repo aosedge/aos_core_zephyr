@@ -14,17 +14,19 @@ include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
 project(aoszephyrapp)
 
 # ######################################################################################################################
+# Config
+# ######################################################################################################################
+
+set(AOS_CORE_CONFIG aoscoreconfig.hpp)
+
+# ######################################################################################################################
 # Includes
 # ######################################################################################################################
 
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
 
-if(CONFIG_BOARD MATCHES "rcar")
-    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} prebuilt)
-endif()
-
 if(BOARD MATCHES "native_posix*")
-    zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} mocks/include)
+    zephyr_include_directories(mocks/include)
 endif()
 
 if(TA_DEPLOY_DIR)
@@ -43,7 +45,7 @@ endif()
 # ######################################################################################################################
 
 # Aos core configuration
-add_definitions(-include aoscoreconfig.hpp)
+add_definitions(-include ${AOS_CORE_CONFIG})
 
 # ######################################################################################################################
 # Compile options
@@ -74,26 +76,19 @@ target_sources(
 # Enable vchannels and xrun mocks for native posix
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
 
-# NOTE: Include source files with DomD binaries and configuration, needed to start DomD on Zephyr
-target_sources_ifdef(
-    CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c src/domains/domd/domain_bins_spider.S
-)
+# Include domain IPL and dtb for xen_dom0 shield
+target_sources_ifdef(CONFIG_SHIELD_XEN_DOM0 app PRIVATE src/domains/domd/domain_bins.S)
 
-# NOTE: Include source files for DomD support for Gen3 board.
-# Gen3 specific binaries were added with separate .S file to avoid extra checks inside source files.
-target_sources_ifdef(
-    CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c
-    src/domains/domd/domain_bins_gen3.S
-)
+# Include source files for DomD support
 
-target_sources_ifdef(
-    CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c src/domains/domd/domain_bins_gen3.S
-)
+target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c)
+target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c)
+target_sources_ifdef(CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c)
 
-# NOTE: Include source files for qemu boards.
+# Include source files for qemu boards.
 target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
 
-# NOTE: Include HW-specific source file
+# Include HW-specific source file
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
 
 # ######################################################################################################################
@@ -124,7 +119,11 @@ add_dependencies(app version)
 
 find_package(CoreAPI)
 
-generate_api(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api)
+set(CORE_API_CXX_FLAGS -I${CMAKE_CURRENT_SOURCE_DIR}/src -I${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_lib_cpp/include
+                       -include ${CMAKE_BINARY_DIR}/zephyr/include/generated/autoconf.h -include ${AOS_CORE_CONFIG}
+)
+
+core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 
 # ######################################################################################################################
 # External libs
@@ -143,7 +142,7 @@ set(external_project_cxx_flags "${includes} ${system_includes} ${definitions} ${
 # aos_core_lib_cpp
 # ######################################################################################################################
 
-set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error -include aoscoreconfig.hpp")
+set(aos_cxx_flags "${external_project_cxx_flags} -Wno-pedantic -Wno-error -include ${AOS_CORE_CONFIG}")
 set(aoscore_build_dir ${CMAKE_CURRENT_BINARY_DIR}/aoscore)
 
 ExternalProject_Add(
