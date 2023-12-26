@@ -153,8 +153,8 @@ private:
     constexpr static auto cStoragePath = CONFIG_AOS_STORAGE_DIR;
 
     struct InstanceIdent {
-        char     mServiceID[aos::cServiceIDLen];
-        char     mSubjectID[aos::cSubjectIDLen];
+        char     mServiceID[aos::cServiceIDLen + 1];
+        char     mSubjectID[aos::cSubjectIDLen + 1];
         uint64_t mInstance;
 
         /**
@@ -174,8 +174,8 @@ private:
         InstanceIdent mInstanceIdent;
         uint32_t      mUID;
         uint64_t      mPriority;
-        char          mStoragePath[aos::cFilePathLen];
-        char          mStatePath[aos::cFilePathLen];
+        char          mStoragePath[aos::cFilePathLen + 1];
+        char          mStatePath[aos::cFilePathLen + 1];
 
         /**
          * Compares instance info.
@@ -192,8 +192,8 @@ private:
 
     struct VersionInfo {
         uint64_t mAosVersion;
-        char     mVendorVersion[aos::cVendorVersionLen];
-        char     mDescription[aos::cDescriptionLen];
+        char     mVendorVersion[aos::cVendorVersionLen + 1];
+        char     mDescription[aos::cDescriptionLen + 1];
 
         /**
          * Compares version info.
@@ -210,9 +210,9 @@ private:
 
     struct ServiceData {
         VersionInfo mVersionInfo;
-        char        mServiceID[aos::cServiceIDLen];
-        char        mProviderID[aos::cProviderIDLen];
-        char        mImagePath[aos::cFilePathLen];
+        char        mServiceID[aos::cServiceIDLen + 1];
+        char        mProviderID[aos::cProviderIDLen + 1];
+        char        mImagePath[aos::cFilePathLen + 1];
 
         /**
          * Compares service data.
