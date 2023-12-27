@@ -25,4 +25,8 @@ config AOS_SERVICES_DIR
 	string "Aos services dir"
 	default "/aos/services"
 
+config AOS_UNIT_CONFIG_FILE
+	string "Node configuration file path"
+	default "/aos/unit_config.cfg"
+
 source "Kconfig"
