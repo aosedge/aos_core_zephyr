@@ -7,7 +7,9 @@
 
 #include <unistd.h>
 
-#include <vchanapi.h>
+#include <aos/common/tools/memory.hpp>
+
+#include "utils/checksum.hpp"
 
 #include "communication.hpp"
 #include "log.hpp"
@@ -50,10 +52,15 @@ aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secu
 {
     LOG_DBG() << "Initialize communication";
 
+    auto err = mCMClient.Init(*this);
+    if (!err.IsNone()) {
+        return err;
+    }
+
     mChannels[static_cast<int>(ChannelEnum::eOpen)]   = &openChannel;
     mChannels[static_cast<int>(ChannelEnum::eSecure)] = &secureChannel;
 
-    auto err = StartChannelThreads();
+    err = StartChannelThreads();
     if (!err.IsNone()) {
         return err;
     }
@@ -161,16 +168,94 @@ void Communication::ChannelHandler(Channel channel)
     }
 }
 
-aos::Error Communication::ProcessMessages(Channel channel)
+aos::Error Communication::SendMessage(Channel channel, AosVChanSource source, const aos::String& methodName,
+    uint64_t requestID, const aos::Array<uint8_t> data, aos::Error messageError)
 {
-    aos::StaticArray<uint8_t, sizeof(VChanMessageHeader)> readBuffer;
+    LOG_DBG() << "Send message: channel = " << channel << ", source = " << source << ", methodName = " << methodName
+              << ", size = " << data.Size() << " error = " << messageError;
 
-    auto err = mChannels[channel]->Read(readBuffer, readBuffer.MaxSize());
+    VChanMessageHeader header = {source, static_cast<uint32_t>(data.Size()), requestID, messageError.Errno(),
+        static_cast<int32_t>(messageError.Value())};
+
+    auto checksum = CalculateSha256(data);
+    if (!checksum.mError.IsNone()) {
+        return AOS_ERROR_WRAP(checksum.mError);
+    }
+
+    aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header.mSha256), aos::cSHA256Size) = checksum.mValue;
+
+    auto err = mChannels[channel]->Write(
+        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(VChanMessageHeader)));
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    err = mChannels[channel]->Write(data);
     if (!err.IsNone()) {
         return err;
     }
 
     return aos::ErrorEnum::eNone;
+}
+
+aos::Error Communication::ProcessMessages(Channel channel)
+{
+    auto headerData = aos::StaticArray<uint8_t, sizeof(VChanMessageHeader)>();
+
+    while (true) {
+        auto err = mChannels[channel]->Read(headerData, sizeof(VChanMessageHeader));
+        if (!err.IsNone()) {
+            return err;
+        }
+
+        auto header = reinterpret_cast<VChanMessageHeader*>(headerData.Get());
+
+        LOG_DBG() << "Receive message: channel = " << channel << ", source = " << header->mSource
+                  << ", size = " << header->mDataSize;
+
+        if (header->mDataSize > mCMClient.GetReceiveBufferSize()) {
+            LOG_ERR() << "Not enough mem in receive buffer";
+            continue;
+        }
+
+        aos::Array<uint8_t> data(static_cast<uint8_t*>(mCMClient.GetReceiveBuffer()), mCMClient.GetReceiveBufferSize());
+
+        if (header->mDataSize) {
+            err = mChannels[channel]->Read(data, header->mDataSize);
+            if (!err.IsNone()) {
+                return err;
+            }
+
+            auto checksum = CalculateSha256(data);
+            if (!checksum.mError.IsNone()) {
+                LOG_ERR() << "Can't calculate checksum: " << checksum.mError;
+                continue;
+            }
+
+            if (checksum.mValue != aos::Array<uint8_t>(header->mSha256, aos::cSHA256Size)) {
+                LOG_ERR() << "Checksum error";
+                continue;
+            }
+        }
+
+        aos::LockGuard lock(mMutex);
+
+        switch (header->mSource) {
+        case AOS_VCHAN_SM:
+            err = mCMClient.ProcessMessage(header->mMethodName, header->mRequestID, data);
+            break;
+
+        case AOS_VCHAN_IAM:
+            break;
+
+        default:
+            LOG_ERR() << "Wrong source received: " << header->mSource;
+        }
+
+        if (!err.IsNone()) {
+            LOG_ERR() << "Error processing message: " << err;
+        }
+    }
 }
 
 size_t Communication::GetNumConnectedChannels()

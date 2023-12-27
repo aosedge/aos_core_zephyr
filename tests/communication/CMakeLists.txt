@@ -52,4 +52,7 @@ target_include_directories(app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE ../../src/communication/communication.cpp src/main.cpp)
+target_sources(
+    app PRIVATE ../../src/communication/communication.cpp ../../src/communication/cmclient.cpp
+                ../../src/utils/checksum.cpp src/main.cpp
+)
