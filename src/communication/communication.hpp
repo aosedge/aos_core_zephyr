@@ -20,7 +20,10 @@
 /**
  * Communication instance.
  */
-class Communication : public aos::ConnectionPublisherItf, private MessageSenderItf, private aos::NonCopyable {
+class Communication : public aos::sm::launcher::InstanceStatusReceiverItf,
+                      public aos::ConnectionPublisherItf,
+                      private MessageSenderItf,
+                      private aos::NonCopyable {
 public:
     /**
      * Initializes communication instance.
@@ -39,6 +42,22 @@ public:
      * Destructor.
      */
     ~Communication();
+
+    /**
+     * Sends instances run status.
+     *
+     * @param instances instances status array.
+     * @return Error.
+     */
+    aos::Error InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances) override;
+
+    /**
+     * Sends instances update status.
+     * @param instances instances status array.
+     *
+     * @return Error.
+     */
+    aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances) override;
 
     /**
      * Subscribes the provided ConnectionSubscriberItf to this object.

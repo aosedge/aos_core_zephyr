@@ -40,6 +40,22 @@ public:
         DownloadReceiverItf& downloader, MessageSenderItf& messageSender);
 
     /**
+     * Sends instances run status.
+     *
+     * @param instances instances status array.
+     * @return Error.
+     */
+    aos::Error InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances);
+
+    /**
+     * Sends instances update status.
+     * @param instances instances status array.
+     *
+     * @return Error.
+     */
+    aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances);
+
+    /**
      * Processes received message.
      *
      * @param methodName protocol method name.

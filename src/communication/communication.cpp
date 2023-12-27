@@ -69,6 +69,20 @@ aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secu
     return aos::ErrorEnum::eNone;
 }
 
+aos::Error Communication::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances)
+{
+    aos::LockGuard lock(mMutex);
+
+    return mCMClient.InstancesRunStatus(instances);
+}
+
+aos::Error Communication::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
+{
+    aos::LockGuard lock(mMutex);
+
+    return mCMClient.InstancesUpdateStatus(instances);
+}
+
 aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
 {
     aos::LockGuard lock(mMutex);
