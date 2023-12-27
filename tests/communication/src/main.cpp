@@ -22,6 +22,7 @@
 
 #include "mocks/commchannelmock.hpp"
 #include "mocks/connectionsubscribermock.hpp"
+#include "mocks/downloadermock.hpp"
 #include "mocks/launchermock.hpp"
 #include "mocks/resourcemanagermock.hpp"
 
@@ -43,6 +44,7 @@ static CommChannelMock sOpenChannel;
 static CommChannelMock sSecureChannel;
 LauncherMock           sLauncher;
 ResourceManagerMock    sResourceManager;
+DownloaderMock         sDownloader;
 static Communication   sCommunication;
 
 /***********************************************************************************************************************
@@ -193,7 +195,7 @@ ZTEST_SUITE(
     []() -> void* {
         aos::Log::SetCallback(TestLogCallback);
 
-        auto err = sCommunication.Init(sOpenChannel, sSecureChannel, sLauncher, sResourceManager);
+        auto err = sCommunication.Init(sOpenChannel, sSecureChannel, sLauncher, sResourceManager, sDownloader);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
         return nullptr;
@@ -396,4 +398,61 @@ ZTEST_F(communication, test_RunInstances)
     zassert_equal(sLauncher.GetServices(), services);
     zassert_equal(sLauncher.GetLayers(), layers);
     zassert_equal(sLauncher.GetInstances(), instances);
+}
+
+ZTEST_F(communication, test_ImageContentInfo)
+{
+    auto                                                 aosContentInfo = ImageContentInfo {42};
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    uint8_t                                              sha256[] = {1, 2, 3, 4, 5, 6, 7, 8};
+
+    aosContentInfo.mFiles.EmplaceBack(FileInfo {"path/to/file1", aos::Array<uint8_t>(sha256, sizeof(sha256)), 1024});
+    aosContentInfo.mFiles.EmplaceBack(FileInfo {"path/to/file2", aos::Array<uint8_t>(sha256, sizeof(sha256)), 2048});
+    aosContentInfo.mFiles.EmplaceBack(FileInfo {"path/to/file3", aos::Array<uint8_t>(sha256, sizeof(sha256)), 4096});
+    aosContentInfo.mError = "content info error";
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_image_content_info_tag;
+    incomingMessage.SMIncomingMessage.image_content_info.request_id        = aosContentInfo.mRequestID;
+    incomingMessage.SMIncomingMessage.image_content_info.image_files_count = aosContentInfo.mFiles.Size();
+
+    for (size_t i = 0; i < aosContentInfo.mFiles.Size(); i++) {
+        const auto& aosFileInfo = aosContentInfo.mFiles[i];
+        auto&       pbFileInfo  = incomingMessage.SMIncomingMessage.image_content_info.image_files[i];
+
+        StringToPB(aosFileInfo.mRelativePath, pbFileInfo.relative_path);
+        ByteArrayToPB(aosFileInfo.mSHA256, pbFileInfo.sha256);
+        pbFileInfo.size = aosFileInfo.mSize;
+    }
+
+    StringToPB(aosContentInfo.mError, incomingMessage.SMIncomingMessage.image_content_info.error);
+
+    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
+
+    err = sDownloader.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting downloader event: %s", err.Message());
+
+    zassert_equal(sDownloader.GetContentInfo(), aosContentInfo);
+}
+
+ZTEST_F(communication, test_ImageContent)
+{
+    uint8_t data[]       = {12, 23, 45, 32, 21, 56, 12, 18};
+    auto    aosFileChunk = FileChunk {43, "path/to/file1", 4, 1, aos::Array<uint8_t>(data, sizeof(data))};
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+
+    incomingMessage.which_SMIncomingMessage                    = servicemanager_v3_SMIncomingMessages_image_content_tag;
+    incomingMessage.SMIncomingMessage.image_content.request_id = aosFileChunk.mRequestID;
+    StringToPB(aosFileChunk.mRelativePath, incomingMessage.SMIncomingMessage.image_content.relative_path);
+    incomingMessage.SMIncomingMessage.image_content.parts_count = aosFileChunk.mPartsCount;
+    incomingMessage.SMIncomingMessage.image_content.part        = aosFileChunk.mPart;
+    ByteArrayToPB(aosFileChunk.mData, incomingMessage.SMIncomingMessage.image_content.data);
+
+    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
+
+    err = sDownloader.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting downloader event: %s", err.Message());
+
+    zassert_equal(sDownloader.GetFileChunk(), aosFileChunk);
 }

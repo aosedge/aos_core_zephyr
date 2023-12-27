@@ -12,6 +12,7 @@
 
 #include <proto/servicemanager/v3/servicemanager.pb.h>
 
+#include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
 #include "messagesender.hpp"
@@ -31,11 +32,12 @@ public:
      *
      * @param launcher launcher instance.
      * @param resourceManager resource manager instance.
+     * @param downloader downloader instance.
      * @param messageSender message sender instance.
      * @return aos::Error.
      */
-    aos::Error Init(
-        aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager, MessageSenderItf& messageSender);
+    aos::Error Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
+        DownloadReceiverItf& downloader, MessageSenderItf& messageSender);
 
     /**
      * Processes received message.
@@ -66,16 +68,20 @@ private:
     aos::Error ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
     aos::Error ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig& pbUnitConfig);
     aos::Error ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances);
+    aos::Error ProcessImageContentInfo(const servicemanager_v3_ImageContentInfo& pbContentInfo);
+    aos::Error ProcessImageContent(const servicemanager_v3_ImageContent& pbContent);
     aos::Error SendOutgoingMessage(
         const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError = aos::ErrorEnum::eNone);
 
     aos::sm::launcher::LauncherItf* mLauncher {};
     ResourceManagerItf*             mResourceManager {};
+    DownloadReceiverItf*            mDownloader {};
     MessageSenderItf*               mMessageSender {};
 
     aos::StaticAllocator<sizeof(servicemanager_v3_SMIncomingMessages) + sizeof(servicemanager_v3_SMOutgoingMessages)
-        + sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)
-        + sizeof(aos::InstanceInfoStaticArray)>
+        + aos::Max(sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)
+                + sizeof(aos::InstanceInfoStaticArray),
+            sizeof(ImageContentInfo) + sizeof(FileChunk))>
         mAllocator;
 
     aos::StaticBuffer<servicemanager_v3_SMIncomingMessages_size> mReceiveBuffer;
