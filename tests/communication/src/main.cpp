@@ -11,9 +11,14 @@
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
 
+#include <pb_decode.h>
+#include <pb_encode.h>
+
 #include <aos/common/tools/log.hpp>
 
 #include "communication/communication.hpp"
+#include "utils/checksum.hpp"
+#include "utils/pbconvert.hpp"
 
 #include "mocks/commchannelmock.hpp"
 #include "mocks/connectionsubscribermock.hpp"
@@ -23,7 +28,7 @@
  **********************************************************************************************************************/
 
 /***********************************************************************************************************************
- * Consts
+ * Static
  **********************************************************************************************************************/
 
 static constexpr auto cWaitTimeout = std::chrono::seconds {1};

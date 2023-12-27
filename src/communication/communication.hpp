@@ -9,17 +9,18 @@
 #define COMMUNICATION_HPP_
 
 #include <aos/common/connectionsubsc.hpp>
-#include <aos/common/tools/array.hpp>
 #include <aos/common/tools/enum.hpp>
 #include <aos/common/tools/thread.hpp>
 
 #include "channeltype.hpp"
+#include "cmclient.hpp"
 #include "commchannel.hpp"
+#include "messagesender.hpp"
 
 /**
  * Communication instance.
  */
-class Communication : public aos::ConnectionPublisherItf, private aos::NonCopyable {
+class Communication : public aos::ConnectionPublisherItf, private MessageSenderItf, private aos::NonCopyable {
 public:
     /**
      * Initializes communication instance.
@@ -53,6 +54,8 @@ private:
     static constexpr auto cMaxSubscribers       = 1;
     static constexpr auto cConnectionTimeoutSec = 5;
 
+    aos::Error SendMessage(Channel channel, AosVChanSource source, const aos::String& methodName, uint64_t requestID,
+        const aos::Array<uint8_t> data, aos::Error messageError) override;
     void       ConnectNotification(bool connected);
     aos::Error StartChannelThreads();
     void       ChannelHandler(Channel channel);
@@ -66,6 +69,8 @@ private:
     bool            mClose = false;
 
     aos::StaticArray<aos::ConnectionSubscriberItf*, cMaxSubscribers> mConnectionSubscribers;
+
+    CMClient mCMClient;
 };
 
 #endif
