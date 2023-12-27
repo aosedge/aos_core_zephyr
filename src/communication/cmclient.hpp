@@ -56,6 +56,14 @@ public:
     aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances);
 
     /**
+     * Send image content request
+     *
+     * @param request image content request
+     * @return Error.
+     */
+    aos::Error SendImageContentRequest(const ImageContentRequest& request);
+
+    /**
      * Processes received message.
      *
      * @param methodName protocol method name.

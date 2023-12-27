@@ -23,6 +23,25 @@ struct ImageContentRequest {
     aos::StaticString<aos::cURLLen> mURL;
     uint64_t                        mRequestID;
     aos::DownloadContent            mContentType;
+
+    /**
+     * Compares image content request.
+     *
+     * @param request request to compare.
+     * @return bool.
+     */
+    bool operator==(const ImageContentRequest& request) const
+    {
+        return mURL == request.mURL && mRequestID == request.mRequestID && mContentType == request.mContentType;
+    }
+
+    /**
+     * Compares image content request.
+     *
+     * @param request request to compare.
+     * @return bool.
+     */
+    bool operator!=(const ImageContentRequest& request) const { return !operator==(request); }
 };
 
 /**
