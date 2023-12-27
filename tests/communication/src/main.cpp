@@ -22,6 +22,7 @@
 
 #include "mocks/commchannelmock.hpp"
 #include "mocks/connectionsubscribermock.hpp"
+#include "mocks/launchermock.hpp"
 #include "mocks/resourcemanagermock.hpp"
 
 /***********************************************************************************************************************
@@ -40,6 +41,7 @@ static constexpr auto cWaitTimeout = std::chrono::seconds {1};
 
 static CommChannelMock sOpenChannel;
 static CommChannelMock sSecureChannel;
+LauncherMock           sLauncher;
 ResourceManagerMock    sResourceManager;
 static Communication   sCommunication;
 
@@ -191,7 +193,7 @@ ZTEST_SUITE(
     []() -> void* {
         aos::Log::SetCallback(TestLogCallback);
 
-        auto err = sCommunication.Init(sOpenChannel, sSecureChannel, sResourceManager);
+        auto err = sCommunication.Init(sOpenChannel, sSecureChannel, sLauncher, sResourceManager);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
         return nullptr;
@@ -294,4 +296,104 @@ ZTEST_F(communication, test_SetUnitConfig)
     zassert_equal(strlen(outgoingMessage.SMOutgoingMessage.unit_config_status.error), 0);
     zassert_equal(sResourceManager.GetVersion(), version);
     zassert_equal(sResourceManager.GetUnitConfig(), unitConfig);
+}
+
+ZTEST_F(communication, test_RunInstances)
+{
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_run_instances_tag;
+    incomingMessage.SMIncomingMessage.run_instances.force_restart = true;
+
+    uint8_t sha256[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    uint8_t sha512[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+
+    // Fill services
+
+    aos::ServiceInfoStaticArray services;
+
+    services.EmplaceBack(aos::ServiceInfo {{0, "1.0.0", "this is service 1"}, "service1", "provider1", 42,
+        "service1 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), aos::Array<uint8_t>(sha512, sizeof(sha512)), 312});
+    services.EmplaceBack(aos::ServiceInfo {{1, "1.0.1", "this is service 2"}, "service2", "provider2", 43,
+        "service2 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), aos::Array<uint8_t>(sha512, sizeof(sha512)), 512});
+
+    incomingMessage.SMIncomingMessage.run_instances.services_count = services.Size();
+
+    for (size_t i = 0; i < services.Size(); i++) {
+        const auto& aosService = services[i];
+        auto&       pbService  = incomingMessage.SMIncomingMessage.run_instances.services[i];
+
+        pbService.has_version_info = true;
+        VersionInfoToPB(aosService.mVersionInfo, pbService.version_info);
+        StringToPB(aosService.mServiceID, pbService.service_id);
+        StringToPB(aosService.mProviderID, pbService.provider_id);
+        pbService.gid = aosService.mGID;
+        StringToPB(aosService.mURL, pbService.url);
+        ByteArrayToPB(aosService.mSHA256, pbService.sha256);
+        ByteArrayToPB(aosService.mSHA512, pbService.sha512);
+        pbService.size = aosService.mSize;
+    }
+
+    // Fill layers
+
+    aos::LayerInfoStaticArray layers;
+
+    layers.EmplaceBack(aos::LayerInfo {{2, "2.1.0", "this is layer 1"}, "layer1", "digest1", "layer1 URL",
+        aos::Array<uint8_t>(sha256, sizeof(sha256)), aos::Array<uint8_t>(sha512, sizeof(sha512)), 1024});
+    layers.EmplaceBack(aos::LayerInfo {{3, "2.2.0", "this is layer 2"}, "layer2", "digest2", "layer2 URL",
+        aos::Array<uint8_t>(sha256, sizeof(sha256)), aos::Array<uint8_t>(sha512, sizeof(sha512)), 2048});
+    layers.EmplaceBack(aos::LayerInfo {{4, "2.3.0", "this is layer 3"}, "layer3", "digest3", "layer3 URL",
+        aos::Array<uint8_t>(sha256, sizeof(sha256)), aos::Array<uint8_t>(sha512, sizeof(sha512)), 4096});
+
+    incomingMessage.SMIncomingMessage.run_instances.layers_count = layers.Size();
+
+    for (size_t i = 0; i < layers.Size(); i++) {
+        const auto& aosLayer = layers[i];
+        auto&       pbLayer  = incomingMessage.SMIncomingMessage.run_instances.layers[i];
+
+        pbLayer.has_version_info = true;
+        VersionInfoToPB(aosLayer.mVersionInfo, pbLayer.version_info);
+        StringToPB(aosLayer.mLayerID, pbLayer.layer_id);
+        StringToPB(aosLayer.mLayerDigest, pbLayer.digest);
+        StringToPB(aosLayer.mURL, pbLayer.url);
+        ByteArrayToPB(aosLayer.mSHA256, pbLayer.sha256);
+        ByteArrayToPB(aosLayer.mSHA512, pbLayer.sha512);
+        pbLayer.size = aosLayer.mSize;
+    }
+
+    // Fill instances
+
+    aos::InstanceInfoStaticArray instances;
+
+    instances.EmplaceBack(aos::InstanceInfo {{"service1", "subject1", 1}, 1, 1, "storage1", "state1"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service2", "subject2", 2}, 2, 2, "storage2", "state2"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service3", "subject3", 3}, 3, 3, "storage3", "state3"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service4", "subject4", 4}, 4, 4, "storage4", "state4"});
+
+    incomingMessage.SMIncomingMessage.run_instances.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        const auto& aosInstance = instances[i];
+        auto&       pbInstance  = incomingMessage.SMIncomingMessage.run_instances.instances[i];
+
+        pbInstance.has_instance = true;
+        InstanceIdentToPB(aosInstance.mInstanceIdent, pbInstance.instance);
+        pbInstance.uid      = aosInstance.mUID;
+        pbInstance.priority = aosInstance.mPriority;
+        StringToPB(aosInstance.mStoragePath, pbInstance.storage_path);
+        StringToPB(aosInstance.mStatePath, pbInstance.state_path);
+    }
+
+    // Send message and check result
+
+    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
+
+    err = sLauncher.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting run instances: %s", err.Message());
+
+    zassert_equal(sLauncher.IsForceRestart(), incomingMessage.SMIncomingMessage.run_instances.force_restart);
+    zassert_equal(sLauncher.GetServices(), services);
+    zassert_equal(sLauncher.GetLayers(), layers);
+    zassert_equal(sLauncher.GetInstances(), instances);
 }

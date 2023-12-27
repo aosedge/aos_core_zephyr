@@ -19,10 +19,12 @@
  * Public
  **********************************************************************************************************************/
 
-aos::Error CMClient::Init(ResourceManagerItf& resourceManager, MessageSenderItf& messageSender)
+aos::Error CMClient::Init(
+    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager, MessageSenderItf& messageSender)
 {
     LOG_DBG() << "Initialize CM client";
 
+    mLauncher        = &launcher;
     mResourceManager = &resourceManager;
     mMessageSender   = &messageSender;
 
@@ -58,6 +60,7 @@ aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requ
         break;
 
     case servicemanager_v3_SMIncomingMessages_run_instances_tag:
+        err = ProcessRunInstances(message->SMIncomingMessage.run_instances);
         break;
 
     case servicemanager_v3_SMIncomingMessages_image_content_info_tag:
@@ -147,6 +150,79 @@ aos::Error CMClient::ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig&
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
     return SendOutgoingMessage(*outgoingMessage);
+}
+
+aos::Error CMClient::ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances)
+{
+    LOG_DBG() << "Receive SM message: message = RunInstances";
+
+    auto aosServices = aos::MakeUnique<aos::ServiceInfoStaticArray>(&mAllocator);
+
+    aosServices->Resize(pbRunInstances.services_count);
+
+    for (auto i = 0; i < pbRunInstances.services_count; i++) {
+        const auto& pbService  = pbRunInstances.services[i];
+        auto&       aosService = (*aosServices)[i];
+
+        if (pbService.has_version_info) {
+            PBToVersionInfo(pbService.version_info, aosService.mVersionInfo);
+        }
+
+        PBToString(pbService.service_id, aosService.mServiceID);
+        PBToString(pbService.provider_id, aosService.mProviderID);
+        aosService.mGID = pbService.gid;
+        aosService.mURL = pbService.url;
+        PBToByteArray(pbService.sha256, aosService.mSHA256);
+        PBToByteArray(pbService.sha512, aosService.mSHA512);
+        aosService.mSize = pbService.size;
+    }
+
+    auto aosLayers = aos::MakeUnique<aos::LayerInfoStaticArray>(&mAllocator);
+
+    aosLayers->Resize(pbRunInstances.layers_count);
+
+    for (auto i = 0; i < pbRunInstances.layers_count; i++) {
+        const auto& pbLayer  = pbRunInstances.layers[i];
+        auto&       aosLayer = (*aosLayers)[i];
+
+        if (pbLayer.has_version_info) {
+            PBToVersionInfo(pbLayer.version_info, aosLayer.mVersionInfo);
+        }
+
+        PBToString(pbLayer.layer_id, aosLayer.mLayerID);
+        PBToString(pbLayer.digest, aosLayer.mLayerDigest);
+        PBToString(pbLayer.url, aosLayer.mURL);
+        PBToByteArray(pbLayer.sha256, aosLayer.mSHA256);
+        PBToByteArray(pbLayer.sha512, aosLayer.mSHA512);
+        aosLayer.mSize = pbLayer.size;
+    }
+
+    auto aosInstances = aos::MakeUnique<aos::InstanceInfoStaticArray>(&mAllocator);
+
+    aosInstances->Resize(pbRunInstances.instances_count);
+
+    for (auto i = 0; i < pbRunInstances.instances_count; i++) {
+        const auto& pbInstance  = pbRunInstances.instances[i];
+        auto&       aosInstance = (*aosInstances)[i];
+
+        if (pbInstance.has_instance) {
+            PBToString(pbInstance.instance.service_id, aosInstance.mInstanceIdent.mServiceID);
+            PBToString(pbInstance.instance.subject_id, aosInstance.mInstanceIdent.mSubjectID);
+            aosInstance.mInstanceIdent.mInstance = pbInstance.instance.instance;
+        }
+
+        aosInstance.mUID      = pbInstance.uid;
+        aosInstance.mPriority = pbInstance.priority;
+        PBToString(pbInstance.storage_path, aosInstance.mStoragePath);
+        PBToString(pbInstance.state_path, aosInstance.mStatePath);
+    }
+
+    auto err = mLauncher->RunInstances(*aosServices, *aosLayers, *aosInstances, pbRunInstances.force_restart);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error CMClient::SendOutgoingMessage(const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError)
