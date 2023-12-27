@@ -21,6 +21,7 @@
  * Communication instance.
  */
 class Communication : public aos::sm::launcher::InstanceStatusReceiverItf,
+                      public DownloadRequesterItf,
                       public aos::ConnectionPublisherItf,
                       private MessageSenderItf,
                       private aos::NonCopyable {
@@ -58,6 +59,14 @@ public:
      * @return Error.
      */
     aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances) override;
+
+    /**
+     * Send image content request
+     *
+     * @param request image content request
+     * @return Error
+     */
+    aos::Error SendImageContentRequest(const ImageContentRequest& request) override;
 
     /**
      * Subscribes the provided ConnectionSubscriberItf to this object.

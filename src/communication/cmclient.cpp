@@ -91,6 +91,23 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
     return SendOutgoingMessage(*outgoingMessage);
 }
 
+aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
+{
+    auto  outgoingMessage  = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
+    auto& pbContentRequest = outgoingMessage->SMOutgoingMessage.image_content_request;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_image_content_request_tag;
+    pbContentRequest = servicemanager_v3_ImageContentRequest servicemanager_v3_ImageContentRequest_init_zero;
+
+    StringToPB(request.mURL, pbContentRequest.url);
+    pbContentRequest.request_id = request.mRequestID;
+    StringToPB(request.mContentType.ToString(), pbContentRequest.content_type);
+
+    LOG_DBG() << "Send SM message: message = ImageContentRequest";
+
+    return SendOutgoingMessage(*outgoingMessage);
+}
+
 aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data)
 {
     (void)methodName;

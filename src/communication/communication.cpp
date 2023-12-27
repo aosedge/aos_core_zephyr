@@ -83,6 +83,13 @@ aos::Error Communication::InstancesUpdateStatus(const aos::Array<aos::InstanceSt
     return mCMClient.InstancesUpdateStatus(instances);
 }
 
+aos::Error Communication::SendImageContentRequest(const ImageContentRequest& request)
+{
+    aos::LockGuard lock(mMutex);
+
+    return mCMClient.SendImageContentRequest(request);
+}
+
 aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
 {
     aos::LockGuard lock(mMutex);

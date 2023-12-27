@@ -541,3 +541,26 @@ ZTEST_F(communication, test_InstancesUpdateStatus)
         outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_update_instances_status_tag);
     zassert_equal(receiveUpdateStatus, sendUpdateStatus);
 }
+
+ZTEST_F(communication, test_ImageContentRequest)
+{
+    ImageContentRequest sendContentRequest {"content URL", 42, aos::DownloadContentEnum::eService};
+
+    auto err = sCommunication.SendImageContentRequest(sendContentRequest);
+    zassert_true(err.IsNone(), "Error sending image content request: %s", err.Message());
+
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+
+    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    ImageContentRequest receiveContentRequest {};
+
+    PBToString(outgoingMessage.SMOutgoingMessage.image_content_request.url, receiveContentRequest.mURL);
+    receiveContentRequest.mRequestID = outgoingMessage.SMOutgoingMessage.image_content_request.request_id;
+    PBToEnum(outgoingMessage.SMOutgoingMessage.image_content_request.content_type, receiveContentRequest.mContentType);
+
+    zassert_equal(
+        outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_image_content_request_tag);
+    zassert_equal(receiveContentRequest, sendContentRequest);
+}
