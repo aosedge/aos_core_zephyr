@@ -12,6 +12,8 @@
 
 #include <proto/servicemanager/v3/servicemanager.pb.h>
 
+#include "resourcemanager/resourcemanager.hpp"
+
 #include "messagesender.hpp"
 
 /**
@@ -27,10 +29,11 @@ public:
     /**
      * Initializes CM client instance.
      *
+     * @param resourceManager resource manager instance.
      * @param messageSender message sender instance.
      * @return aos::Error.
      */
-    aos::Error Init(MessageSenderItf& messageSender);
+    aos::Error Init(ResourceManagerItf& resourceManager, MessageSenderItf& messageSender);
 
     /**
      * Processes received message.
@@ -57,10 +60,14 @@ public:
     size_t GetReceiveBufferSize() const { return mReceiveBuffer.Size(); }
 
 private:
+    aos::Error ProcessGetUnitConfigStatus();
+    aos::Error ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
+    aos::Error ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig& pbUnitConfig);
     aos::Error SendOutgoingMessage(
         const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError = aos::ErrorEnum::eNone);
 
-    MessageSenderItf* mMessageSender {};
+    ResourceManagerItf* mResourceManager {};
+    MessageSenderItf*   mMessageSender {};
 
     aos::StaticAllocator<sizeof(servicemanager_v3_SMIncomingMessages) + sizeof(servicemanager_v3_SMOutgoingMessages)>
         mAllocator;

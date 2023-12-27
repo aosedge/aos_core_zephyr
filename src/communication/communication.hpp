@@ -27,9 +27,10 @@ public:
      *
      * @param openChannel open channel instance.
      * @param secureChannel secure channel instance.
+     * @param resourceManager resource manager instance.
      * @return aos::Error.
      */
-    aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel);
+    aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel, ResourceManagerItf& resourceManager);
 
     /**
      * Destructor.
