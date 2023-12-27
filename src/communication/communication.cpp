@@ -49,11 +49,11 @@ Communication::~Communication()
 }
 
 aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
-    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager)
+    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager, DownloadReceiverItf& downloader)
 {
     LOG_DBG() << "Initialize communication";
 
-    auto err = mCMClient.Init(launcher, resourceManager, *this);
+    auto err = mCMClient.Init(launcher, resourceManager, downloader, *this);
     if (!err.IsNone()) {
         return err;
     }

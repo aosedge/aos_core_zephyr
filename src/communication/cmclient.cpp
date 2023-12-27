@@ -19,13 +19,14 @@
  * Public
  **********************************************************************************************************************/
 
-aos::Error CMClient::Init(
-    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager, MessageSenderItf& messageSender)
+aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
+    DownloadReceiverItf& downloader, MessageSenderItf& messageSender)
 {
     LOG_DBG() << "Initialize CM client";
 
     mLauncher        = &launcher;
     mResourceManager = &resourceManager;
+    mDownloader      = &downloader;
     mMessageSender   = &messageSender;
 
     return aos::ErrorEnum::eNone;
@@ -64,9 +65,11 @@ aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requ
         break;
 
     case servicemanager_v3_SMIncomingMessages_image_content_info_tag:
+        err = ProcessImageContentInfo(message->SMIncomingMessage.image_content_info);
         break;
 
     case servicemanager_v3_SMIncomingMessages_image_content_tag:
+        err = ProcessImageContent(message->SMIncomingMessage.image_content);
         break;
 
     default:
@@ -218,6 +221,54 @@ aos::Error CMClient::ProcessRunInstances(const servicemanager_v3_RunInstances& p
     }
 
     auto err = mLauncher->RunInstances(*aosServices, *aosLayers, *aosInstances, pbRunInstances.force_restart);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::ProcessImageContentInfo(const servicemanager_v3_ImageContentInfo& pbContentInfo)
+{
+    LOG_DBG() << "Receive SM message: message = ImageContentInfo";
+
+    auto aosContentInfo = aos::MakeUnique<ImageContentInfo>(&mAllocator);
+
+    aosContentInfo->mRequestID = pbContentInfo.request_id;
+
+    for (auto i = 0; i < pbContentInfo.image_files_count; i++) {
+        FileInfo fileInfo;
+
+        PBToString(pbContentInfo.image_files[i].relative_path, fileInfo.mRelativePath);
+        PBToByteArray(pbContentInfo.image_files[i].sha256, fileInfo.mSHA256);
+        fileInfo.mSize = pbContentInfo.image_files[i].size;
+
+        aosContentInfo->mFiles.PushBack(fileInfo);
+    }
+
+    aosContentInfo->mError = pbContentInfo.error;
+
+    auto err = mDownloader->ReceiveImageContentInfo(*aosContentInfo);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::ProcessImageContent(const servicemanager_v3_ImageContent& pbContent)
+{
+    LOG_DBG() << "Receive SM message: message = ImageContent";
+
+    auto chunk = aos::MakeUnique<FileChunk>(&mAllocator);
+
+    chunk->mRequestID = pbContent.request_id;
+    PBToString(pbContent.relative_path, chunk->mRelativePath);
+    chunk->mPartsCount = pbContent.parts_count;
+    chunk->mPart       = pbContent.part;
+    PBToByteArray(pbContent.data, chunk->mData);
+
+    auto err = mDownloader->ReceiveFileChunk(*chunk);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
