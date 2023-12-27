@@ -32,6 +32,25 @@ struct FileInfo {
     aos::StaticString<aos::cFilePathLen>        mRelativePath;
     aos::StaticArray<uint8_t, aos::cSHA256Size> mSHA256;
     uint64_t                                    mSize;
+
+    /**
+     * Compares file info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator==(const FileInfo& info) const
+    {
+        return mRelativePath == info.mRelativePath && mSHA256 == info.mSHA256 && mSize == info.mSize;
+    }
+
+    /**
+     * Compares file info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator!=(const FileInfo& info) const { return !operator==(info); }
 };
 
 /**
@@ -41,6 +60,25 @@ struct ImageContentInfo {
     uint64_t                                 mRequestID;
     aos::StaticArray<FileInfo, 32>           mFiles;
     aos::StaticString<aos::cErrorMessageLen> mError;
+
+    /**
+     * Compares content info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator==(const ImageContentInfo& info) const
+    {
+        return mRequestID == info.mRequestID && mFiles == info.mFiles && mError == info.mError;
+    }
+
+    /**
+     * Compares content info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator!=(const ImageContentInfo& info) const { return !operator==(info); }
 };
 
 /**
@@ -52,6 +90,26 @@ struct FileChunk {
     uint64_t                                       mPartsCount;
     uint64_t                                       mPart;
     aos::StaticArray<uint8_t, aos::cFileChunkSize> mData;
+
+    /**
+     * Compares file chunks.
+     *
+     * @param chunk chunk to compare.
+     * @return bool.
+     */
+    bool operator==(const FileChunk& chunk) const
+    {
+        return mRequestID == chunk.mRequestID && mRelativePath == chunk.mRelativePath
+            && mPartsCount == chunk.mPartsCount && mPart == chunk.mPart && mData == chunk.mData;
+    }
+
+    /**
+     * Compares file chunks.
+     *
+     * @param chunk chunk to compare.
+     * @return bool.
+     */
+    bool operator!=(const FileChunk& chunk) const { return !operator==(chunk); }
 };
 
 /**

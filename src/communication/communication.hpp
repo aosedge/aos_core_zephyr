@@ -29,10 +29,11 @@ public:
      * @param secureChannel secure channel instance.
      * @param launcher launcher instance.
      * @param resourceManager resource manager instance.
+     * @param downloader downloader instance.
      * @return aos::Error.
      */
     aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
-        aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager);
+        aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager, DownloadReceiverItf& downloader);
 
     /**
      * Destructor.
