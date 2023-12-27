@@ -36,6 +36,27 @@
 
 static constexpr auto cWaitTimeout = std::chrono::seconds {1};
 
+static constexpr void PBToInstanceStatus(
+    const servicemanager_v3_InstanceStatus& pbInstance, aos::InstanceStatus& aosInstance)
+{
+    if (pbInstance.has_instance) {
+        PBToString(pbInstance.instance.service_id, aosInstance.mInstanceIdent.mServiceID);
+        PBToString(pbInstance.instance.subject_id, aosInstance.mInstanceIdent.mSubjectID);
+        aosInstance.mInstanceIdent.mInstance = pbInstance.instance.instance;
+    }
+
+    aosInstance.mAosVersion = pbInstance.aos_version;
+    PBToEnum(pbInstance.run_state, aosInstance.mRunState);
+
+    if (pbInstance.has_error_info) {
+        if (pbInstance.error_info.exit_code) {
+            aosInstance.mError = pbInstance.error_info.exit_code;
+        } else {
+            aosInstance.mError = static_cast<aos::ErrorEnum>(pbInstance.error_info.aos_code);
+        }
+    }
+}
+
 /***********************************************************************************************************************
  * Vars
  **********************************************************************************************************************/
@@ -455,4 +476,68 @@ ZTEST_F(communication, test_ImageContent)
     zassert_true(err.IsNone(), "Error waiting downloader event: %s", err.Message());
 
     zassert_equal(sDownloader.GetFileChunk(), aosFileChunk);
+}
+
+ZTEST_F(communication, test_InstancesRunStatus)
+{
+    aos::InstanceStatusStaticArray sendRunStatus {};
+
+    sendRunStatus.EmplaceBack(aos::InstanceStatus {
+        {"service1", "subject1", 0}, 4, aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone});
+    sendRunStatus.EmplaceBack(
+        aos::InstanceStatus {{"service1", "subject1", 1}, 4, aos::InstanceRunStateEnum::eFailed, 42});
+    sendRunStatus.EmplaceBack(aos::InstanceStatus {
+        {"service1", "subject1", 2}, 4, aos::InstanceRunStateEnum::eFailed, aos::ErrorEnum::eRuntime});
+
+    auto err = sCommunication.InstancesRunStatus(sendRunStatus);
+    zassert_true(err.IsNone(), "Error sending run instances status: %s", err.Message());
+
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+
+    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    aos::InstanceStatusStaticArray receiveRunStatus {};
+
+    for (auto i = 0; i < outgoingMessage.SMOutgoingMessage.run_instances_status.instances_count; i++) {
+        aos::InstanceStatus instanceStatus;
+
+        PBToInstanceStatus(outgoingMessage.SMOutgoingMessage.run_instances_status.instances[i], instanceStatus);
+        receiveRunStatus.PushBack(instanceStatus);
+    }
+
+    zassert_equal(
+        outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_run_instances_status_tag);
+    zassert_equal(receiveRunStatus, sendRunStatus);
+}
+
+ZTEST_F(communication, test_InstancesUpdateStatus)
+{
+    aos::InstanceStatusStaticArray sendUpdateStatus {};
+
+    sendUpdateStatus.EmplaceBack(aos::InstanceStatus {
+        {"service1", "subject1", 0}, 1, aos::InstanceRunStateEnum::eFailed, aos::ErrorEnum::eNoMemory});
+    sendUpdateStatus.EmplaceBack(aos::InstanceStatus {
+        {"service1", "subject1", 1}, 1, aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone});
+
+    auto err = sCommunication.InstancesUpdateStatus(sendUpdateStatus);
+    zassert_true(err.IsNone(), "Error sending update instances status: %s", err.Message());
+
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+
+    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    aos::InstanceStatusStaticArray receiveUpdateStatus {};
+
+    for (auto i = 0; i < outgoingMessage.SMOutgoingMessage.update_instances_status.instances_count; i++) {
+        aos::InstanceStatus instanceStatus;
+
+        PBToInstanceStatus(outgoingMessage.SMOutgoingMessage.update_instances_status.instances[i], instanceStatus);
+        receiveUpdateStatus.PushBack(instanceStatus);
+    }
+
+    zassert_equal(
+        outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_update_instances_status_tag);
+    zassert_equal(receiveUpdateStatus, sendUpdateStatus);
 }

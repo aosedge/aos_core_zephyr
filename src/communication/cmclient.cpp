@@ -16,6 +16,27 @@
 #include "log.hpp"
 
 /***********************************************************************************************************************
+ * Static
+ **********************************************************************************************************************/
+
+static void InstanceStatusToPB(const aos::InstanceStatus& aosInstance, servicemanager_v3_InstanceStatus& pbInstance)
+{
+    pbInstance.has_instance = true;
+    StringToPB(aosInstance.mInstanceIdent.mServiceID, pbInstance.instance.service_id);
+    StringToPB(aosInstance.mInstanceIdent.mSubjectID, pbInstance.instance.subject_id);
+    pbInstance.instance.instance = aosInstance.mInstanceIdent.mInstance;
+    pbInstance.aos_version       = aosInstance.mAosVersion;
+    StringToPB(aosInstance.mRunState.ToString(), pbInstance.run_state);
+
+    if (!aosInstance.mError.IsNone()) {
+        pbInstance.has_error_info       = true;
+        pbInstance.error_info.aos_code  = static_cast<int32_t>(aosInstance.mError.Value());
+        pbInstance.error_info.exit_code = aosInstance.mError.Errno();
+        ErrorToPB(aosInstance.mError, pbInstance.error_info.message);
+    }
+}
+
+/***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
@@ -30,6 +51,44 @@ aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceMana
     mMessageSender   = &messageSender;
 
     return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances)
+{
+    auto  outgoingMessage = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
+    auto& pbRunStatus     = outgoingMessage->SMOutgoingMessage.run_instances_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_run_instances_status_tag;
+    pbRunStatus = servicemanager_v3_RunInstancesStatus servicemanager_v3_RunInstancesStatus_init_zero;
+
+    outgoingMessage->SMOutgoingMessage.run_instances_status.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        InstanceStatusToPB(instances[i], pbRunStatus.instances[i]);
+    }
+
+    LOG_DBG() << "Send SM message: message = RunInstancesStatus";
+
+    return SendOutgoingMessage(*outgoingMessage);
+}
+
+aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
+{
+    auto  outgoingMessage = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
+    auto& pbUpdateStatus  = outgoingMessage->SMOutgoingMessage.update_instances_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_update_instances_status_tag;
+    pbUpdateStatus = servicemanager_v3_UpdateInstancesStatus servicemanager_v3_UpdateInstancesStatus_init_zero;
+
+    outgoingMessage->SMOutgoingMessage.update_instances_status.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        InstanceStatusToPB(instances[i], pbUpdateStatus.instances[i]);
+    }
+
+    LOG_DBG() << "Send SM message: message = UpdateInstancesStatus";
+
+    return SendOutgoingMessage(*outgoingMessage);
 }
 
 aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data)
