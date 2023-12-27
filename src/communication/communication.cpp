@@ -48,11 +48,12 @@ Communication::~Communication()
     }
 }
 
-aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel)
+aos::Error Communication::Init(
+    CommChannelItf& openChannel, CommChannelItf& secureChannel, ResourceManagerItf& resourceManager)
 {
     LOG_DBG() << "Initialize communication";
 
-    auto err = mCMClient.Init(*this);
+    auto err = mCMClient.Init(resourceManager, *this);
     if (!err.IsNone()) {
         return err;
     }
