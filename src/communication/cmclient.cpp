@@ -36,6 +36,22 @@ static void InstanceStatusToPB(const aos::InstanceStatus& aosInstance, servicema
     }
 }
 
+static void MonitoringDataToPB(
+    const aos::monitoring::MonitoringData& aosMonitoring, servicemanager_v3_MonitoringData& pbMonitoring)
+{
+    pbMonitoring.ram        = aosMonitoring.mRAM;
+    pbMonitoring.cpu        = aosMonitoring.mCPU;
+    pbMonitoring.disk_count = aosMonitoring.mDisk.Size();
+
+    for (size_t i = 0; i < aosMonitoring.mDisk.Size(); i++) {
+        StringToPB(aosMonitoring.mDisk[i].mName, pbMonitoring.disk[i].name);
+        pbMonitoring.disk[i].used_size = aosMonitoring.mDisk[i].mUsedSize;
+    }
+
+    pbMonitoring.in_traffic  = aosMonitoring.mInTraffic;
+    pbMonitoring.out_traffic = aosMonitoring.mOutTraffic;
+}
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
@@ -104,6 +120,37 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
     StringToPB(request.mContentType.ToString(), pbContentRequest.content_type);
 
     LOG_DBG() << "Send SM message: message = ImageContentRequest";
+
+    return SendOutgoingMessage(*outgoingMessage);
+}
+
+aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData)
+{
+    auto  outgoingMessage  = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
+    auto& pbMonitoringData = outgoingMessage->SMOutgoingMessage.node_monitoring;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_monitoring_tag;
+    pbMonitoringData = servicemanager_v3_NodeMonitoring servicemanager_v3_NodeMonitoring_init_zero;
+
+    pbMonitoringData.has_monitoring_data = true;
+    MonitoringDataToPB(monitoringData.mMonitoringData, pbMonitoringData.monitoring_data);
+
+    pbMonitoringData.instance_monitoring_count = monitoringData.mServiceInstances.Size();
+    for (size_t i = 0; i < monitoringData.mServiceInstances.Size(); i++) {
+        pbMonitoringData.instance_monitoring[i].has_instance = true;
+        InstanceIdentToPB(
+            monitoringData.mServiceInstances[i].mInstanceIdent, pbMonitoringData.instance_monitoring[i].instance);
+
+        pbMonitoringData.instance_monitoring[i].has_monitoring_data = true;
+        MonitoringDataToPB(monitoringData.mServiceInstances[i].mMonitoringData,
+            pbMonitoringData.instance_monitoring[i].monitoring_data);
+    }
+
+    pbMonitoringData.has_timestamp     = true;
+    pbMonitoringData.timestamp.seconds = monitoringData.mTimestamp.tv_sec;
+    pbMonitoringData.timestamp.nanos   = monitoringData.mTimestamp.tv_nsec;
+
+    LOG_DBG() << "Send SM message: message = NodeMonitoring";
 
     return SendOutgoingMessage(*outgoingMessage);
 }

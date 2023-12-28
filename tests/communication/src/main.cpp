@@ -34,7 +34,7 @@
  * Static
  **********************************************************************************************************************/
 
-static constexpr auto cWaitTimeout = std::chrono::seconds {1};
+static constexpr auto cWaitTimeout = std::chrono::seconds {5};
 
 static constexpr void PBToInstanceStatus(
     const servicemanager_v3_InstanceStatus& pbInstance, aos::InstanceStatus& aosInstance)
@@ -57,6 +57,22 @@ static constexpr void PBToInstanceStatus(
     }
 }
 
+static void PBToMonitoringData(
+    const servicemanager_v3_MonitoringData& pbMonitoring, aos::monitoring::MonitoringData& aosMonitoring)
+{
+    aosMonitoring.mRAM = pbMonitoring.ram;
+    aosMonitoring.mCPU = pbMonitoring.cpu;
+    aosMonitoring.mDisk.Resize(pbMonitoring.disk_count);
+
+    for (size_t i = 0; i < pbMonitoring.disk_count; i++) {
+
+        PBToString(pbMonitoring.disk[i].name, aosMonitoring.mDisk[i].mName);
+        aosMonitoring.mDisk[i].mUsedSize = pbMonitoring.disk[i].used_size;
+    }
+
+    aosMonitoring.mInTraffic  = pbMonitoring.in_traffic;
+    aosMonitoring.mOutTraffic = pbMonitoring.out_traffic;
+}
 /***********************************************************************************************************************
  * Vars
  **********************************************************************************************************************/
@@ -563,4 +579,63 @@ ZTEST_F(communication, test_ImageContentRequest)
     zassert_equal(
         outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_image_content_request_tag);
     zassert_equal(receiveContentRequest, sendContentRequest);
+}
+
+ZTEST_F(communication, test_MonitoringData)
+{
+    aos::monitoring::NodeMonitoringData sendMonitoringData {"", {1024, 100, {}, 10, 20}, {10, 20}};
+
+    sendMonitoringData.mMonitoringData.mDisk.EmplaceBack(aos::monitoring::PartitionInfo {"disk1", "", {}, 0, 2048});
+    sendMonitoringData.mMonitoringData.mDisk.EmplaceBack(aos::monitoring::PartitionInfo {"disk2", "", {}, 0, 4096});
+
+    sendMonitoringData.mServiceInstances.EmplaceBack(
+        aos::monitoring::InstanceMonitoringData {"", {"service1", "subject1", 0}, {512, 50, {}, 30, 30}});
+    sendMonitoringData.mServiceInstances.end()->mMonitoringData.mDisk.EmplaceBack(
+        aos::monitoring::PartitionInfo {"disk3", "", {}, 0, 192});
+    sendMonitoringData.mServiceInstances.end()->mMonitoringData.mDisk.EmplaceBack(
+        aos::monitoring::PartitionInfo {"disk4", "", {}, 0, 243});
+    sendMonitoringData.mServiceInstances.EmplaceBack(
+        aos::monitoring::InstanceMonitoringData {"", {"service1", "subject1", 1}, {256, 32, {}, 33, 32}});
+    sendMonitoringData.mServiceInstances.end()->mMonitoringData.mDisk.EmplaceBack(
+        aos::monitoring::PartitionInfo {"disk5", "", {}, 0, 543});
+    sendMonitoringData.mServiceInstances.EmplaceBack(
+        aos::monitoring::InstanceMonitoringData {"", {"service1", "subject1", 2}, {128, 15, {}, 43, 12}});
+
+    auto err = sCommunication.SendMonitoringData(sendMonitoringData);
+    zassert_true(err.IsNone(), "Error sending monitoring data: %s", err.Message());
+
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+
+    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    aos::monitoring::NodeMonitoringData receiveMonitoringData {};
+
+    const auto& pbMonitoringData = outgoingMessage.SMOutgoingMessage.node_monitoring;
+
+    if (pbMonitoringData.has_monitoring_data) {
+        PBToMonitoringData(pbMonitoringData.monitoring_data, receiveMonitoringData.mMonitoringData);
+    }
+
+    receiveMonitoringData.mServiceInstances.Resize(pbMonitoringData.instance_monitoring_count);
+
+    for (size_t i = 0; i < pbMonitoringData.instance_monitoring_count; i++) {
+        if (pbMonitoringData.instance_monitoring[i].has_instance) {
+            PBToInstanceIdent(pbMonitoringData.instance_monitoring[i].instance,
+                receiveMonitoringData.mServiceInstances[i].mInstanceIdent);
+        }
+
+        if (pbMonitoringData.instance_monitoring[i].has_monitoring_data) {
+            PBToMonitoringData(pbMonitoringData.instance_monitoring[i].monitoring_data,
+                receiveMonitoringData.mServiceInstances[i].mMonitoringData);
+        }
+    }
+
+    if (pbMonitoringData.has_timestamp) {
+        receiveMonitoringData.mTimestamp.tv_sec  = pbMonitoringData.timestamp.seconds;
+        receiveMonitoringData.mTimestamp.tv_nsec = pbMonitoringData.timestamp.nanos;
+    }
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_monitoring_tag);
+    zassert_equal(receiveMonitoringData, sendMonitoringData);
 }
