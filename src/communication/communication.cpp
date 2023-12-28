@@ -90,6 +90,13 @@ aos::Error Communication::SendImageContentRequest(const ImageContentRequest& req
     return mCMClient.SendImageContentRequest(request);
 }
 
+aos::Error Communication::SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData)
+{
+    aos::LockGuard lock(mMutex);
+
+    return mCMClient.SendMonitoringData(monitoringData);
+}
+
 aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
 {
     aos::LockGuard lock(mMutex);

@@ -22,6 +22,7 @@
  */
 class Communication : public aos::sm::launcher::InstanceStatusReceiverItf,
                       public DownloadRequesterItf,
+                      public aos::monitoring::SenderItf,
                       public aos::ConnectionPublisherItf,
                       private MessageSenderItf,
                       private aos::NonCopyable {
@@ -67,6 +68,14 @@ public:
      * @return Error
      */
     aos::Error SendImageContentRequest(const ImageContentRequest& request) override;
+
+    /**
+     * Sends monitoring data
+     *
+     * @param monitoringData monitoring data
+     * @return Error
+     */
+    aos::Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData) override;
 
     /**
      * Subscribes the provided ConnectionSubscriberItf to this object.
