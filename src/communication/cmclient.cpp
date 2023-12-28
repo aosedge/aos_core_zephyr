@@ -57,12 +57,14 @@ static void MonitoringDataToPB(
  **********************************************************************************************************************/
 
 aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-    DownloadReceiverItf& downloader, MessageSenderItf& messageSender)
+    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader,
+    MessageSenderItf& messageSender)
 {
     LOG_DBG() << "Initialize CM client";
 
     mLauncher        = &launcher;
     mResourceManager = &resourceManager;
+    mResourceMonitor = &resourceMonitor;
     mDownloader      = &downloader;
     mMessageSender   = &messageSender;
 
@@ -151,6 +153,44 @@ aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringDat
     pbMonitoringData.timestamp.nanos   = monitoringData.mTimestamp.tv_nsec;
 
     LOG_DBG() << "Send SM message: message = NodeMonitoring";
+
+    return SendOutgoingMessage(*outgoingMessage);
+}
+
+aos::Error CMClient::SendNodeConfiguration()
+{
+    auto  nodeInfo            = aos::MakeUnique<aos::monitoring::NodeInfo>(&mAllocator);
+    auto  outgoingMessage     = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
+    auto& pbNodeConfiguration = outgoingMessage->SMOutgoingMessage.node_configuration;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_configuration_tag;
+    pbNodeConfiguration = servicemanager_v3_NodeConfiguration servicemanager_v3_NodeConfiguration_init_zero;
+
+    auto err = mResourceMonitor->GetNodeInfo(*nodeInfo);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    StringToPB(cNodeID, pbNodeConfiguration.node_id);
+    StringToPB(cNodeType, pbNodeConfiguration.node_type);
+    pbNodeConfiguration.remote_node           = true;
+    pbNodeConfiguration.runner_features_count = 1;
+    StringToPB(cRunner, pbNodeConfiguration.runner_features[0]);
+    pbNodeConfiguration.num_cpus         = nodeInfo->mNumCPUs;
+    pbNodeConfiguration.total_ram        = nodeInfo->mTotalRAM;
+    pbNodeConfiguration.partitions_count = nodeInfo->mPartitions.Size();
+
+    for (size_t i = 0; i < nodeInfo->mPartitions.Size(); ++i) {
+        StringToPB(nodeInfo->mPartitions[i].mName, pbNodeConfiguration.partitions[i].name);
+        pbNodeConfiguration.partitions[i].total_size  = nodeInfo->mPartitions[i].mTotalSize;
+        pbNodeConfiguration.partitions[i].types_count = nodeInfo->mPartitions[i].mTypes.Size();
+
+        for (size_t j = 0; j < nodeInfo->mPartitions[i].mTypes.Size(); ++j) {
+            StringToPB(nodeInfo->mPartitions[i].mTypes[j], pbNodeConfiguration.partitions[i].types[j]);
+        }
+    }
+
+    LOG_DBG() << "Send SM message: message = NodeConfiguration";
 
     return SendOutgoingMessage(*outgoingMessage);
 }

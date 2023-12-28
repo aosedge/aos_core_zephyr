@@ -8,6 +8,7 @@
 #ifndef CMCLIENT_HPP_
 #define CMCLIENT_HPP_
 
+#include <aos/common/resourcemonitor.hpp>
 #include <aos/sm/launcher.hpp>
 
 #include <proto/servicemanager/v3/servicemanager.pb.h>
@@ -32,12 +33,14 @@ public:
      *
      * @param launcher launcher instance.
      * @param resourceManager resource manager instance.
+     * @param resourceMonitor resource monitor instance.
      * @param downloader downloader instance.
      * @param messageSender message sender instance.
      * @return aos::Error.
      */
     aos::Error Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-        DownloadReceiverItf& downloader, MessageSenderItf& messageSender);
+        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader,
+        MessageSenderItf& messageSender);
 
     /**
      * Sends instances run status.
@@ -67,9 +70,16 @@ public:
      * Sends monitoring data
      *
      * @param monitoringData monitoring data
-     * @return Error
+     * @return Error.
      */
     aos::Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData);
+
+    /**
+     * Sends node configuration.
+     *
+     * @return Error.
+     */
+    aos::Error SendNodeConfiguration();
 
     /**
      * Processes received message.
@@ -96,6 +106,10 @@ public:
     size_t GetReceiveBufferSize() const { return mReceiveBuffer.Size(); }
 
 private:
+    static constexpr auto cNodeID   = CONFIG_AOS_NODE_ID;
+    static constexpr auto cNodeType = CONFIG_AOS_NODE_TYPE;
+    static constexpr auto cRunner   = "xrun";
+
     aos::Error ProcessGetUnitConfigStatus();
     aos::Error ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
     aos::Error ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig& pbUnitConfig);
@@ -105,15 +119,17 @@ private:
     aos::Error SendOutgoingMessage(
         const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError = aos::ErrorEnum::eNone);
 
-    aos::sm::launcher::LauncherItf* mLauncher {};
-    ResourceManagerItf*             mResourceManager {};
-    DownloadReceiverItf*            mDownloader {};
-    MessageSenderItf*               mMessageSender {};
+    aos::sm::launcher::LauncherItf*      mLauncher {};
+    ResourceManagerItf*                  mResourceManager {};
+    aos::monitoring::ResourceMonitorItf* mResourceMonitor {};
+    DownloadReceiverItf*                 mDownloader {};
+    MessageSenderItf*                    mMessageSender {};
 
     aos::StaticAllocator<sizeof(servicemanager_v3_SMIncomingMessages) + sizeof(servicemanager_v3_SMOutgoingMessages)
-        + aos::Max(sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)
-                + sizeof(aos::InstanceInfoStaticArray),
-            sizeof(ImageContentInfo) + sizeof(FileChunk))>
+            + aos::Max(sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)
+                    + sizeof(aos::InstanceInfoStaticArray),
+                sizeof(ImageContentInfo) + sizeof(FileChunk)),
+        sizeof(aos::monitoring::NodeInfo)>
         mAllocator;
 
     aos::StaticBuffer<servicemanager_v3_SMIncomingMessages_size> mReceiveBuffer;
