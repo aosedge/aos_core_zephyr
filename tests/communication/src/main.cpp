@@ -25,6 +25,7 @@
 #include "mocks/downloadermock.hpp"
 #include "mocks/launchermock.hpp"
 #include "mocks/resourcemanagermock.hpp"
+#include "mocks/resourcemonitormock.hpp"
 
 /***********************************************************************************************************************
  * Types
@@ -81,6 +82,7 @@ static CommChannelMock sOpenChannel;
 static CommChannelMock sSecureChannel;
 LauncherMock           sLauncher;
 ResourceManagerMock    sResourceManager;
+ResourceMonitorMock    sResourceMonitor;
 DownloaderMock         sDownloader;
 static Communication   sCommunication;
 
@@ -232,8 +234,16 @@ ZTEST_SUITE(
     []() -> void* {
         aos::Log::SetCallback(TestLogCallback);
 
-        auto err = sCommunication.Init(sOpenChannel, sSecureChannel, sLauncher, sResourceManager, sDownloader);
+        auto err = sCommunication.Init(
+            sOpenChannel, sSecureChannel, sLauncher, sResourceManager, sResourceMonitor, sDownloader);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
+
+        // Wait node configuration message
+
+        servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+
+        err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+        zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
         return nullptr;
     },
@@ -249,6 +259,18 @@ ZTEST_F(communication, test_Connection)
 
     sCommunication.Subscribes(subscriber);
 
+    aos::monitoring::NodeInfo sendNodeInfo {CONFIG_AOS_NODE_ID, 2, 1024, {}};
+
+    sendNodeInfo.mPartitions.EmplaceBack(aos::monitoring::PartitionInfo {"var", "", {}, 2048, 0});
+    sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("data");
+    sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("state");
+    sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("storage");
+    sendNodeInfo.mPartitions.EmplaceBack(aos::monitoring::PartitionInfo {"aos", "", {}, 4096, 0});
+    sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("aos");
+    sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("tmp");
+
+    sResourceMonitor.SetNodeInfo(sendNodeInfo);
+
     sSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
 
     auto err = subscriber.WaitDisconnect(cWaitTimeout);
@@ -256,6 +278,38 @@ ZTEST_F(communication, test_Connection)
 
     err = subscriber.WaitConnect(cWaitTimeout);
     zassert_true(err.IsNone(), "Wait connection error: %s", err.Message());
+
+    // Wait node configuration message
+
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+
+    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    aos::monitoring::NodeInfo receiveNodeInfo {};
+    const auto&               pbNodeConfiguration = outgoingMessage.SMOutgoingMessage.node_configuration;
+
+    PBToString(pbNodeConfiguration.node_id, receiveNodeInfo.mNodeID);
+    receiveNodeInfo.mNumCPUs  = pbNodeConfiguration.num_cpus;
+    receiveNodeInfo.mTotalRAM = pbNodeConfiguration.total_ram;
+    receiveNodeInfo.mPartitions.Resize(pbNodeConfiguration.partitions_count);
+
+    for (size_t i = 0; i < pbNodeConfiguration.partitions_count; ++i) {
+        PBToString(pbNodeConfiguration.partitions[i].name, receiveNodeInfo.mPartitions[i].mName);
+        receiveNodeInfo.mPartitions[i].mTotalSize = pbNodeConfiguration.partitions[i].total_size;
+        receiveNodeInfo.mPartitions[i].mTypes.Resize(pbNodeConfiguration.partitions[i].types_count);
+
+        for (size_t j = 0; j < pbNodeConfiguration.partitions[i].types_count; ++j) {
+            PBToString(pbNodeConfiguration.partitions[i].types[j], receiveNodeInfo.mPartitions[i].mTypes[j]);
+        }
+    }
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_configuration_tag);
+    zassert_equal(strcmp(pbNodeConfiguration.node_type, CONFIG_AOS_NODE_TYPE), 0);
+    zassert_equal(pbNodeConfiguration.remote_node, true);
+    zassert_equal(pbNodeConfiguration.runner_features_count, 1);
+    zassert_equal(strcmp(pbNodeConfiguration.runner_features[0], "xrun"), 0);
+    zassert_equal(receiveNodeInfo, sendNodeInfo);
 
     sCommunication.Unsubscribes(subscriber);
 }
