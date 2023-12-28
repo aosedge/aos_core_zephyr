@@ -49,11 +49,12 @@ Communication::~Communication()
 }
 
 aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
-    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager, DownloadReceiverItf& downloader)
+    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
+    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader)
 {
     LOG_DBG() << "Initialize communication";
 
-    auto err = mCMClient.Init(launcher, resourceManager, downloader, *this);
+    auto err = mCMClient.Init(launcher, resourceManager, resourceMonitor, downloader, *this);
     if (!err.IsNone()) {
         return err;
     }
@@ -158,6 +159,11 @@ void Communication::ChannelHandler(Channel channel)
                 LOG_DBG() << "Channel connected: channel = " << channel;
 
                 if (GetNumConnectedChannels() == static_cast<size_t>(ChannelEnum::eNumChannels)) {
+                    err = mCMClient.SendNodeConfiguration();
+                    if (!err.IsNone()) {
+                        LOG_ERR() << "Can't send node configuration: " << err;
+                    }
+
                     ConnectNotification(true);
                 }
             }
