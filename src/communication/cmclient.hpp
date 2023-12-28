@@ -64,6 +64,14 @@ public:
     aos::Error SendImageContentRequest(const ImageContentRequest& request);
 
     /**
+     * Sends monitoring data
+     *
+     * @param monitoringData monitoring data
+     * @return Error
+     */
+    aos::Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData);
+
+    /**
      * Processes received message.
      *
      * @param methodName protocol method name.
