@@ -32,7 +32,7 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mDownloader.Init(mCMClient)).IsNone()) {
+    if (!(err = mDownloader.Init(mCommunication)).IsNone()) {
         return err;
     }
 
@@ -44,16 +44,27 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCMClient, mCMClient)).IsNone()) {
+    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCommunication, mCommunication)).IsNone()) {
         return err;
     }
 
-    if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage, mResourceMonitor))
+    if (!(err = mLauncher.Init(
+              mServiceManager, mRunner, mJsonOciSpec, mCommunication, mStorage, mResourceMonitor, mCommunication))
              .IsNone()) {
         return err;
     }
 
-    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader, mResourceMonitor)).IsNone()) {
+    if (!(err = mCommOpenChannel.Init(VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCommSecureChannel.Init(VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCommunication.Init(
+              mCommOpenChannel, mCommSecureChannel, mLauncher, mResourceManager, mResourceMonitor, mDownloader))
+             .IsNone()) {
         return err;
     }
 
