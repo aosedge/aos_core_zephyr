@@ -14,7 +14,8 @@
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
-#include "cmclient/cmclient.hpp"
+#include "communication/communication.hpp"
+#include "communication/vchannel.hpp"
 #include "ocispec/ocispec.hpp"
 #include "resourceusageprovider/resourceusageprovider.hpp"
 #include "runner/runner.hpp"
@@ -40,16 +41,18 @@ public:
 
 private:
     static App                              sApp;
-    CMClient                                mCMClient;
-    Storage                                 mStorage;
-    Runner                                  mRunner;
+    aos::monitoring::ResourceMonitor        mResourceMonitor;
     aos::sm::launcher::Launcher             mLauncher;
-    ResourceManager                         mResourceManager;
+    aos::sm::servicemanager::ServiceManager mServiceManager;
+    Communication                           mCommunication;
+    VChannel                                mCommOpenChannel;
+    VChannel                                mCommSecureChannel;
     Downloader                              mDownloader;
     OCISpec                                 mJsonOciSpec;
-    aos::sm::servicemanager::ServiceManager mServiceManager;
-    aos::monitoring::ResourceMonitor        mResourceMonitor;
+    ResourceManager                         mResourceManager;
     ResourceUsageProvider                   mResourceUsageProvider;
+    Runner                                  mRunner;
+    Storage                                 mStorage;
 };
 
 #endif

@@ -61,15 +61,17 @@ target_compile_options(app PRIVATE -Wstack-usage=2048)
 target_sources(
     app
     PRIVATE src/main.cpp
-            src/logger/logger.cpp
             src/app/app.cpp
-            src/cmclient/cmclient.cpp
+            src/communication/cmclient.cpp
+            src/communication/communication.cpp
+            src/communication/vchannel.cpp
+            src/downloader/downloader.cpp
+            src/logger/logger.cpp
+            src/ocispec/ocispec.cpp
+            src/resourcemanager/resourcemanager.cpp
+            src/resourceusageprovider/resourceusageprovider.cpp
             src/runner/runner.cpp
             src/storage/storage.cpp
-            src/downloader/downloader.cpp
-            src/resourcemanager/resourcemanager.cpp
-            src/ocispec/ocispec.cpp
-            src/resourceusageprovider/resourceusageprovider.cpp
             src/utils/checksum.cpp
 )
 
