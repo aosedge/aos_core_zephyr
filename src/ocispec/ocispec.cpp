@@ -105,11 +105,11 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
 
     memset(jsonImageManifest, 0, sizeof(ImageManifest));
 
-    jsonImageManifest->mediaType = "";
-    jsonImageManifest->config.mediaType = "";
-    jsonImageManifest->config.digest = "";
+    jsonImageManifest->mediaType            = "";
+    jsonImageManifest->config.mediaType     = "";
+    jsonImageManifest->config.digest        = "";
     jsonImageManifest->aosService.mediaType = "";
-    jsonImageManifest->aosService.digest = "";
+    jsonImageManifest->aosService.digest    = "";
 
     int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageManifestDescr,
         ARRAY_SIZE(ImageManifestDescr), jsonImageManifest);
@@ -118,7 +118,7 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
     }
 
     manifest.mSchemaVersion = jsonImageManifest->schemaVersion;
-    manifest.mMediaType = jsonImageManifest->mediaType;
+    manifest.mMediaType     = jsonImageManifest->mediaType;
 
     // config
 
@@ -194,10 +194,10 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
     memset(jsonImageManifest, 0, sizeof(ImageManifest));
 
     jsonImageManifest->aosService.mediaType = "";
-    jsonImageManifest->aosService.digest = "";
+    jsonImageManifest->aosService.digest    = "";
 
     jsonImageManifest->schemaVersion = manifest.mSchemaVersion;
-    jsonImageManifest->mediaType = manifest.mMediaType.CStr();
+    jsonImageManifest->mediaType     = manifest.mMediaType.CStr();
 
     // config
 
@@ -360,9 +360,9 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 
     memset(jsonRuntimeSpec, 0, sizeof(RuntimeSpec));
 
-    jsonRuntimeSpec->ociVersion = "";
-    jsonRuntimeSpec->vm.hypervisor.path = "";
-    jsonRuntimeSpec->vm.kernel.path = "";
+    jsonRuntimeSpec->ociVersion             = "";
+    jsonRuntimeSpec->vm.hypervisor.path     = "";
+    jsonRuntimeSpec->vm.kernel.path         = "";
     jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
 
     int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, RuntimeSpecDescr,
@@ -379,7 +379,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         }
 
         runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
-        runtimeSpec.mVM->mKernel.mPath = jsonRuntimeSpec->vm.kernel.path;
+        runtimeSpec.mVM->mKernel.mPath     = jsonRuntimeSpec->vm.kernel.path;
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hypervisor.parametersLen; i++) {
             runtimeSpec.mVM->mHypervisor.mParameters.PushBack(jsonRuntimeSpec->vm.hypervisor.parameters[i]);
@@ -390,7 +390,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         }
 
         runtimeSpec.mVM->mHWConfig.mDeviceTree = jsonRuntimeSpec->vm.hwConfig.deviceTree;
-        runtimeSpec.mVM->mHWConfig.mVCPUs = jsonRuntimeSpec->vm.hwConfig.vcpus;
+        runtimeSpec.mVM->mHWConfig.mVCPUs      = jsonRuntimeSpec->vm.hwConfig.vcpus;
 
         uint64_t memKB = 0;
 
@@ -465,16 +465,16 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
 
     memset(jsonRuntimeSpec, 0, sizeof(RuntimeSpec));
 
-    jsonRuntimeSpec->vm.hypervisor.path = "";
-    jsonRuntimeSpec->vm.kernel.path = "";
+    jsonRuntimeSpec->vm.hypervisor.path     = "";
+    jsonRuntimeSpec->vm.kernel.path         = "";
     jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
-    jsonRuntimeSpec->ociVersion = runtimeSpec.mOCIVersion.CStr();
+    jsonRuntimeSpec->ociVersion             = runtimeSpec.mOCIVersion.CStr();
 
     if (runtimeSpec.mVM) {
-        jsonRuntimeSpec->vm.hypervisor.path = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
-        jsonRuntimeSpec->vm.kernel.path = const_cast<char*>(runtimeSpec.mVM->mKernel.mPath.CStr());
+        jsonRuntimeSpec->vm.hypervisor.path          = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
+        jsonRuntimeSpec->vm.kernel.path              = const_cast<char*>(runtimeSpec.mVM->mKernel.mPath.CStr());
         jsonRuntimeSpec->vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
-        jsonRuntimeSpec->vm.kernel.parametersLen = runtimeSpec.mVM->mKernel.mParameters.Size();
+        jsonRuntimeSpec->vm.kernel.parametersLen     = runtimeSpec.mVM->mKernel.mParameters.Size();
 
         for (size_t i = 0; i < runtimeSpec.mVM->mHypervisor.mParameters.Size(); i++) {
             jsonRuntimeSpec->vm.hypervisor.parameters[i]
@@ -487,7 +487,7 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
         }
 
         jsonRuntimeSpec->vm.hwConfig.deviceTree = runtimeSpec.mVM->mHWConfig.mDeviceTree.CStr();
-        jsonRuntimeSpec->vm.hwConfig.vcpus = runtimeSpec.mVM->mHWConfig.mVCPUs;
+        jsonRuntimeSpec->vm.hwConfig.vcpus      = runtimeSpec.mVM->mHWConfig.mVCPUs;
 
         auto memKB = new (&mAllocator) aos::StaticString<20>;
 
@@ -598,7 +598,7 @@ aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path)
         return AOS_ERROR_WRAP(errno);
     }
 
-    auto len = strlen(static_cast<char*>(mJsonFileBuffer.Get()));
+    auto len     = strlen(static_cast<char*>(mJsonFileBuffer.Get()));
     auto written = write(file, mJsonFileBuffer.Get(), len);
     if (written < 0) {
         err = AOS_ERROR_WRAP(errno);

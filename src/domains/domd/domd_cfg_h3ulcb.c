@@ -482,32 +482,32 @@ static ssize_t get_ipl_image_size(void* image_info, uint64_t* size)
 struct xen_domain_cfg domd_cfg = {
     .mem_kb = 0x200000, /* 2Gb */
 
-    .flags = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),
-    .max_evtchns = 10,
-    .max_vcpus = 4,
-    .gnt_frames = 32,
+    .flags               = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),
+    .max_evtchns         = 10,
+    .max_vcpus           = 4,
+    .gnt_frames          = 32,
     .max_maptrack_frames = 1,
 
-    .iomems = domd_iomems,
+    .iomems    = domd_iomems,
     .nr_iomems = ARRAY_SIZE(domd_iomems),
 
-    .irqs = domd_irqs,
+    .irqs    = domd_irqs,
     .nr_irqs = ARRAY_SIZE(domd_irqs),
 
     .gic_version = XEN_DOMCTL_CONFIG_GIC_V2,
-    .tee_type = XEN_DOMCTL_CONFIG_TEE_OPTEE,
+    .tee_type    = XEN_DOMCTL_CONFIG_TEE_OPTEE,
 
-    .dtdevs = domd_dtdevs,
+    .dtdevs    = domd_dtdevs,
     .nr_dtdevs = ARRAY_SIZE(domd_dtdevs),
 
-    .dt_passthrough = dt_passthrough_nodes,
+    .dt_passthrough    = dt_passthrough_nodes,
     .nr_dt_passthrough = ARRAY_SIZE(dt_passthrough_nodes),
-    .load_image_bytes = load_ipl_image,
-    .get_image_size = get_ipl_image_size,
-    .image_info = NULL,
+    .load_image_bytes  = load_ipl_image,
+    .get_image_size    = get_ipl_image_size,
+    .image_info        = NULL,
 
     .dtb_start = __dtb_ipl_start,
-    .dtb_end = __dtb_ipl_end,
+    .dtb_end   = __dtb_ipl_end,
 };
 
 int create_domains(void)
