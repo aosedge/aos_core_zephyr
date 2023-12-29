@@ -31,24 +31,24 @@ ZTEST(storage, test_AddUpdateRemoveInstance)
     aos::StaticArray<aos::InstanceInfo, 2> instances;
 
     aos::InstanceInfo instanceInfo;
-    instanceInfo.mInstanceIdent.mInstance = 1;
+    instanceInfo.mInstanceIdent.mInstance  = 1;
     instanceInfo.mInstanceIdent.mServiceID = "service_id";
     instanceInfo.mInstanceIdent.mSubjectID = "subject_id";
-    instanceInfo.mPriority = 1;
-    instanceInfo.mStoragePath = "storage_path";
-    instanceInfo.mStatePath = "state_path";
-    instanceInfo.mUID = 1;
+    instanceInfo.mPriority                 = 1;
+    instanceInfo.mStoragePath              = "storage_path";
+    instanceInfo.mStatePath                = "state_path";
+    instanceInfo.mUID                      = 1;
 
     instances.PushBack(instanceInfo);
 
     aos::InstanceInfo instanceInfo2;
-    instanceInfo2.mInstanceIdent.mInstance = 2;
+    instanceInfo2.mInstanceIdent.mInstance  = 2;
     instanceInfo2.mInstanceIdent.mServiceID = "service_id";
     instanceInfo2.mInstanceIdent.mSubjectID = "subject_id";
-    instanceInfo2.mPriority = 2;
-    instanceInfo2.mStoragePath = "storage_path";
-    instanceInfo2.mStatePath = "state_path";
-    instanceInfo2.mUID = 2;
+    instanceInfo2.mPriority                 = 2;
+    instanceInfo2.mStoragePath              = "storage_path";
+    instanceInfo2.mStatePath                = "state_path";
+    instanceInfo2.mUID                      = 2;
 
     instances.PushBack(instanceInfo2);
 
@@ -70,10 +70,10 @@ ZTEST(storage, test_AddUpdateRemoveInstance)
     }
 
     instances[0].mStoragePath = "storage_path2";
-    instances[0].mStatePath = "state_path2";
+    instances[0].mStatePath   = "state_path2";
 
     instances[1].mStoragePath = "storage_path3";
-    instances[1].mStatePath = "state_path3";
+    instances[1].mStatePath   = "state_path3";
 
     for (const auto& instance : instances) {
         zassert_equal(storage.UpdateInstance(instance), aos::ErrorEnum::eNone, "Failed to update instance");
@@ -110,22 +110,22 @@ ZTEST(storage, test_AddUpdateRemoveService)
     aos::StaticArray<aos::sm::servicemanager::ServiceData, 2> services;
 
     aos::sm::servicemanager::ServiceData serviceData;
-    serviceData.mVersionInfo.mAosVersion = 1;
+    serviceData.mVersionInfo.mAosVersion    = 1;
     serviceData.mVersionInfo.mVendorVersion = "vendor_version";
-    serviceData.mVersionInfo.mDescription = "description";
-    serviceData.mServiceID = "service_id";
-    serviceData.mProviderID = "provider_id";
-    serviceData.mImagePath = "image_path";
+    serviceData.mVersionInfo.mDescription   = "description";
+    serviceData.mServiceID                  = "service_id";
+    serviceData.mProviderID                 = "provider_id";
+    serviceData.mImagePath                  = "image_path";
 
     services.PushBack(serviceData);
 
     aos::sm::servicemanager::ServiceData serviceData2;
-    serviceData2.mVersionInfo.mAosVersion = 2;
+    serviceData2.mVersionInfo.mAosVersion    = 2;
     serviceData2.mVersionInfo.mVendorVersion = "vendor_version2";
-    serviceData2.mVersionInfo.mDescription = "description2";
-    serviceData2.mServiceID = "service_id2";
-    serviceData2.mProviderID = "provider_id2";
-    serviceData2.mImagePath = "image_path2";
+    serviceData2.mVersionInfo.mDescription   = "description2";
+    serviceData2.mServiceID                  = "service_id2";
+    serviceData2.mProviderID                 = "provider_id2";
+    serviceData2.mImagePath                  = "image_path2";
 
     services.PushBack(serviceData2);
 

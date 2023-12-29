@@ -32,28 +32,43 @@ static char* dt_passthrough_nodes[] = {
 };
 
 static struct xen_domain_iomem domd_iomems[] = {
-    {.first_mfn = 0xe6020, .nr_mfns = 0x1}, {.first_mfn = 0xe6050, .nr_mfns = 0x1},
-    {.first_mfn = 0xe6051, .nr_mfns = 0x1}, {.first_mfn = 0xe6150, .nr_mfns = 0x4}, /* CPG */
+    {.first_mfn = 0xe6020, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6050, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6051, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6150, .nr_mfns = 0x4}, /* CPG */
     {.first_mfn = 0xe6160, .nr_mfns = 0x4}, /* RST */
     {.first_mfn = 0xe6180, .nr_mfns = 0x4}, /* SYSC */
-    {.first_mfn = 0xe6500, .nr_mfns = 0x1}, {.first_mfn = 0xe66d8, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6500, .nr_mfns = 0x1},
+    {.first_mfn = 0xe66d8, .nr_mfns = 0x1},
     {.first_mfn = 0xe6860, .nr_mfns = 0x1}, /* UFS HCD */
     {.first_mfn = 0xe68c0, .nr_mfns = 0x20}, /* EtherAVB */
     {.first_mfn = 0xe6444, .nr_mfns = 0x3}, /* EtherAVB */
-    {.first_mfn = 0xe6550, .nr_mfns = 0x1}, {.first_mfn = 0xe6e60, .nr_mfns = 0x1},
-    {.first_mfn = 0xe7350, .nr_mfns = 0x1}, {.first_mfn = 0xe7300, .nr_mfns = 0x10},
-    {.first_mfn = 0xe7351, .nr_mfns = 0x1}, {.first_mfn = 0xe7310, .nr_mfns = 0x10},
-    {.first_mfn = 0xfff00, .nr_mfns = 0x1}, {.first_mfn = 0xffd60, .nr_mfns = 0x1},
-    {.first_mfn = 0xffc10, .nr_mfns = 0x10}, {.first_mfn = 0xffd61, .nr_mfns = 0x1},
-    {.first_mfn = 0xffc20, .nr_mfns = 0x10}, {.first_mfn = 0xffd62, .nr_mfns = 0x1},
-    {.first_mfn = 0xffd70, .nr_mfns = 0x10}, {.first_mfn = 0xffd63, .nr_mfns = 0x1},
-    {.first_mfn = 0xffd80, .nr_mfns = 0x10}, {.first_mfn = 0xe65d3, .nr_mfns = 0x2},
-    {.first_mfn = 0xe65d5, .nr_mfns = 0x2}, {.first_mfn = 0xe65d6, .nr_mfns = 0x1},
-    {.first_mfn = 0xe65d7, .nr_mfns = 0x1}, {.first_mfn = 0xe6198, .nr_mfns = 0x1},
-    {.first_mfn = 0xe61a0, .nr_mfns = 0x1}, {.first_mfn = 0xe61a0, .nr_mfns = 0x1},
-    {.first_mfn = 0xe61b0, .nr_mfns = 0x1}, {.first_mfn = 0xe6260, .nr_mfns = 0x10},
-    {.first_mfn = 0xdfd91, .nr_mfns = 0x1}, {.first_mfn = 0xe6078, .nr_mfns = 0x1},
-    //	{ .first_gfn = 0x47fc7, .first_mfn = 0x37fc7, .nr_mfns = 0x2},
+    {.first_mfn = 0xe6550, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6e60, .nr_mfns = 0x1},
+    {.first_mfn = 0xe7350, .nr_mfns = 0x1},
+    {.first_mfn = 0xe7300, .nr_mfns = 0x10},
+    {.first_mfn = 0xe7351, .nr_mfns = 0x1},
+    {.first_mfn = 0xe7310, .nr_mfns = 0x10},
+    {.first_mfn = 0xfff00, .nr_mfns = 0x1},
+    {.first_mfn = 0xffd60, .nr_mfns = 0x1},
+    {.first_mfn = 0xffc10, .nr_mfns = 0x10},
+    {.first_mfn = 0xffd61, .nr_mfns = 0x1},
+    {.first_mfn = 0xffc20, .nr_mfns = 0x10},
+    {.first_mfn = 0xffd62, .nr_mfns = 0x1},
+    {.first_mfn = 0xffd70, .nr_mfns = 0x10},
+    {.first_mfn = 0xffd63, .nr_mfns = 0x1},
+    {.first_mfn = 0xffd80, .nr_mfns = 0x10},
+    {.first_mfn = 0xe65d3, .nr_mfns = 0x2},
+    {.first_mfn = 0xe65d5, .nr_mfns = 0x2},
+    {.first_mfn = 0xe65d6, .nr_mfns = 0x1},
+    {.first_mfn = 0xe65d7, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6198, .nr_mfns = 0x1},
+    {.first_mfn = 0xe61a0, .nr_mfns = 0x1},
+    {.first_mfn = 0xe61a0, .nr_mfns = 0x1},
+    {.first_mfn = 0xe61b0, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6260, .nr_mfns = 0x10},
+    {.first_mfn = 0xdfd91, .nr_mfns = 0x1},
+    {.first_mfn = 0xe6078, .nr_mfns = 0x1},
 };
 
 static uint32_t domd_irqs[] = {
@@ -269,34 +284,34 @@ static ssize_t get_ipl_image_size(void* image_info, uint64_t* size)
 
 struct xen_domain_cfg domd_cfg = {
     .machine_dt_compat = "renesas,r8a779f0",
-    .mem_kb = 0x100000, /* 1Gb */
+    .mem_kb            = 0x100000, /* 1Gb */
 
-    .flags = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),
-    .max_evtchns = 10,
-    .max_vcpus = 4,
-    .gnt_frames = 32,
+    .flags               = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),
+    .max_evtchns         = 10,
+    .max_vcpus           = 4,
+    .gnt_frames          = 32,
     .max_maptrack_frames = 1,
 
-    .iomems = domd_iomems,
+    .iomems    = domd_iomems,
     .nr_iomems = ARRAY_SIZE(domd_iomems),
 
-    .irqs = domd_irqs,
+    .irqs    = domd_irqs,
     .nr_irqs = ARRAY_SIZE(domd_irqs),
 
     .gic_version = XEN_DOMCTL_CONFIG_GIC_V3,
-    .tee_type = XEN_DOMCTL_CONFIG_TEE_OPTEE,
+    .tee_type    = XEN_DOMCTL_CONFIG_TEE_OPTEE,
 
-    .dtdevs = domd_dtdevs,
+    .dtdevs    = domd_dtdevs,
     .nr_dtdevs = ARRAY_SIZE(domd_dtdevs),
 
-    .dt_passthrough = dt_passthrough_nodes,
+    .dt_passthrough    = dt_passthrough_nodes,
     .nr_dt_passthrough = ARRAY_SIZE(dt_passthrough_nodes),
-    .load_image_bytes = load_ipl_image,
-    .get_image_size = get_ipl_image_size,
-    .image_info = NULL,
+    .load_image_bytes  = load_ipl_image,
+    .get_image_size    = get_ipl_image_size,
+    .image_info        = NULL,
 
     .dtb_start = __dtb_ipl_start,
-    .dtb_end = __dtb_ipl_end,
+    .dtb_end   = __dtb_ipl_end,
 };
 
 int create_domains(void)
