@@ -86,7 +86,7 @@ aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
 
     auto err = mInstanceDatabase.ReadRecords([&instances, this](const InstanceInfo& instanceInfo) -> aos::Error {
         auto instance = ConvertInstanceInfo(instanceInfo);
-        auto err = instances.PushBack(instance);
+        auto err      = instances.PushBack(instance);
         if (!err.IsNone()) {
             return AOS_ERROR_WRAP(err);
         }
@@ -188,13 +188,13 @@ aos::InstanceInfo Storage::ConvertInstanceInfo(const InstanceInfo& instance)
 {
     aos::InstanceInfo instanceInfo;
 
-    instanceInfo.mInstanceIdent.mInstance = instance.mInstanceIdent.mInstance;
+    instanceInfo.mInstanceIdent.mInstance  = instance.mInstanceIdent.mInstance;
     instanceInfo.mInstanceIdent.mSubjectID = instance.mInstanceIdent.mSubjectID;
     instanceInfo.mInstanceIdent.mServiceID = instance.mInstanceIdent.mServiceID;
-    instanceInfo.mPriority = instance.mPriority;
-    instanceInfo.mStatePath = instance.mStatePath;
-    instanceInfo.mStoragePath = instance.mStoragePath;
-    instanceInfo.mUID = instance.mUID;
+    instanceInfo.mPriority                 = instance.mPriority;
+    instanceInfo.mStatePath                = instance.mStatePath;
+    instanceInfo.mStoragePath              = instance.mStoragePath;
+    instanceInfo.mUID                      = instance.mUID;
 
     return instanceInfo;
 }
@@ -217,12 +217,12 @@ aos::sm::servicemanager::ServiceData Storage::ConvertServiceData(const Storage::
 {
     aos::sm::servicemanager::ServiceData serviceData;
 
-    serviceData.mVersionInfo.mAosVersion = service.mVersionInfo.mAosVersion;
+    serviceData.mVersionInfo.mAosVersion    = service.mVersionInfo.mAosVersion;
     serviceData.mVersionInfo.mVendorVersion = service.mVersionInfo.mVendorVersion;
-    serviceData.mVersionInfo.mDescription = service.mVersionInfo.mDescription;
-    serviceData.mServiceID = service.mServiceID;
-    serviceData.mProviderID = service.mProviderID;
-    serviceData.mImagePath = service.mImagePath;
+    serviceData.mVersionInfo.mDescription   = service.mVersionInfo.mDescription;
+    serviceData.mServiceID                  = service.mServiceID;
+    serviceData.mProviderID                 = service.mProviderID;
+    serviceData.mImagePath                  = service.mImagePath;
 
     return serviceData;
 }
