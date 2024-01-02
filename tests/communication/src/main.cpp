@@ -240,7 +240,7 @@ ZTEST_SUITE(
 
         // Wait node configuration message
 
-        servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+        servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
         err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
         zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -281,7 +281,7 @@ ZTEST_F(communication, test_Connection)
 
     // Wait node configuration message
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -322,14 +322,14 @@ ZTEST_F(communication, test_GetUnitConfigStatus)
     sResourceManager.UpdateUnitConfig(version, unitConfig);
     sResourceManager.SetError(aos::ErrorEnum::eFailed);
 
-    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
     incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_get_unit_config_status_tag;
 
     auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -347,7 +347,7 @@ ZTEST_F(communication, test_CheckUnitConfig)
 {
     auto                                                 version    = "1.2.0";
     auto                                                 unitConfig = "unitConfig";
-    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
     incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_check_unit_config_tag;
     strcpy(incomingMessage.SMIncomingMessage.check_unit_config.vendor_version, version);
@@ -356,7 +356,7 @@ ZTEST_F(communication, test_CheckUnitConfig)
     auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -370,7 +370,7 @@ ZTEST_F(communication, test_SetUnitConfig)
 {
     auto                                                 version    = "1.2.0";
     auto                                                 unitConfig = "unitConfig";
-    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
     incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_set_unit_config_tag;
     strcpy(incomingMessage.SMIncomingMessage.set_unit_config.vendor_version, version);
@@ -379,7 +379,7 @@ ZTEST_F(communication, test_SetUnitConfig)
     auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -393,7 +393,7 @@ ZTEST_F(communication, test_SetUnitConfig)
 
 ZTEST_F(communication, test_RunInstances)
 {
-    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
     incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_run_instances_tag;
     incomingMessage.SMIncomingMessage.run_instances.force_restart = true;
@@ -494,7 +494,7 @@ ZTEST_F(communication, test_RunInstances)
 ZTEST_F(communication, test_ImageContentInfo)
 {
     auto                                                 aosContentInfo = ImageContentInfo {42};
-    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
     uint8_t                                              sha256[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
     aosContentInfo.mFiles.EmplaceBack(FileInfo {"path/to/file1", aos::Array<uint8_t>(sha256, sizeof(sha256)), 1024});
@@ -530,7 +530,7 @@ ZTEST_F(communication, test_ImageContent)
 {
     uint8_t data[]       = {12, 23, 45, 32, 21, 56, 12, 18};
     auto    aosFileChunk = FileChunk {43, "path/to/file1", 4, 1, aos::Array<uint8_t>(data, sizeof(data))};
-    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_zero;
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
     incomingMessage.which_SMIncomingMessage                    = servicemanager_v3_SMIncomingMessages_image_content_tag;
     incomingMessage.SMIncomingMessage.image_content.request_id = aosFileChunk.mRequestID;
@@ -562,7 +562,7 @@ ZTEST_F(communication, test_InstancesRunStatus)
     auto err = sCommunication.InstancesRunStatus(sendRunStatus);
     zassert_true(err.IsNone(), "Error sending run instances status: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -593,7 +593,7 @@ ZTEST_F(communication, test_InstancesUpdateStatus)
     auto err = sCommunication.InstancesUpdateStatus(sendUpdateStatus);
     zassert_true(err.IsNone(), "Error sending update instances status: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -619,7 +619,7 @@ ZTEST_F(communication, test_ImageContentRequest)
     auto err = sCommunication.SendImageContentRequest(sendContentRequest);
     zassert_true(err.IsNone(), "Error sending image content request: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
@@ -658,7 +658,7 @@ ZTEST_F(communication, test_MonitoringData)
     auto err = sCommunication.SendMonitoringData(sendMonitoringData);
     zassert_true(err.IsNone(), "Error sending monitoring data: %s", err.Message());
 
-    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_zero;
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
     err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());

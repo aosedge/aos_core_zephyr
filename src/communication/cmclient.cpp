@@ -77,7 +77,7 @@ aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& i
     auto& pbRunStatus     = outgoingMessage->SMOutgoingMessage.run_instances_status;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_run_instances_status_tag;
-    pbRunStatus = servicemanager_v3_RunInstancesStatus servicemanager_v3_RunInstancesStatus_init_zero;
+    pbRunStatus = servicemanager_v3_RunInstancesStatus servicemanager_v3_RunInstancesStatus_init_default;
 
     outgoingMessage->SMOutgoingMessage.run_instances_status.instances_count = instances.Size();
 
@@ -96,7 +96,7 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
     auto& pbUpdateStatus  = outgoingMessage->SMOutgoingMessage.update_instances_status;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_update_instances_status_tag;
-    pbUpdateStatus = servicemanager_v3_UpdateInstancesStatus servicemanager_v3_UpdateInstancesStatus_init_zero;
+    pbUpdateStatus = servicemanager_v3_UpdateInstancesStatus servicemanager_v3_UpdateInstancesStatus_init_default;
 
     outgoingMessage->SMOutgoingMessage.update_instances_status.instances_count = instances.Size();
 
@@ -115,7 +115,7 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
     auto& pbContentRequest = outgoingMessage->SMOutgoingMessage.image_content_request;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_image_content_request_tag;
-    pbContentRequest = servicemanager_v3_ImageContentRequest servicemanager_v3_ImageContentRequest_init_zero;
+    pbContentRequest = servicemanager_v3_ImageContentRequest servicemanager_v3_ImageContentRequest_init_default;
 
     StringToPB(request.mURL, pbContentRequest.url);
     pbContentRequest.request_id = request.mRequestID;
@@ -132,7 +132,7 @@ aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringDat
     auto& pbMonitoringData = outgoingMessage->SMOutgoingMessage.node_monitoring;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_monitoring_tag;
-    pbMonitoringData = servicemanager_v3_NodeMonitoring servicemanager_v3_NodeMonitoring_init_zero;
+    pbMonitoringData = servicemanager_v3_NodeMonitoring servicemanager_v3_NodeMonitoring_init_default;
 
     pbMonitoringData.has_monitoring_data = true;
     MonitoringDataToPB(monitoringData.mMonitoringData, pbMonitoringData.monitoring_data);
@@ -164,7 +164,7 @@ aos::Error CMClient::SendNodeConfiguration()
     auto& pbNodeConfiguration = outgoingMessage->SMOutgoingMessage.node_configuration;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_node_configuration_tag;
-    pbNodeConfiguration = servicemanager_v3_NodeConfiguration servicemanager_v3_NodeConfiguration_init_zero;
+    pbNodeConfiguration = servicemanager_v3_NodeConfiguration servicemanager_v3_NodeConfiguration_init_default;
 
     auto err = mResourceMonitor->GetNodeInfo(*nodeInfo);
     if (!err.IsNone()) {
@@ -255,7 +255,7 @@ aos::Error CMClient::ProcessGetUnitConfigStatus()
     auto& pbConfigStatus  = outgoingMessage->SMOutgoingMessage.unit_config_status;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
-    pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_zero;
+    pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_default;
 
     aos::StaticString<aos::cVendorVersionLen> version;
 
@@ -279,7 +279,7 @@ aos::Error CMClient::ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitCon
     auto& pbConfigStatus  = outgoingMessage->SMOutgoingMessage.unit_config_status;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
-    pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_zero;
+    pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_default;
 
     auto err = mResourceManager->CheckUnitConfig(pbUnitConfig.vendor_version, pbUnitConfig.unit_config);
     if (!err.IsNone()) {
@@ -304,7 +304,7 @@ aos::Error CMClient::ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig&
     auto& pbConfigStatus  = outgoingMessage->SMOutgoingMessage.unit_config_status;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
-    pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_zero;
+    pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_default;
 
     auto err = mResourceManager->UpdateUnitConfig(pbUnitConfig.vendor_version, pbUnitConfig.unit_config);
     if (!err.IsNone()) {
