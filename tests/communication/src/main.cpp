@@ -24,8 +24,8 @@
 #include "mocks/connectionsubscribermock.hpp"
 #include "mocks/downloadermock.hpp"
 #include "mocks/launchermock.hpp"
+#include "mocks/monitoringmock.hpp"
 #include "mocks/resourcemanagermock.hpp"
-#include "mocks/resourcemonitormock.hpp"
 
 /***********************************************************************************************************************
  * Types

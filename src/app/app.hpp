@@ -8,7 +8,7 @@
 #ifndef APP_HPP_
 #define APP_HPP_
 
-#include <aos/common/resourcemonitor.hpp>
+#include <aos/common/monitoring.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
 #include <aos/sm/launcher.hpp>
