@@ -13,6 +13,7 @@
 
 #include <proto/servicemanager/v3/servicemanager.pb.h>
 
+#include "clocksync/clocksync.hpp"
 #include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
@@ -35,11 +36,12 @@ public:
      * @param resourceManager resource manager instance.
      * @param resourceMonitor resource monitor instance.
      * @param downloader downloader instance.
+     * @param clockSync clock sync instance.
      * @param messageSender message sender instance.
      * @return aos::Error.
      */
     aos::Error Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader,
+        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync,
         MessageSenderItf& messageSender);
 
     /**
@@ -82,6 +84,13 @@ public:
     aos::Error SendNodeConfiguration();
 
     /**
+     * Sends clock sync request.
+     *
+     * @return Error.
+     */
+    aos::Error SendClockSyncRequest();
+
+    /**
      * Processes received message.
      *
      * @param channel communication channel on which message is received.
@@ -118,6 +127,7 @@ private:
     aos::Error ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances);
     aos::Error ProcessImageContentInfo(const servicemanager_v3_ImageContentInfo& pbContentInfo);
     aos::Error ProcessImageContent(const servicemanager_v3_ImageContent& pbContent);
+    aos::Error ProcessClockSync(const servicemanager_v3_ClockSync& pbClockSync);
     aos::Error SendOutgoingMessage(Channel channel, const servicemanager_v3_SMOutgoingMessages& message,
         aos::Error messageError = aos::ErrorEnum::eNone);
 
@@ -125,6 +135,7 @@ private:
     ResourceManagerItf*                  mResourceManager {};
     aos::monitoring::ResourceMonitorItf* mResourceMonitor {};
     DownloadReceiverItf*                 mDownloader {};
+    ClockSyncItf*                        mClockSync {};
     MessageSenderItf*                    mMessageSender {};
 
     aos::StaticAllocator<sizeof(servicemanager_v3_SMIncomingMessages) + sizeof(servicemanager_v3_SMOutgoingMessages)

@@ -50,11 +50,13 @@ Communication::~Communication()
 
 aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
     aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader)
+    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync)
 {
     LOG_DBG() << "Initialize communication";
 
-    auto err = mCMClient.Init(launcher, resourceManager, resourceMonitor, downloader, *this);
+    mClockSync = &clockSync;
+
+    auto err = mCMClient.Init(launcher, resourceManager, resourceMonitor, downloader, clockSync, *this);
     if (!err.IsNone()) {
         return err;
     }
@@ -96,6 +98,33 @@ aos::Error Communication::SendMonitoringData(const aos::monitoring::NodeMonitori
     aos::LockGuard lock(mMutex);
 
     return mCMClient.SendMonitoringData(monitoringData);
+}
+
+aos::Error Communication::SendClockSyncRequest()
+{
+    aos::LockGuard lock(mMutex);
+
+    return mCMClient.SendClockSyncRequest();
+}
+
+void Communication::ClockSynced()
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_DBG() << "Clock synced";
+
+    mClockSynced = true;
+    mCondVar.NotifyOne();
+}
+
+void Communication::ClockUnsynced()
+{
+    aos::LockGuard lock(mMutex);
+
+    LOG_WRN() << "Clock unsynced";
+
+    mClockSynced = false;
+    mCondVar.NotifyOne();
 }
 
 aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
@@ -148,25 +177,13 @@ void Communication::ChannelHandler(Channel channel)
         aos::Error err;
 
         {
-            aos::LockGuard lock(mMutex);
+            aos::UniqueLock lock(mMutex);
 
             if (mClose) {
                 return;
             }
 
-            err = mChannels[channel]->Connect();
-            if (err.IsNone()) {
-                LOG_DBG() << "Channel connected: channel = " << channel;
-
-                if (GetNumConnectedChannels() == static_cast<size_t>(ChannelEnum::eNumChannels)) {
-                    err = mCMClient.SendNodeConfiguration();
-                    if (!err.IsNone()) {
-                        LOG_ERR() << "Can't send node configuration: " << err;
-                    }
-
-                    ConnectNotification(true);
-                }
-            }
+            err = ConnectChannel(lock, channel);
         }
 
         if (!err.IsNone()) {
@@ -189,18 +206,75 @@ void Communication::ChannelHandler(Channel channel)
                 return;
             }
 
-            err = mChannels[channel]->Close();
+            err = CloseChannel(channel);
             if (!err.IsNone()) {
                 LOG_ERR() << "Error closing channel: channel = " << channel << ", err = " << err;
             }
+        }
+    }
+}
 
-            LOG_DBG() << "Channel disconnected: channel = " << channel;
+aos::Error Communication::ConnectChannel(aos::UniqueLock& lock, Channel channel)
+{
+    if (channel == ChannelEnum::eSecure) {
+        if (!mClockSynced) {
+            LOG_DBG() << "Wait open channel is connected...";
 
-            if (GetNumConnectedChannels() == static_cast<size_t>(ChannelEnum::eNumChannels) - 1) {
-                ConnectNotification(false);
+            auto err = mCondVar.Wait(lock, [this]() { return mChannels[Channel(ChannelEnum::eOpen)]->IsConnected(); });
+            if (!err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
+
+            err = mClockSync->Start();
+            if (!err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
+
+            LOG_DBG() << "Wait clock is synced...";
+
+            err = mCondVar.Wait(lock, [this]() { return mClockSynced; });
+            if (!err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
             }
         }
     }
+
+    auto err = mChannels[channel]->Connect();
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    LOG_DBG() << "Channel connected: channel = " << channel;
+
+    mCondVar.NotifyOne();
+
+    if (GetNumConnectedChannels() == static_cast<size_t>(ChannelEnum::eNumChannels)) {
+        err = mCMClient.SendNodeConfiguration();
+        if (!err.IsNone()) {
+            LOG_ERR() << "Can't send node configuration: " << err;
+        }
+
+        ConnectNotification(true);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error Communication::CloseChannel(Channel channel)
+{
+    auto err = mChannels[channel]->Close();
+
+    LOG_DBG() << "Channel closed: channel = " << channel;
+
+    if (GetNumConnectedChannels() != static_cast<size_t>(ChannelEnum::eNumChannels)) {
+        ConnectNotification(false);
+    }
+
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error Communication::SendMessage(Channel channel, AosVChanSource source, const aos::String& methodName,

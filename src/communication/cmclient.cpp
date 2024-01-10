@@ -57,7 +57,7 @@ static void MonitoringDataToPB(
  **********************************************************************************************************************/
 
 aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader,
+    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync,
     MessageSenderItf& messageSender)
 {
     LOG_DBG() << "Initialize CM client";
@@ -66,6 +66,7 @@ aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceMana
     mResourceManager = &resourceManager;
     mResourceMonitor = &resourceMonitor;
     mDownloader      = &downloader;
+    mClockSync       = &clockSync;
     mMessageSender   = &messageSender;
 
     return aos::ErrorEnum::eNone;
@@ -195,6 +196,19 @@ aos::Error CMClient::SendNodeConfiguration()
     return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
 }
 
+aos::Error CMClient::SendClockSyncRequest()
+{
+    auto  outgoingMessage    = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
+    auto& pbClockSyncRequest = outgoingMessage->SMOutgoingMessage.clock_sync_request;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_clock_sync_request_tag;
+    pbClockSyncRequest = servicemanager_v3_ClockSyncRequest servicemanager_v3_ClockSyncRequest_init_default;
+
+    LOG_DBG() << "Send SM message: message = ClockSyncRequest";
+
+    return SendOutgoingMessage(ChannelEnum::eOpen, *outgoingMessage);
+}
+
 aos::Error CMClient::ProcessMessage(
     Channel channel, const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data)
 {
@@ -234,6 +248,10 @@ aos::Error CMClient::ProcessMessage(
 
     case servicemanager_v3_SMIncomingMessages_image_content_tag:
         err = ProcessImageContent(message->SMIncomingMessage.image_content);
+        break;
+
+    case servicemanager_v3_SMIncomingMessages_clock_sync_tag:
+        err = ProcessClockSync(message->SMIncomingMessage.clock_sync);
         break;
 
     default:
@@ -433,6 +451,22 @@ aos::Error CMClient::ProcessImageContent(const servicemanager_v3_ImageContent& p
     PBToByteArray(pbContent.data, chunk->mData);
 
     auto err = mDownloader->ReceiveFileChunk(*chunk);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error CMClient::ProcessClockSync(const servicemanager_v3_ClockSync& pbClockSync)
+{
+    LOG_DBG() << "Receive SM message: message = ClockSync";
+
+    if (!pbClockSync.has_current_time) {
+        return aos::ErrorEnum::eInvalidArgument;
+    }
+
+    auto err = mClockSync->Sync(aos::Time::Unix(pbClockSync.current_time.seconds, pbClockSync.current_time.nanos));
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
