@@ -5,10 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef RESOURCEMONITORMOCK_HPP_
-#define RESOURCEMONITORMOCK_HPP_
+#ifndef MONITORINGMOCK_HPP_
+#define MONITORINGMOCK_HPP_
 
-#include <aos/common/resourcemonitor.hpp>
+#include <aos/common/monitoring.hpp>
 
 class ResourceMonitorMock : public aos::monitoring::ResourceMonitorItf {
 public:

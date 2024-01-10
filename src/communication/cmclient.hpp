@@ -8,7 +8,7 @@
 #ifndef CMCLIENT_HPP_
 #define CMCLIENT_HPP_
 
-#include <aos/common/resourcemonitor.hpp>
+#include <aos/common/monitoring.hpp>
 #include <aos/sm/launcher.hpp>
 
 #include <proto/servicemanager/v3/servicemanager.pb.h>
