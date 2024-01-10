@@ -84,12 +84,14 @@ public:
     /**
      * Processes received message.
      *
+     * @param channel communication channel on which message is received.
      * @param methodName protocol method name.
      * @param requestID protocol request ID.
      * @param data raw message data.
      * @return aos::Error.
      */
-    aos::Error ProcessMessage(const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data);
+    aos::Error ProcessMessage(
+        Channel channel, const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data);
 
     /**
      * Returns pointer for receive buffer.
@@ -110,14 +112,14 @@ private:
     static constexpr auto cNodeType = CONFIG_AOS_NODE_TYPE;
     static constexpr auto cRunner   = "xrun";
 
-    aos::Error ProcessGetUnitConfigStatus();
-    aos::Error ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
-    aos::Error ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig& pbUnitConfig);
+    aos::Error ProcessGetUnitConfigStatus(Channel channel);
+    aos::Error ProcessCheckUnitConfig(Channel channel, const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
+    aos::Error ProcessSetUnitConfig(Channel channel, const servicemanager_v3_SetUnitConfig& pbUnitConfig);
     aos::Error ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances);
     aos::Error ProcessImageContentInfo(const servicemanager_v3_ImageContentInfo& pbContentInfo);
     aos::Error ProcessImageContent(const servicemanager_v3_ImageContent& pbContent);
-    aos::Error SendOutgoingMessage(
-        const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError = aos::ErrorEnum::eNone);
+    aos::Error SendOutgoingMessage(Channel channel, const servicemanager_v3_SMOutgoingMessages& message,
+        aos::Error messageError = aos::ErrorEnum::eNone);
 
     aos::sm::launcher::LauncherItf*      mLauncher {};
     ResourceManagerItf*                  mResourceManager {};

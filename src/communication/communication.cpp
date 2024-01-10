@@ -277,7 +277,7 @@ aos::Error Communication::ProcessMessages(Channel channel)
 
         switch (header->mSource) {
         case AOS_VCHAN_SM:
-            err = mCMClient.ProcessMessage(header->mMethodName, header->mRequestID, data);
+            err = mCMClient.ProcessMessage(channel, header->mMethodName, header->mRequestID, data);
             break;
 
         case AOS_VCHAN_IAM:

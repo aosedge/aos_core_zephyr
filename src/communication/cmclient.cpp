@@ -87,7 +87,7 @@ aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& i
 
     LOG_DBG() << "Send SM message: message = RunInstancesStatus";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
 }
 
 aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
@@ -106,7 +106,7 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
 
     LOG_DBG() << "Send SM message: message = UpdateInstancesStatus";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
 }
 
 aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
@@ -123,7 +123,7 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
 
     LOG_DBG() << "Send SM message: message = ImageContentRequest";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
 }
 
 aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData)
@@ -154,7 +154,7 @@ aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringDat
 
     LOG_DBG() << "Send SM message: message = NodeMonitoring";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
 }
 
 aos::Error CMClient::SendNodeConfiguration()
@@ -192,10 +192,11 @@ aos::Error CMClient::SendNodeConfiguration()
 
     LOG_DBG() << "Send SM message: message = NodeConfiguration";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
 }
 
-aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data)
+aos::Error CMClient::ProcessMessage(
+    Channel channel, const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data)
 {
     (void)methodName;
 
@@ -212,15 +213,15 @@ aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requ
 
     switch (message->which_SMIncomingMessage) {
     case servicemanager_v3_SMIncomingMessages_get_unit_config_status_tag:
-        err = ProcessGetUnitConfigStatus();
+        err = ProcessGetUnitConfigStatus(channel);
         break;
 
     case servicemanager_v3_SMIncomingMessages_check_unit_config_tag:
-        err = ProcessCheckUnitConfig(message->SMIncomingMessage.check_unit_config);
+        err = ProcessCheckUnitConfig(channel, message->SMIncomingMessage.check_unit_config);
         break;
 
     case servicemanager_v3_SMIncomingMessages_set_unit_config_tag:
-        err = ProcessSetUnitConfig(message->SMIncomingMessage.set_unit_config);
+        err = ProcessSetUnitConfig(channel, message->SMIncomingMessage.set_unit_config);
         break;
 
     case servicemanager_v3_SMIncomingMessages_run_instances_tag:
@@ -247,7 +248,7 @@ aos::Error CMClient::ProcessMessage(const aos::String& methodName, uint64_t requ
  * Private
  **********************************************************************************************************************/
 
-aos::Error CMClient::ProcessGetUnitConfigStatus()
+aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel)
 {
     LOG_DBG() << "Receive SM message: message = GetUnitConfigStatus";
 
@@ -268,10 +269,10 @@ aos::Error CMClient::ProcessGetUnitConfigStatus()
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(channel, *outgoingMessage);
 }
 
-aos::Error CMClient::ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitConfig& pbUnitConfig)
+aos::Error CMClient::ProcessCheckUnitConfig(Channel channel, const servicemanager_v3_CheckUnitConfig& pbUnitConfig)
 {
     LOG_DBG() << "Receive SM message: message = CheckUnitConfig";
 
@@ -293,10 +294,10 @@ aos::Error CMClient::ProcessCheckUnitConfig(const servicemanager_v3_CheckUnitCon
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(channel, *outgoingMessage);
 }
 
-aos::Error CMClient::ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig& pbUnitConfig)
+aos::Error CMClient::ProcessSetUnitConfig(Channel channel, const servicemanager_v3_SetUnitConfig& pbUnitConfig)
 {
     LOG_DBG() << "Receive SM message: message = SetUnitConfig";
 
@@ -315,7 +316,7 @@ aos::Error CMClient::ProcessSetUnitConfig(const servicemanager_v3_SetUnitConfig&
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendOutgoingMessage(*outgoingMessage);
+    return SendOutgoingMessage(channel, *outgoingMessage);
 }
 
 aos::Error CMClient::ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances)
@@ -439,7 +440,8 @@ aos::Error CMClient::ProcessImageContent(const servicemanager_v3_ImageContent& p
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error CMClient::SendOutgoingMessage(const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError)
+aos::Error CMClient::SendOutgoingMessage(
+    Channel channel, const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError)
 {
     auto outStream = pb_ostream_from_buffer(static_cast<pb_byte_t*>(mSendBuffer.Get()), mSendBuffer.Size());
 
@@ -452,6 +454,6 @@ aos::Error CMClient::SendOutgoingMessage(const servicemanager_v3_SMOutgoingMessa
         }
     }
 
-    return mMessageSender->SendMessage(ChannelEnum::eSecure, AOS_VCHAN_SM, "", 0,
+    return mMessageSender->SendMessage(channel, AOS_VCHAN_SM, "", 0,
         aos::Array<uint8_t>(static_cast<uint8_t*>(mSendBuffer.Get()), outStream.bytes_written), messageError);
 }
