@@ -23,6 +23,7 @@
 class Communication : public aos::sm::launcher::InstanceStatusReceiverItf,
                       public DownloadRequesterItf,
                       public aos::monitoring::SenderItf,
+                      public ClockSyncSenderItf,
                       public aos::ConnectionPublisherItf,
                       private MessageSenderItf,
                       private aos::NonCopyable {
@@ -36,11 +37,12 @@ public:
      * @param resourceManager resource manager instance.
      * @param resourceMonitor resource monitor instance.
      * @param downloader downloader instance.
+     * @param clockSync clock sync instance.
      * @return aos::Error.
      */
     aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
         aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader);
+        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync);
 
     /**
      * Destructor.
@@ -80,6 +82,23 @@ public:
     aos::Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData) override;
 
     /**
+     * Sends clock sync request.
+     *
+     * @return Error.
+     */
+    aos::Error SendClockSyncRequest() override;
+
+    /**
+     * Notifies sender that clock is synced.
+     */
+    void ClockSynced() override;
+
+    /**
+     * Notifies sender that clock is unsynced.
+     */
+    void ClockUnsynced() override;
+
+    /**
      * Subscribes the provided ConnectionSubscriberItf to this object.
      *
      * @param subscriber The ConnectionSubscriberItf that wants to subscribe.
@@ -102,18 +121,25 @@ private:
     void       ConnectNotification(bool connected);
     aos::Error StartChannelThreads();
     void       ChannelHandler(Channel channel);
+    aos::Error ConnectChannel(aos::UniqueLock& lock, Channel channel);
+    aos::Error CloseChannel(Channel channel);
     size_t     GetNumConnectedChannels();
     aos::Error ProcessMessages(Channel channel);
 
-    aos::Mutex    mMutex;
-    aos::Thread<> mChannelThreads[static_cast<int>(ChannelEnum::eNumChannels)];
+    aos::Mutex               mMutex;
+    aos::ConditionalVariable mCondVar;
+    aos::Thread<>            mChannelThreads[static_cast<int>(ChannelEnum::eNumChannels)];
 
     CommChannelItf* mChannels[static_cast<int>(ChannelEnum::eNumChannels)] {};
     bool            mClose = false;
 
     aos::StaticArray<aos::ConnectionSubscriberItf*, cMaxSubscribers> mConnectionSubscribers;
 
+    ClockSyncItf* mClockSync {};
+
     CMClient mCMClient;
+
+    bool mClockSynced = false;
 };
 
 #endif

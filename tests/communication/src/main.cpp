@@ -20,6 +20,7 @@
 #include "utils/checksum.hpp"
 #include "utils/pbconvert.hpp"
 
+#include "mocks/clocksyncmock.hpp"
 #include "mocks/commchannelmock.hpp"
 #include "mocks/connectionsubscribermock.hpp"
 #include "mocks/downloadermock.hpp"
@@ -84,6 +85,7 @@ LauncherMock           sLauncher;
 ResourceManagerMock    sResourceManager;
 ResourceMonitorMock    sResourceMonitor;
 DownloaderMock         sDownloader;
+ClockSyncMock          sClockSync;
 static Communication   sCommunication;
 
 /***********************************************************************************************************************
@@ -235,8 +237,10 @@ ZTEST_SUITE(
         aos::Log::SetCallback(TestLogCallback);
 
         auto err = sCommunication.Init(
-            sOpenChannel, sSecureChannel, sLauncher, sResourceManager, sResourceMonitor, sDownloader);
+            sOpenChannel, sSecureChannel, sLauncher, sResourceManager, sResourceMonitor, sDownloader, sClockSync);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
+
+        sCommunication.ClockSynced();
 
         // Wait node configuration message
 
@@ -244,6 +248,9 @@ ZTEST_SUITE(
 
         err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
         zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+        zassert_equal(
+            outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_configuration_tag);
 
         return nullptr;
     },
@@ -253,7 +260,7 @@ ZTEST_SUITE(
  * Tests
  **********************************************************************************************************************/
 
-ZTEST_F(communication, test_Connection)
+ZTEST_F(communication, test_NodeConfiguration)
 {
     ConnectionSubscriberMock subscriber;
 
@@ -692,4 +699,61 @@ ZTEST_F(communication, test_MonitoringData)
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_monitoring_tag);
     zassert_equal(receiveMonitoringData, sendMonitoringData);
+}
+
+ZTEST_F(communication, test_ClockSync)
+{
+    sCommunication.ClockUnsynced();
+    sClockSync.SetStarted(false);
+
+    sSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
+
+    // Wait clock sync start
+
+    auto err = sClockSync.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting clock sync start: %s", err.Message());
+
+    zassert_true(sClockSync.GetStarted());
+
+    // Wait clock sync request
+
+    err = sCommunication.SendClockSyncRequest();
+    zassert_true(err.IsNone(), "Error sending clock sync request: %s", err.Message());
+
+    servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
+
+    err = ReceiveCMOutgoingMessage(sOpenChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_clock_sync_request_tag);
+
+    // Send clock sync
+
+    servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
+
+    incomingMessage.which_SMIncomingMessage                       = servicemanager_v3_SMIncomingMessages_clock_sync_tag;
+    incomingMessage.SMIncomingMessage.clock_sync.has_current_time = true;
+    incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds = 43;
+    incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos   = 234;
+
+    err = SendCMIncomingMessage(sOpenChannel, AOS_VCHAN_SM, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
+
+    err = sClockSync.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting clock sync start: %s", err.Message());
+
+    zassert_equal(sClockSync.GetSyncTime(),
+        aos::Time::Unix(incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds,
+            incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos));
+
+    sCommunication.ClockSynced();
+
+    // Wait node configuration
+
+    outgoingMessage = servicemanager_v3_SMOutgoingMessages servicemanager_v3_SMOutgoingMessages_init_default;
+
+    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_configuration_tag);
 }
