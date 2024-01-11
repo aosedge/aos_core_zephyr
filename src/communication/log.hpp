@@ -10,9 +10,9 @@
 
 #include "logger/logger.hpp"
 
-#define LOG_DBG() LOG_MODULE_DBG(static_cast<aos::LogModule::EnumType>(Logger::Module::eCMClient))
-#define LOG_INF() LOG_MODULE_INF(static_cast<aos::LogModule::EnumType>(Logger::Module::eCMClient))
-#define LOG_WRN() LOG_MODULE_WRN(static_cast<aos::LogModule::EnumType>(Logger::Module::eCMClient))
-#define LOG_ERR() LOG_MODULE_ERR(static_cast<aos::LogModule::EnumType>(Logger::Module::eCMClient))
+#define LOG_DBG() LOG_MODULE_DBG(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
+#define LOG_INF() LOG_MODULE_INF(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
+#define LOG_WRN() LOG_MODULE_WRN(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
+#define LOG_ERR() LOG_MODULE_ERR(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
 
 #endif

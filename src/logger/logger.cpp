@@ -49,17 +49,22 @@
         }                                                                                                              \
     }
 
+// internal logs
+
 LOG_CALLBACK(app);
-LOG_CALLBACK(cmclient);
-LOG_CALLBACK(launcher);
-LOG_CALLBACK(runner);
-LOG_CALLBACK(storage);
-LOG_CALLBACK(resourcemanager);
-LOG_CALLBACK(servicemanager);
+LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
+LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(resourceusageprovider);
+LOG_CALLBACK(runner);
+LOG_CALLBACK(storage);
+
+// Aos lib logs
+
+LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
+LOG_CALLBACK(servicemanager);
 
 /***********************************************************************************************************************
  * Public
@@ -77,28 +82,15 @@ void Logger::Init()
 void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
 {
     switch (static_cast<int>(module.GetValue())) {
+        // internal logs
+
     case static_cast<int>(Module::eApp):
         log_app::LogCallback(level, message);
 
         break;
 
-    case static_cast<int>(Module::eCMClient):
-        log_cmclient::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eRunner):
-        log_runner::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eStorage):
-        log_storage::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eResourceMgr):
-        log_resourcemanager::LogCallback(level, message);
+    case static_cast<int>(Module::eCommunication):
+        log_communication::LogCallback(level, message);
 
         break;
 
@@ -112,23 +104,40 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         break;
 
+    case static_cast<int>(Module::eResourceMgr):
+        log_resourcemanager::LogCallback(level, message);
+
+        break;
+
     case static_cast<int>(Module::eResourceProvider):
         log_resourceusageprovider::LogCallback(level, message);
 
         break;
+
+    case static_cast<int>(Module::eRunner):
+        log_runner::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eStorage):
+        log_storage::LogCallback(level, message);
+
+        break;
+
+        // Aos lib logs
 
     case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
         log_launcher::LogCallback(level, message);
 
         break;
 
-    case static_cast<int>(aos::LogModuleEnum::eSMServiceManager):
-        log_servicemanager::LogCallback(level, message);
+    case static_cast<int>(aos::LogModuleEnum::eCommonMonitoring):
+        log_monitoring::LogCallback(level, message);
 
         break;
 
-    case static_cast<int>(aos::LogModuleEnum::eCommonMonitoring):
-        log_monitoring::LogCallback(level, message);
+    case static_cast<int>(aos::LogModuleEnum::eSMServiceManager):
+        log_servicemanager::LogCallback(level, message);
 
         break;
 
