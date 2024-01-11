@@ -36,7 +36,7 @@ aos::Error Downloader::Init(DownloadRequesterItf& downloadRequester)
 
 aos::Error Downloader::Download(const aos::String& url, const aos::String& path, aos::DownloadContent contentType)
 {
-    aos::LockGuard lock(mMutex);
+    aos::UniqueLock lock(mMutex);
 
     LOG_DBG() << "Download: " << url;
 
@@ -58,7 +58,7 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
         return mErrProcessImageRequest;
     }
 
-    mWaitDownload.Wait([this] { return mFinishDownload; });
+    mWaitDownload.Wait(lock, [this] { return mFinishDownload; });
 
     err = mTimer.Stop();
     if (!err.IsNone()) {

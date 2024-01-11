@@ -242,7 +242,7 @@ private:
 
     DownloadRequesterItf*                mDownloadRequester {};
     aos::Mutex                           mMutex;
-    aos::ConditionalVariable             mWaitDownload {mMutex};
+    aos::ConditionalVariable             mWaitDownload;
     aos::Error                           mErrProcessImageRequest {};
     aos::StaticString<aos::cFilePathLen> mRequestedPath {};
     aos::StaticArray<DownloadResult, 32> mDownloadResults {};
