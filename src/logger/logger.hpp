@@ -20,7 +20,7 @@ public:
      */
     enum class Module {
         eApp = static_cast<int>(aos::LogModuleEnum::eNumModules),
-        eCMClient,
+        eCommunication,
         eRunner,
         eStorage,
         eResourceMgr,
