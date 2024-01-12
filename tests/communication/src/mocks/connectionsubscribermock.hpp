@@ -59,14 +59,27 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
-    bool IsConnected() const { return mConnected; }
+    bool IsConnected() const
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        return mConnected;
+    }
+
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        mConnected  = false;
+        mConnect    = false;
+        mDisconnect = false;
+    }
 
 private:
     bool                    mConnected  = false;
     bool                    mConnect    = false;
     bool                    mDisconnect = false;
     std::condition_variable mCV;
-    std::mutex              mMutex;
+    mutable std::mutex      mMutex;
 };
 
 #endif

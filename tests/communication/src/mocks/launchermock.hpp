@@ -69,6 +69,17 @@ public:
         return mForceRestart;
     }
 
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        mEventReceived = false;
+        mServices.Clear();
+        mLayers.Clear();
+        mInstances.Clear();
+        mForceRestart = false;
+    }
+
 private:
     static constexpr auto cWaitTimeout = std::chrono::seconds {1};
 

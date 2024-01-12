@@ -29,6 +29,12 @@
 #include "mocks/resourcemanagermock.hpp"
 
 /***********************************************************************************************************************
+ * Consts
+ **********************************************************************************************************************/
+
+static constexpr auto cWaitTimeout = std::chrono::seconds {5};
+
+/***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
 
@@ -46,8 +52,6 @@ struct communication_fixture {
 /***********************************************************************************************************************
  * Static
  **********************************************************************************************************************/
-
-static constexpr auto cWaitTimeout = std::chrono::seconds {5};
 
 static constexpr void PBToInstanceStatus(
     const servicemanager_v3_InstanceStatus& pbInstance, aos::InstanceStatus& aosInstance)
@@ -255,7 +259,18 @@ ZTEST_SUITE(
 
         return fixture;
     },
-    NULL, NULL, [](void* fixture) { delete static_cast<communication_fixture*>(fixture); });
+    [](void* fixture) {
+        auto f = static_cast<communication_fixture*>(fixture);
+
+        f->mOpenChannel.Clear();
+        f->mSecureChannel.Clear();
+        f->mLauncher.Clear();
+        f->mResourceManager.Clear();
+        f->mResourceMonitor.Clear();
+        f->mDownloader.Clear();
+        f->mClockSync.Clear();
+    },
+    NULL, [](void* fixture) { delete static_cast<communication_fixture*>(fixture); });
 
 /***********************************************************************************************************************
  * Tests
@@ -347,8 +362,6 @@ ZTEST_F(communication, test_GetUnitConfigStatus)
     zassert_equal(strcmp(outgoingMessage.SMOutgoingMessage.unit_config_status.error,
                       aos::Error(aos::ErrorEnum::eFailed).Message()),
         0);
-
-    fixture->mResourceManager.SetError(aos::ErrorEnum::eNone);
 }
 
 ZTEST_F(communication, test_CheckUnitConfig)
@@ -705,7 +718,6 @@ ZTEST_F(communication, test_MonitoringData)
 ZTEST_F(communication, test_ClockSync)
 {
     fixture->mCommunication.ClockUnsynced();
-    fixture->mClockSync.SetStarted(false);
 
     fixture->mSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
 

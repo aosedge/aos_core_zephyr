@@ -42,14 +42,12 @@ public:
     const FileChunk& GetFileChunk() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
-
         return mFileChunk;
     }
 
     const ImageContentInfo& GetContentInfo() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
-
         return mContentInfo;
     }
 
@@ -64,6 +62,15 @@ public:
         mEventReceived = false;
 
         return aos::ErrorEnum::eNone;
+    }
+
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        mEventReceived = false;
+        mContentInfo   = ImageContentInfo();
+        mFileChunk     = FileChunk();
     }
 
 private:

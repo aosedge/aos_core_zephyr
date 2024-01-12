@@ -28,6 +28,8 @@ public:
 
     void SetNodeInfo(const aos::monitoring::NodeInfo& nodeInfo) { mNodeInfo = nodeInfo; }
 
+    void Clear() { mNodeInfo = aos::monitoring::NodeInfo(); }
+
 private:
     aos::monitoring::NodeInfo mNodeInfo;
 };

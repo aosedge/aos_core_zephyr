@@ -32,9 +32,18 @@ public:
         return mError;
     };
 
-    void               SetError(const aos::Error& err) { mError = err; }
+    void SetError(const aos::Error& err) { mError = err; }
+
     const std::string& GetVersion() const { return mVersion; }
+
     const std::string& GetUnitConfig() const { return mUnitConfig; }
+
+    void Clear()
+    {
+        mVersion.clear();
+        mUnitConfig.clear();
+        mError = aos::ErrorEnum::eNone;
+    }
 
 private:
     std::string mVersion;
