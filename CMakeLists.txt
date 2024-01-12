@@ -62,6 +62,7 @@ target_sources(
     app
     PRIVATE src/main.cpp
             src/app/app.cpp
+            src/clocksync/clocksync.cpp
             src/communication/cmclient.cpp
             src/communication/communication.cpp
             src/communication/vchannel.cpp

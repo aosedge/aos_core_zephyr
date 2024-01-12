@@ -52,6 +52,7 @@
 // internal logs
 
 LOG_CALLBACK(app);
+LOG_CALLBACK(clocksync);
 LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
@@ -91,6 +92,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(Module::eCommunication):
         log_communication::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eClockSync):
+        log_clocksync::LogCallback(level, message);
 
         break;
 
