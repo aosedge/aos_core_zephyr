@@ -27,6 +27,7 @@ public:
         eDownloader,
         eOCISpec,
         eResourceProvider,
+        eClockSync,
     };
 
     /**
