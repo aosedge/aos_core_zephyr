@@ -14,6 +14,7 @@
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
+#include "clocksync/clocksync.hpp"
 #include "communication/communication.hpp"
 #include "communication/vchannel.hpp"
 #include "ocispec/ocispec.hpp"
@@ -44,6 +45,7 @@ private:
     aos::monitoring::ResourceMonitor        mResourceMonitor;
     aos::sm::launcher::Launcher             mLauncher;
     aos::sm::servicemanager::ServiceManager mServiceManager;
+    ClockSync                               mClockSync;
     Communication                           mCommunication;
     VChannel                                mCommOpenChannel;
     VChannel                                mCommSecureChannel;

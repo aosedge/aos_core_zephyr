@@ -1,0 +1,20 @@
+# Copyright (C) 2023 Renesas Electronics Corporation.
+# Copyright (C) 2023 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Aos zephyr application"
+
+config AOS_CLOCK_SYNC_SEND_PERIOD_SEC
+	int "Send clock sync period in seconds"
+	default 1
+
+config AOS_CLOCK_SYNC_TIMEOUT_SEC
+	int "Clock becomes unsynced if there is no clock sync update during this period."
+	default 2
+
+config AOS_CLOCK_SYNC_MAX_DIFF_MSEC
+	int "Maximum allowed difference between source and current time."
+	default 10000
+
+source "Kconfig"
