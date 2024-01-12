@@ -32,6 +32,17 @@
  * Types
  **********************************************************************************************************************/
 
+struct communication_fixture {
+    CommChannelMock     mOpenChannel;
+    CommChannelMock     mSecureChannel;
+    LauncherMock        mLauncher;
+    ResourceManagerMock mResourceManager;
+    ResourceMonitorMock mResourceMonitor;
+    DownloaderMock      mDownloader;
+    ClockSyncMock       mClockSync;
+    Communication       mCommunication;
+};
+
 /***********************************************************************************************************************
  * Static
  **********************************************************************************************************************/
@@ -75,18 +86,6 @@ static void PBToMonitoringData(
     aosMonitoring.mInTraffic  = pbMonitoring.in_traffic;
     aosMonitoring.mOutTraffic = pbMonitoring.out_traffic;
 }
-/***********************************************************************************************************************
- * Vars
- **********************************************************************************************************************/
-
-static CommChannelMock sOpenChannel;
-static CommChannelMock sSecureChannel;
-LauncherMock           sLauncher;
-ResourceManagerMock    sResourceManager;
-ResourceMonitorMock    sResourceMonitor;
-DownloaderMock         sDownloader;
-ClockSyncMock          sClockSync;
-static Communication   sCommunication;
 
 /***********************************************************************************************************************
  * Private
@@ -236,25 +235,27 @@ ZTEST_SUITE(
     []() -> void* {
         aos::Log::SetCallback(TestLogCallback);
 
-        auto err = sCommunication.Init(
-            sOpenChannel, sSecureChannel, sLauncher, sResourceManager, sResourceMonitor, sDownloader, sClockSync);
+        auto fixture = new communication_fixture;
+
+        auto err = fixture->mCommunication.Init(fixture->mOpenChannel, fixture->mSecureChannel, fixture->mLauncher,
+            fixture->mResourceManager, fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
-        sCommunication.ClockSynced();
+        fixture->mCommunication.ClockSynced();
 
         // Wait node configuration message
 
         servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-        err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+        err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
         zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
         zassert_equal(
             outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_configuration_tag);
 
-        return nullptr;
+        return fixture;
     },
-    [](void*) {}, NULL, NULL);
+    NULL, NULL, [](void* fixture) { delete static_cast<communication_fixture*>(fixture); });
 
 /***********************************************************************************************************************
  * Tests
@@ -264,7 +265,7 @@ ZTEST_F(communication, test_NodeConfiguration)
 {
     ConnectionSubscriberMock subscriber;
 
-    sCommunication.Subscribes(subscriber);
+    fixture->mCommunication.Subscribes(subscriber);
 
     aos::monitoring::NodeInfo sendNodeInfo {CONFIG_AOS_NODE_ID, 2, 1024, {}};
 
@@ -276,9 +277,9 @@ ZTEST_F(communication, test_NodeConfiguration)
     sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("aos");
     sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("tmp");
 
-    sResourceMonitor.SetNodeInfo(sendNodeInfo);
+    fixture->mResourceMonitor.SetNodeInfo(sendNodeInfo);
 
-    sSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
+    fixture->mSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
 
     auto err = subscriber.WaitDisconnect(cWaitTimeout);
     zassert_true(err.IsNone(), "Wait connection error: %s", err.Message());
@@ -290,7 +291,7 @@ ZTEST_F(communication, test_NodeConfiguration)
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     aos::monitoring::NodeInfo receiveNodeInfo {};
@@ -318,7 +319,7 @@ ZTEST_F(communication, test_NodeConfiguration)
     zassert_equal(strcmp(pbNodeConfiguration.runner_features[0], "xrun"), 0);
     zassert_equal(receiveNodeInfo, sendNodeInfo);
 
-    sCommunication.Unsubscribes(subscriber);
+    fixture->mCommunication.Unsubscribes(subscriber);
 }
 
 ZTEST_F(communication, test_GetUnitConfigStatus)
@@ -326,19 +327,19 @@ ZTEST_F(communication, test_GetUnitConfigStatus)
     auto version    = "1.1.1";
     auto unitConfig = "unitConfig";
 
-    sResourceManager.UpdateUnitConfig(version, unitConfig);
-    sResourceManager.SetError(aos::ErrorEnum::eFailed);
+    fixture->mResourceManager.UpdateUnitConfig(version, unitConfig);
+    fixture->mResourceManager.SetError(aos::ErrorEnum::eFailed);
 
     servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
     incomingMessage.which_SMIncomingMessage = servicemanager_v3_SMIncomingMessages_get_unit_config_status_tag;
 
-    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    auto err = SendCMIncomingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_unit_config_status_tag);
@@ -347,7 +348,7 @@ ZTEST_F(communication, test_GetUnitConfigStatus)
                       aos::Error(aos::ErrorEnum::eFailed).Message()),
         0);
 
-    sResourceManager.SetError(aos::ErrorEnum::eNone);
+    fixture->mResourceManager.SetError(aos::ErrorEnum::eNone);
 }
 
 ZTEST_F(communication, test_CheckUnitConfig)
@@ -360,12 +361,12 @@ ZTEST_F(communication, test_CheckUnitConfig)
     strcpy(incomingMessage.SMIncomingMessage.check_unit_config.vendor_version, version);
     strcpy(incomingMessage.SMIncomingMessage.check_unit_config.unit_config, unitConfig);
 
-    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    auto err = SendCMIncomingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_unit_config_status_tag);
@@ -383,19 +384,19 @@ ZTEST_F(communication, test_SetUnitConfig)
     strcpy(incomingMessage.SMIncomingMessage.set_unit_config.vendor_version, version);
     strcpy(incomingMessage.SMIncomingMessage.set_unit_config.unit_config, unitConfig);
 
-    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    auto err = SendCMIncomingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_unit_config_status_tag);
     zassert_equal(strcmp(outgoingMessage.SMOutgoingMessage.unit_config_status.vendor_version, version), 0);
     zassert_equal(strlen(outgoingMessage.SMOutgoingMessage.unit_config_status.error), 0);
-    zassert_equal(sResourceManager.GetVersion(), version);
-    zassert_equal(sResourceManager.GetUnitConfig(), unitConfig);
+    zassert_equal(fixture->mResourceManager.GetVersion(), version);
+    zassert_equal(fixture->mResourceManager.GetUnitConfig(), unitConfig);
 }
 
 ZTEST_F(communication, test_RunInstances)
@@ -486,16 +487,16 @@ ZTEST_F(communication, test_RunInstances)
 
     // Send message and check result
 
-    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    auto err = SendCMIncomingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = sLauncher.WaitEvent(cWaitTimeout);
+    err = fixture->mLauncher.WaitEvent(cWaitTimeout);
     zassert_true(err.IsNone(), "Error waiting run instances: %s", err.Message());
 
-    zassert_equal(sLauncher.IsForceRestart(), incomingMessage.SMIncomingMessage.run_instances.force_restart);
-    zassert_equal(sLauncher.GetServices(), services);
-    zassert_equal(sLauncher.GetLayers(), layers);
-    zassert_equal(sLauncher.GetInstances(), instances);
+    zassert_equal(fixture->mLauncher.IsForceRestart(), incomingMessage.SMIncomingMessage.run_instances.force_restart);
+    zassert_equal(fixture->mLauncher.GetServices(), services);
+    zassert_equal(fixture->mLauncher.GetLayers(), layers);
+    zassert_equal(fixture->mLauncher.GetInstances(), instances);
 }
 
 ZTEST_F(communication, test_ImageContentInfo)
@@ -524,13 +525,13 @@ ZTEST_F(communication, test_ImageContentInfo)
 
     StringToPB(aosContentInfo.mError, incomingMessage.SMIncomingMessage.image_content_info.error);
 
-    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    auto err = SendCMIncomingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = sDownloader.WaitEvent(cWaitTimeout);
+    err = fixture->mDownloader.WaitEvent(cWaitTimeout);
     zassert_true(err.IsNone(), "Error waiting downloader event: %s", err.Message());
 
-    zassert_equal(sDownloader.GetContentInfo(), aosContentInfo);
+    zassert_equal(fixture->mDownloader.GetContentInfo(), aosContentInfo);
 }
 
 ZTEST_F(communication, test_ImageContent)
@@ -546,13 +547,13 @@ ZTEST_F(communication, test_ImageContent)
     incomingMessage.SMIncomingMessage.image_content.part        = aosFileChunk.mPart;
     ByteArrayToPB(aosFileChunk.mData, incomingMessage.SMIncomingMessage.image_content.data);
 
-    auto err = SendCMIncomingMessage(sSecureChannel, AOS_VCHAN_SM, incomingMessage);
+    auto err = SendCMIncomingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = sDownloader.WaitEvent(cWaitTimeout);
+    err = fixture->mDownloader.WaitEvent(cWaitTimeout);
     zassert_true(err.IsNone(), "Error waiting downloader event: %s", err.Message());
 
-    zassert_equal(sDownloader.GetFileChunk(), aosFileChunk);
+    zassert_equal(fixture->mDownloader.GetFileChunk(), aosFileChunk);
 }
 
 ZTEST_F(communication, test_InstancesRunStatus)
@@ -566,12 +567,12 @@ ZTEST_F(communication, test_InstancesRunStatus)
     sendRunStatus.EmplaceBack(aos::InstanceStatus {
         {"service1", "subject1", 2}, 4, aos::InstanceRunStateEnum::eFailed, aos::ErrorEnum::eRuntime});
 
-    auto err = sCommunication.InstancesRunStatus(sendRunStatus);
+    auto err = fixture->mCommunication.InstancesRunStatus(sendRunStatus);
     zassert_true(err.IsNone(), "Error sending run instances status: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     aos::InstanceStatusStaticArray receiveRunStatus {};
@@ -597,12 +598,12 @@ ZTEST_F(communication, test_InstancesUpdateStatus)
     sendUpdateStatus.EmplaceBack(aos::InstanceStatus {
         {"service1", "subject1", 1}, 1, aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone});
 
-    auto err = sCommunication.InstancesUpdateStatus(sendUpdateStatus);
+    auto err = fixture->mCommunication.InstancesUpdateStatus(sendUpdateStatus);
     zassert_true(err.IsNone(), "Error sending update instances status: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     aos::InstanceStatusStaticArray receiveUpdateStatus {};
@@ -623,12 +624,12 @@ ZTEST_F(communication, test_ImageContentRequest)
 {
     ImageContentRequest sendContentRequest {"content URL", 42, aos::DownloadContentEnum::eService};
 
-    auto err = sCommunication.SendImageContentRequest(sendContentRequest);
+    auto err = fixture->mCommunication.SendImageContentRequest(sendContentRequest);
     zassert_true(err.IsNone(), "Error sending image content request: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     ImageContentRequest receiveContentRequest {};
@@ -662,12 +663,12 @@ ZTEST_F(communication, test_MonitoringData)
     sendMonitoringData.mServiceInstances.EmplaceBack(
         aos::monitoring::InstanceMonitoringData {"", {"service1", "subject1", 2}, {128, 15, {}, 43, 12}});
 
-    auto err = sCommunication.SendMonitoringData(sendMonitoringData);
+    auto err = fixture->mCommunication.SendMonitoringData(sendMonitoringData);
     zassert_true(err.IsNone(), "Error sending monitoring data: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     aos::monitoring::NodeMonitoringData receiveMonitoringData {};
@@ -703,26 +704,26 @@ ZTEST_F(communication, test_MonitoringData)
 
 ZTEST_F(communication, test_ClockSync)
 {
-    sCommunication.ClockUnsynced();
-    sClockSync.SetStarted(false);
+    fixture->mCommunication.ClockUnsynced();
+    fixture->mClockSync.SetStarted(false);
 
-    sSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
+    fixture->mSecureChannel.SendRead(std::vector<uint8_t>(), aos::ErrorEnum::eFailed);
 
     // Wait clock sync start
 
-    auto err = sClockSync.WaitEvent(cWaitTimeout);
+    auto err = fixture->mClockSync.WaitEvent(cWaitTimeout);
     zassert_true(err.IsNone(), "Error waiting clock sync start: %s", err.Message());
 
-    zassert_true(sClockSync.GetStarted());
+    zassert_true(fixture->mClockSync.GetStarted());
 
     // Wait clock sync request
 
-    err = sCommunication.SendClockSyncRequest();
+    err = fixture->mCommunication.SendClockSyncRequest();
     zassert_true(err.IsNone(), "Error sending clock sync request: %s", err.Message());
 
     servicemanager_v3_SMOutgoingMessages outgoingMessage servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sOpenChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mOpenChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_clock_sync_request_tag);
@@ -736,23 +737,23 @@ ZTEST_F(communication, test_ClockSync)
     incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds = 43;
     incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos   = 234;
 
-    err = SendCMIncomingMessage(sOpenChannel, AOS_VCHAN_SM, incomingMessage);
+    err = SendCMIncomingMessage(fixture->mOpenChannel, AOS_VCHAN_SM, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = sClockSync.WaitEvent(cWaitTimeout);
+    err = fixture->mClockSync.WaitEvent(cWaitTimeout);
     zassert_true(err.IsNone(), "Error waiting clock sync start: %s", err.Message());
 
-    zassert_equal(sClockSync.GetSyncTime(),
+    zassert_equal(fixture->mClockSync.GetSyncTime(),
         aos::Time::Unix(incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds,
             incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos));
 
-    sCommunication.ClockSynced();
+    fixture->mCommunication.ClockSynced();
 
     // Wait node configuration
 
     outgoingMessage = servicemanager_v3_SMOutgoingMessages servicemanager_v3_SMOutgoingMessages_init_default;
 
-    err = ReceiveCMOutgoingMessage(sSecureChannel, AOS_VCHAN_SM, outgoingMessage);
+    err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, AOS_VCHAN_SM, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_node_configuration_tag);
