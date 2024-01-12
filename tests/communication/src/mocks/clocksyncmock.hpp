@@ -37,12 +37,6 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
-    void SetStarted(bool started)
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        mStarted = started;
-    }
-
     bool GetStarted() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
@@ -66,6 +60,15 @@ public:
         mEventReceived = false;
 
         return aos::ErrorEnum::eNone;
+    }
+
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        mEventReceived = false;
+        mStarted       = false;
+        mSyncTime      = aos::Time();
     }
 
 private:

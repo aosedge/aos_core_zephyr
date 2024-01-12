@@ -72,9 +72,11 @@ public:
         return mWriteError;
     }
 
-    bool IsConnected() const override { return mConnected; }
-
-    void SetConnectError(aos::Error err) { mConnectError = err; }
+    bool IsConnected() const override
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        return mConnected;
+    }
 
     aos::Error WaitWrite(std::vector<uint8_t>& data, size_t size, const std::chrono::duration<double>& timeout,
         aos::Error err = aos::ErrorEnum::eNone)
@@ -103,6 +105,17 @@ public:
         mCV.notify_one();
     }
 
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        mReadData.clear();
+        mWriteData.clear();
+        mConnectError = aos::ErrorEnum::eNone;
+        mReadError    = aos::ErrorEnum::eNone;
+        mWriteError   = aos::ErrorEnum::eNone;
+    }
+
 private:
     bool                    mConnected = false;
     std::vector<uint8_t>    mReadData;
@@ -111,7 +124,7 @@ private:
     aos::Error              mReadError;
     aos::Error              mWriteError;
     std::condition_variable mCV;
-    std::mutex              mMutex;
+    mutable std::mutex      mMutex;
 };
 
 #endif
