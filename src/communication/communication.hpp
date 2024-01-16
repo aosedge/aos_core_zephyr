@@ -15,7 +15,6 @@
 #include "channeltype.hpp"
 #include "cmclient.hpp"
 #include "commchannel.hpp"
-#include "messagesender.hpp"
 
 /**
  * Communication instance.

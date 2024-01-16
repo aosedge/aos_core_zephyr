@@ -322,12 +322,26 @@ aos::Error Communication::ProcessMessages(Channel channel)
         LOG_DBG() << "Receive message: channel = " << channel << ", source = " << header->mSource
                   << ", size = " << header->mDataSize;
 
-        if (header->mDataSize > mCMClient.GetReceiveBufferSize()) {
+        MessageHandlerItf* handler = nullptr;
+
+        switch (header->mSource) {
+        case AOS_VCHAN_SM:
+            handler = &mCMClient;
+            break;
+
+        default:
+            LOG_ERR() << "Wrong source received: " << header->mSource;
+
+            continue;
+        }
+
+        if (header->mDataSize > handler->GetReceiveBuffer().Size()) {
             LOG_ERR() << "Not enough mem in receive buffer";
             continue;
         }
 
-        aos::Array<uint8_t> data(static_cast<uint8_t*>(mCMClient.GetReceiveBuffer()), mCMClient.GetReceiveBufferSize());
+        aos::Array<uint8_t> data(
+            static_cast<uint8_t*>(handler->GetReceiveBuffer().Get()), handler->GetReceiveBuffer().Size());
 
         if (header->mDataSize) {
             err = mChannels[channel]->Read(data, header->mDataSize);
@@ -349,18 +363,7 @@ aos::Error Communication::ProcessMessages(Channel channel)
 
         aos::LockGuard lock(mMutex);
 
-        switch (header->mSource) {
-        case AOS_VCHAN_SM:
-            err = mCMClient.ProcessMessage(channel, header->mMethodName, header->mRequestID, data);
-            break;
-
-        case AOS_VCHAN_IAM:
-            break;
-
-        default:
-            LOG_ERR() << "Wrong source received: " << header->mSource;
-        }
-
+        err = handler->ReceiveMessage(channel, header->mMethodName, header->mRequestID, data);
         if (!err.IsNone()) {
             LOG_ERR() << "Error processing message: " << err;
         }
