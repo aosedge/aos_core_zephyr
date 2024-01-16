@@ -8,7 +8,6 @@
 #include <aos/common/tools/memory.hpp>
 
 #include <pb_decode.h>
-#include <pb_encode.h>
 
 #include "utils/pbconvert.hpp"
 
@@ -67,7 +66,25 @@ aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceMana
     mResourceMonitor = &resourceMonitor;
     mDownloader      = &downloader;
     mClockSync       = &clockSync;
-    mMessageSender   = &messageSender;
+
+    auto err = MessageHandler::Init(AOS_VCHAN_SM, messageSender);
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    if (!(err = mSMService.Init("")).IsNone()) {
+        return err;
+    }
+
+    mSMService.RegisterMethod("");
+
+    if (!(err = RegisterService(mSMService, ChannelEnum::eOpen)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = RegisterService(mSMService, ChannelEnum::eSecure)).IsNone()) {
+        return err;
+    }
 
     return aos::ErrorEnum::eNone;
 }
@@ -88,7 +105,7 @@ aos::Error CMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& i
 
     LOG_DBG() << "Send SM message: message = RunInstancesStatus";
 
-    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
+    return SendPBMessage(ChannelEnum::eSecure, 0, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
 aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
@@ -107,7 +124,7 @@ aos::Error CMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>
 
     LOG_DBG() << "Send SM message: message = UpdateInstancesStatus";
 
-    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
+    return SendPBMessage(ChannelEnum::eSecure, 0, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
 aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
@@ -124,7 +141,7 @@ aos::Error CMClient::SendImageContentRequest(const ImageContentRequest& request)
 
     LOG_DBG() << "Send SM message: message = ImageContentRequest";
 
-    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
+    return SendPBMessage(ChannelEnum::eSecure, 0, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
 aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData)
@@ -155,7 +172,7 @@ aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringDat
 
     LOG_DBG() << "Send SM message: message = NodeMonitoring";
 
-    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
+    return SendPBMessage(ChannelEnum::eSecure, 0, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
 aos::Error CMClient::SendNodeConfiguration()
@@ -193,7 +210,7 @@ aos::Error CMClient::SendNodeConfiguration()
 
     LOG_DBG() << "Send SM message: message = NodeConfiguration";
 
-    return SendOutgoingMessage(ChannelEnum::eSecure, *outgoingMessage);
+    return SendPBMessage(ChannelEnum::eSecure, 0, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
 aos::Error CMClient::SendClockSyncRequest()
@@ -206,14 +223,16 @@ aos::Error CMClient::SendClockSyncRequest()
 
     LOG_DBG() << "Send SM message: message = ClockSyncRequest";
 
-    return SendOutgoingMessage(ChannelEnum::eOpen, *outgoingMessage);
+    return SendPBMessage(ChannelEnum::eOpen, 0, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
-aos::Error CMClient::ProcessMessage(
-    Channel channel, const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data)
-{
-    (void)methodName;
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
 
+aos::Error CMClient::ProcessMessage(Channel channel, PBServiceItf& service, const aos::String& methodName,
+    uint64_t requestID, const aos::Array<uint8_t>& data)
+{
     auto message = aos::MakeUnique<servicemanager_v3_SMIncomingMessages>(&mAllocator);
     auto stream  = pb_istream_from_buffer(data.Get(), data.Size());
 
@@ -225,48 +244,54 @@ aos::Error CMClient::ProcessMessage(
 
     aos::Error err;
 
-    switch (message->which_SMIncomingMessage) {
-    case servicemanager_v3_SMIncomingMessages_get_unit_config_status_tag:
-        err = ProcessGetUnitConfigStatus(channel);
-        break;
+    if (channel == ChannelEnum::eOpen) {
+        switch (message->which_SMIncomingMessage) {
+        case servicemanager_v3_SMIncomingMessages_clock_sync_tag:
+            err = ProcessClockSync(message->SMIncomingMessage.clock_sync);
+            break;
 
-    case servicemanager_v3_SMIncomingMessages_check_unit_config_tag:
-        err = ProcessCheckUnitConfig(channel, message->SMIncomingMessage.check_unit_config);
-        break;
+        default:
+            LOG_WRN() << "Receive unsupported message tag: " << message->which_SMIncomingMessage;
+            break;
+        }
+    }
 
-    case servicemanager_v3_SMIncomingMessages_set_unit_config_tag:
-        err = ProcessSetUnitConfig(channel, message->SMIncomingMessage.set_unit_config);
-        break;
+    if (channel == ChannelEnum::eSecure) {
+        switch (message->which_SMIncomingMessage) {
+        case servicemanager_v3_SMIncomingMessages_get_unit_config_status_tag:
+            err = ProcessGetUnitConfigStatus(channel, requestID);
+            break;
 
-    case servicemanager_v3_SMIncomingMessages_run_instances_tag:
-        err = ProcessRunInstances(message->SMIncomingMessage.run_instances);
-        break;
+        case servicemanager_v3_SMIncomingMessages_check_unit_config_tag:
+            err = ProcessCheckUnitConfig(channel, requestID, message->SMIncomingMessage.check_unit_config);
+            break;
 
-    case servicemanager_v3_SMIncomingMessages_image_content_info_tag:
-        err = ProcessImageContentInfo(message->SMIncomingMessage.image_content_info);
-        break;
+        case servicemanager_v3_SMIncomingMessages_set_unit_config_tag:
+            err = ProcessSetUnitConfig(channel, requestID, message->SMIncomingMessage.set_unit_config);
+            break;
 
-    case servicemanager_v3_SMIncomingMessages_image_content_tag:
-        err = ProcessImageContent(message->SMIncomingMessage.image_content);
-        break;
+        case servicemanager_v3_SMIncomingMessages_run_instances_tag:
+            err = ProcessRunInstances(message->SMIncomingMessage.run_instances);
+            break;
 
-    case servicemanager_v3_SMIncomingMessages_clock_sync_tag:
-        err = ProcessClockSync(message->SMIncomingMessage.clock_sync);
-        break;
+        case servicemanager_v3_SMIncomingMessages_image_content_info_tag:
+            err = ProcessImageContentInfo(message->SMIncomingMessage.image_content_info);
+            break;
 
-    default:
-        LOG_WRN() << "Receive unsupported message tag: " << message->which_SMIncomingMessage;
-        break;
+        case servicemanager_v3_SMIncomingMessages_image_content_tag:
+            err = ProcessImageContent(message->SMIncomingMessage.image_content);
+            break;
+
+        default:
+            LOG_WRN() << "Receive unsupported message tag: " << message->which_SMIncomingMessage;
+            break;
+        }
     }
 
     return err;
 }
 
-/***********************************************************************************************************************
- * Private
- **********************************************************************************************************************/
-
-aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel)
+aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel, uint64_t requestID)
 {
     LOG_DBG() << "Receive SM message: message = GetUnitConfigStatus";
 
@@ -287,10 +312,11 @@ aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel)
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendOutgoingMessage(channel, *outgoingMessage);
+    return SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
-aos::Error CMClient::ProcessCheckUnitConfig(Channel channel, const servicemanager_v3_CheckUnitConfig& pbUnitConfig)
+aos::Error CMClient::ProcessCheckUnitConfig(
+    Channel channel, uint64_t requestID, const servicemanager_v3_CheckUnitConfig& pbUnitConfig)
 {
     LOG_DBG() << "Receive SM message: message = CheckUnitConfig";
 
@@ -312,10 +338,11 @@ aos::Error CMClient::ProcessCheckUnitConfig(Channel channel, const servicemanage
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendOutgoingMessage(channel, *outgoingMessage);
+    return SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
-aos::Error CMClient::ProcessSetUnitConfig(Channel channel, const servicemanager_v3_SetUnitConfig& pbUnitConfig)
+aos::Error CMClient::ProcessSetUnitConfig(
+    Channel channel, uint64_t requestID, const servicemanager_v3_SetUnitConfig& pbUnitConfig)
 {
     LOG_DBG() << "Receive SM message: message = SetUnitConfig";
 
@@ -334,7 +361,7 @@ aos::Error CMClient::ProcessSetUnitConfig(Channel channel, const servicemanager_
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendOutgoingMessage(channel, *outgoingMessage);
+    return SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
 }
 
 aos::Error CMClient::ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances)
@@ -472,22 +499,4 @@ aos::Error CMClient::ProcessClockSync(const servicemanager_v3_ClockSync& pbClock
     }
 
     return aos::ErrorEnum::eNone;
-}
-
-aos::Error CMClient::SendOutgoingMessage(
-    Channel channel, const servicemanager_v3_SMOutgoingMessages& message, aos::Error messageError)
-{
-    auto outStream = pb_ostream_from_buffer(static_cast<pb_byte_t*>(mSendBuffer.Get()), mSendBuffer.Size());
-
-    auto status = pb_encode(&outStream, &servicemanager_v3_SMOutgoingMessages_msg, &message);
-    if (!status) {
-        LOG_ERR() << "Can't encode outgoing message: " << PB_GET_ERROR(&outStream);
-
-        if (messageError.IsNone()) {
-            messageError = AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
-        }
-    }
-
-    return mMessageSender->SendMessage(channel, AOS_VCHAN_SM, "", 0,
-        aos::Array<uint8_t>(static_cast<uint8_t*>(mSendBuffer.Get()), outStream.bytes_written), messageError);
 }
