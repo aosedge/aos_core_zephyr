@@ -217,7 +217,7 @@ aos::Error CMClient::ProcessMessage(
     auto message = aos::MakeUnique<servicemanager_v3_SMIncomingMessages>(&mAllocator);
     auto stream  = pb_istream_from_buffer(data.Get(), data.Size());
 
-    auto status = pb_decode(&stream, servicemanager_v3_SMIncomingMessages_fields, message.Get());
+    auto status = pb_decode(&stream, &servicemanager_v3_SMIncomingMessages_msg, message.Get());
     if (!status) {
         LOG_ERR() << "Can't decode incoming message: " << PB_GET_ERROR(&stream);
         return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
@@ -479,7 +479,7 @@ aos::Error CMClient::SendOutgoingMessage(
 {
     auto outStream = pb_ostream_from_buffer(static_cast<pb_byte_t*>(mSendBuffer.Get()), mSendBuffer.Size());
 
-    auto status = pb_encode(&outStream, servicemanager_v3_SMOutgoingMessages_fields, &message);
+    auto status = pb_encode(&outStream, &servicemanager_v3_SMOutgoingMessages_msg, &message);
     if (!status) {
         LOG_ERR() << "Can't encode outgoing message: " << PB_GET_ERROR(&outStream);
 
