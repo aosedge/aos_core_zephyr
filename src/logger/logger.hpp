@@ -23,7 +23,7 @@ public:
         eCommunication,
         eRunner,
         eStorage,
-        eResourceMgr,
+        eResourceManager,
         eDownloader,
         eOCISpec,
         eResourceProvider,
