@@ -8,8 +8,9 @@
 #ifndef RESOURCEUSAGEPROVIDER_HPP_
 #define RESOURCEUSAGEPROVIDER_HPP_
 
-#include <aos/common/monitoring.hpp>
 #include <sys/time.h>
+
+#include <aos/common/monitoring.hpp>
 
 class ResourceUsageProvider : public aos::monitoring::ResourceUsageProviderItf {
 public:

@@ -68,9 +68,9 @@ target_sources(
             src/communication/vchannel.cpp
             src/downloader/downloader.cpp
             src/logger/logger.cpp
+            src/monitoring/resourceusageprovider.cpp
             src/ocispec/ocispec.cpp
             src/resourcemanager/resourcemanager.cpp
-            src/resourceusageprovider/resourceusageprovider.cpp
             src/runner/runner.cpp
             src/storage/storage.cpp
             src/utils/checksum.cpp
