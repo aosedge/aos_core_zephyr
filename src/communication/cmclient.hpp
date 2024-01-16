@@ -17,12 +17,18 @@
 #include "downloader/downloader.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 
-#include "messagesender.hpp"
+#include "messagehandler.hpp"
+
+/**
+ * Number of SM PB services.
+ */
+constexpr auto cSMServicesCount = 1;
 
 /**
  * CM client instance.
  */
-class CMClient {
+class CMClient : public MessageHandler<servicemanager_v3_SMIncomingMessages_size,
+                     servicemanager_v3_SMOutgoingMessages_size, cSMServicesCount> {
 public:
     /**
      * Creates CM client.
@@ -90,53 +96,27 @@ public:
      */
     aos::Error SendClockSyncRequest();
 
-    /**
-     * Processes received message.
-     *
-     * @param channel communication channel on which message is received.
-     * @param methodName protocol method name.
-     * @param requestID protocol request ID.
-     * @param data raw message data.
-     * @return aos::Error.
-     */
-    aos::Error ProcessMessage(
-        Channel channel, const aos::String& methodName, uint64_t requestID, const aos::Array<uint8_t>& data);
-
-    /**
-     * Returns pointer for receive buffer.
-     *
-     * @return void*.
-     */
-    void* GetReceiveBuffer() const { return mReceiveBuffer.Get(); }
-
-    /**
-     * Returns receive buffer size.
-     *
-     * @return size_t
-     */
-    size_t GetReceiveBufferSize() const { return mReceiveBuffer.Size(); }
-
 private:
-    static constexpr auto cNodeID   = CONFIG_AOS_NODE_ID;
-    static constexpr auto cNodeType = CONFIG_AOS_NODE_TYPE;
-    static constexpr auto cRunner   = "xrun";
+    static constexpr auto cMethodCount = 1;
+    static constexpr auto cRunner      = "xrun";
 
-    aos::Error ProcessGetUnitConfigStatus(Channel channel);
-    aos::Error ProcessCheckUnitConfig(Channel channel, const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
-    aos::Error ProcessSetUnitConfig(Channel channel, const servicemanager_v3_SetUnitConfig& pbUnitConfig);
+    aos::Error ProcessMessage(Channel channel, PBServiceItf& service, const aos::String& methodName, uint64_t requestID,
+        const aos::Array<uint8_t>& data) override;
+    aos::Error ProcessGetUnitConfigStatus(Channel channel, uint64_t requestID);
+    aos::Error ProcessCheckUnitConfig(
+        Channel channel, uint64_t requestID, const servicemanager_v3_CheckUnitConfig& pbUnitConfig);
+    aos::Error ProcessSetUnitConfig(
+        Channel channel, uint64_t requestID, const servicemanager_v3_SetUnitConfig& pbUnitConfig);
     aos::Error ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances);
     aos::Error ProcessImageContentInfo(const servicemanager_v3_ImageContentInfo& pbContentInfo);
     aos::Error ProcessImageContent(const servicemanager_v3_ImageContent& pbContent);
     aos::Error ProcessClockSync(const servicemanager_v3_ClockSync& pbClockSync);
-    aos::Error SendOutgoingMessage(Channel channel, const servicemanager_v3_SMOutgoingMessages& message,
-        aos::Error messageError = aos::ErrorEnum::eNone);
 
     aos::sm::launcher::LauncherItf*      mLauncher {};
     ResourceManagerItf*                  mResourceManager {};
     aos::monitoring::ResourceMonitorItf* mResourceMonitor {};
     DownloadReceiverItf*                 mDownloader {};
     ClockSyncItf*                        mClockSync {};
-    MessageSenderItf*                    mMessageSender {};
 
     aos::StaticAllocator<sizeof(servicemanager_v3_SMIncomingMessages) + sizeof(servicemanager_v3_SMOutgoingMessages)
             + aos::Max(sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)
@@ -145,8 +125,7 @@ private:
         sizeof(aos::monitoring::NodeInfo)>
         mAllocator;
 
-    aos::StaticBuffer<servicemanager_v3_SMIncomingMessages_size> mReceiveBuffer;
-    aos::StaticBuffer<servicemanager_v3_SMOutgoingMessages_size> mSendBuffer;
+    PBService<cMethodCount> mSMService;
 };
 
 #endif
