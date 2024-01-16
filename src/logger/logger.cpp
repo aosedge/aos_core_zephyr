@@ -57,7 +57,6 @@ LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
 LOG_CALLBACK(resourcemanager);
-LOG_CALLBACK(resourceusageprovider);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(storage);
 
@@ -112,11 +111,6 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(Module::eResourceManager):
         log_resourcemanager::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eResourceProvider):
-        log_resourceusageprovider::LogCallback(level, message);
 
         break;
 
