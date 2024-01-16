@@ -110,7 +110,7 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         break;
 
-    case static_cast<int>(Module::eResourceMgr):
+    case static_cast<int>(Module::eResourceManager):
         log_resourcemanager::LogCallback(level, message);
 
         break;
