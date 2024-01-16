@@ -164,7 +164,7 @@ static aos::Error SendCMIncomingMessage(
 
     auto stream = pb_ostream_from_buffer(data.data(), data.size());
 
-    auto status = pb_encode(&stream, servicemanager_v3_SMIncomingMessages_fields, &message);
+    auto status = pb_encode(&stream, &servicemanager_v3_SMIncomingMessages_msg, &message);
     if (!status) {
         return aos::ErrorEnum::eFailed;
     }
@@ -186,7 +186,7 @@ static aos::Error ReceiveCMOutgoingMessage(
 
     auto stream = pb_istream_from_buffer(data.data(), data.size());
 
-    auto status = pb_decode(&stream, servicemanager_v3_SMOutgoingMessages_fields, &message);
+    auto status = pb_decode(&stream, &servicemanager_v3_SMOutgoingMessages_msg, &message);
     if (!status) {
         return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
     }
