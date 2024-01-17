@@ -21,6 +21,10 @@ aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(c
 
     digest.Resize(aos::cSHA256Size);
 
+    if (data.Size() == 0) {
+        return digest;
+    }
+
     auto ret = tc_sha256_init(&s);
     if (TC_CRYPTO_SUCCESS != ret) {
         return {digest, AOS_ERROR_WRAP(ret)};
