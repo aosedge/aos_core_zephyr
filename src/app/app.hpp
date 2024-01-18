@@ -45,6 +45,7 @@ private:
     aos::monitoring::ResourceMonitor        mResourceMonitor;
     aos::sm::launcher::Launcher             mLauncher;
     aos::sm::servicemanager::ServiceManager mServiceManager;
+    aos::iam::certhandler::CertHandler      mCertHandler;
     ClockSync                               mClockSync;
     Communication                           mCommunication;
     VChannel                                mCommOpenChannel;

@@ -66,8 +66,8 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mCommunication.Init(mCommOpenChannel, mCommSecureChannel, mLauncher, mResourceManager, mResourceMonitor,
-              mDownloader, mClockSync))
+    if (!(err = mCommunication.Init(mCommOpenChannel, mCommSecureChannel, mLauncher, mCertHandler, mResourceManager,
+              mResourceMonitor, mDownloader, mClockSync))
              .IsNone()) {
         return err;
     }
