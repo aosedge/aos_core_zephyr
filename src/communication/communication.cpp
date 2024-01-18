@@ -49,14 +49,20 @@ Communication::~Communication()
 }
 
 aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
-    aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync)
+    aos::sm::launcher::LauncherItf& launcher, aos::iam::certhandler::CertHandlerItf& certHandler,
+    ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
+    DownloadReceiverItf& downloader, ClockSyncItf& clockSync)
 {
     LOG_DBG() << "Initialize communication";
 
     mClockSync = &clockSync;
 
     auto err = mCMClient.Init(launcher, resourceManager, resourceMonitor, downloader, clockSync, *this);
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    err = mIAMServer.Init(certHandler, *this);
     if (!err.IsNone()) {
         return err;
     }
@@ -329,6 +335,10 @@ aos::Error Communication::ProcessMessages(Channel channel)
         switch (header->mSource) {
         case AOS_VCHAN_SM:
             handler = &mCMClient;
+            break;
+
+        case AOS_VCHAN_IAM:
+            handler = &mIAMServer;
             break;
 
         default:

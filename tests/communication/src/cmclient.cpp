@@ -5,21 +5,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <chrono>
-#include <condition_variable>
-
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
 
-#include <pb_decode.h>
-#include <pb_encode.h>
-
-#include <aos/common/tools/log.hpp>
-
 #include "communication/communication.hpp"
-#include "utils/checksum.hpp"
 #include "utils/pbconvert.hpp"
 
+#include "mocks/certhandlermock.hpp"
 #include "mocks/clocksyncmock.hpp"
 #include "mocks/commchannelmock.hpp"
 #include "mocks/connectionsubscribermock.hpp"
@@ -27,21 +19,17 @@
 #include "mocks/launchermock.hpp"
 #include "mocks/monitoringmock.hpp"
 #include "mocks/resourcemanagermock.hpp"
-
-/***********************************************************************************************************************
- * Consts
- **********************************************************************************************************************/
-
-static constexpr auto cWaitTimeout = std::chrono::seconds {5};
+#include "utils.hpp"
 
 /***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
 
-struct communication_fixture {
+struct cmclient_fixture {
     CommChannelMock     mOpenChannel;
     CommChannelMock     mSecureChannel;
     LauncherMock        mLauncher;
+    CertHandlerMock     mCertHandler;
     ResourceManagerMock mResourceManager;
     ResourceMonitorMock mResourceMonitor;
     DownloaderMock      mDownloader;
@@ -91,115 +79,10 @@ static void PBToMonitoringData(
     aosMonitoring.mOutTraffic = pbMonitoring.out_traffic;
 }
 
-/***********************************************************************************************************************
- * Private
- **********************************************************************************************************************/
-
-static aos::Error SendMessageToChannel(CommChannelMock& channel, uint32_t source, const std::string& methodName,
-    uint64_t requestID, const std::vector<uint8_t>& data, aos::Error messageError = aos::ErrorEnum::eNone)
-{
-    auto checksum = CalculateSha256(aos::Array<uint8_t>(data.data(), data.size()));
-    if (!checksum.mError.IsNone()) {
-        return AOS_ERROR_WRAP(checksum.mError);
-    }
-
-    auto header = VChanMessageHeader {source, static_cast<uint32_t>(data.size()), requestID, messageError.Errno(),
-        static_cast<int32_t>(messageError.Value()), ""};
-
-    aos::Array<uint8_t>(header.mSha256, aos::cSHA256Size) = checksum.mValue;
-
-    auto headerPtr = reinterpret_cast<uint8_t*>(&header);
-
-    channel.SendRead(std::vector<uint8_t>(headerPtr, headerPtr + sizeof(VChanMessageHeader)));
-    channel.SendRead(data);
-
-    return aos::ErrorEnum::eNone;
-}
-
-static aos::Error ReceiveMessageFromChannel(CommChannelMock& channel, uint32_t source, const std::string& methodName,
-    uint64_t requestID, std::vector<uint8_t>& data)
-{
-    std::vector<uint8_t> headerData;
-
-    auto err = channel.WaitWrite(headerData, sizeof(VChanMessageHeader), cWaitTimeout);
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    auto header = reinterpret_cast<VChanMessageHeader*>(headerData.data());
-
-    if (header->mSource != source) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
-    }
-
-    if (header->mMethodName != methodName) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
-    }
-
-    if (header->mRequestID != requestID) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidArgument);
-    }
-
-    err = channel.WaitWrite(data, header->mDataSize, cWaitTimeout);
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    auto checksum = CalculateSha256(aos::Array<uint8_t>(data.data(), data.size()));
-    if (!checksum.mError.IsNone()) {
-        return AOS_ERROR_WRAP(checksum.mError);
-    }
-
-    if (checksum.mValue != aos::Array<uint8_t>(header->mSha256, aos::cSHA256Size)) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eInvalidChecksum);
-    }
-
-    return aos::ErrorEnum::eNone;
-}
-
-static aos::Error SendPBMessage(CommChannelMock& channel, uint32_t source, const std::string& methodName,
-    uint64_t requestID, const pb_msgdesc_t* fields, const void* message, size_t messageSize)
-{
-    std::vector<uint8_t> data(messageSize);
-
-    if (messageSize) {
-        auto stream = pb_ostream_from_buffer(data.data(), data.size());
-
-        auto status = pb_encode(&stream, fields, message);
-        if (!status) {
-            return aos::ErrorEnum::eFailed;
-        }
-
-        data.resize(stream.bytes_written);
-    }
-
-    return SendMessageToChannel(channel, source, methodName, requestID, data);
-}
-
 static aos::Error SendCMIncomingMessage(CommChannelMock& channel, const servicemanager_v3_SMIncomingMessages& message)
 {
     return SendPBMessage(channel, AOS_VCHAN_SM, "", 0, &servicemanager_v3_SMIncomingMessages_msg, &message,
         servicemanager_v3_SMOutgoingMessages_size);
-}
-
-static aos::Error ReceivePBMessage(CommChannelMock& channel, uint32_t source, const std::string& methodName,
-    uint64_t requestID, const pb_msgdesc_t* fields, void* message, size_t messageSize)
-{
-    std::vector<uint8_t> data(messageSize);
-
-    auto err = ReceiveMessageFromChannel(channel, source, methodName, requestID, data);
-    if (!err.IsNone()) {
-        return err;
-    }
-
-    auto stream = pb_istream_from_buffer(data.data(), data.size());
-
-    auto status = pb_decode(&stream, fields, message);
-    if (!status) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
-    }
-
-    return aos::ErrorEnum::eNone;
 }
 
 static aos::Error ReceiveCMOutgoingMessage(CommChannelMock& channel, servicemanager_v3_SMOutgoingMessages& message)
@@ -212,51 +95,16 @@ static aos::Error ReceiveCMOutgoingMessage(CommChannelMock& channel, servicemana
  * Setup
  **********************************************************************************************************************/
 
-void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
-{
-    static std::mutex mutex;
-    static auto       startTime = std::chrono::steady_clock::now();
-
-    std::lock_guard<std::mutex> lock(mutex);
-
-    auto now = std::chrono::duration<float>(std::chrono::steady_clock::now() - startTime).count();
-
-    const char* levelStr = "unknown";
-
-    switch (level.GetValue()) {
-    case aos::LogLevelEnum::eDebug:
-        levelStr = "dbg";
-        break;
-
-    case aos::LogLevelEnum::eInfo:
-        levelStr = "inf";
-        break;
-
-    case aos::LogLevelEnum::eWarning:
-        levelStr = "wrn";
-        break;
-
-    case aos::LogLevelEnum::eError:
-        levelStr = "err";
-        break;
-
-    default:
-        levelStr = "n/d";
-        break;
-    }
-
-    printk("%0.3f [%s] %s\n", now, levelStr, message.CStr());
-}
-
 ZTEST_SUITE(
-    communication, NULL,
+    cmclient, nullptr,
     []() -> void* {
         aos::Log::SetCallback(TestLogCallback);
 
-        auto fixture = new communication_fixture;
+        auto fixture = new cmclient_fixture;
 
         auto err = fixture->mCommunication.Init(fixture->mOpenChannel, fixture->mSecureChannel, fixture->mLauncher,
-            fixture->mResourceManager, fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync);
+            fixture->mCertHandler, fixture->mResourceManager, fixture->mResourceMonitor, fixture->mDownloader,
+            fixture->mClockSync);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
         fixture->mCommunication.ClockSynced();
@@ -274,23 +122,24 @@ ZTEST_SUITE(
         return fixture;
     },
     [](void* fixture) {
-        auto f = static_cast<communication_fixture*>(fixture);
+        auto f = static_cast<cmclient_fixture*>(fixture);
 
         f->mOpenChannel.Clear();
         f->mSecureChannel.Clear();
         f->mLauncher.Clear();
+        f->mCertHandler.Clear();
         f->mResourceManager.Clear();
         f->mResourceMonitor.Clear();
         f->mDownloader.Clear();
         f->mClockSync.Clear();
     },
-    NULL, [](void* fixture) { delete static_cast<communication_fixture*>(fixture); });
+    nullptr, [](void* fixture) { delete static_cast<cmclient_fixture*>(fixture); });
 
 /***********************************************************************************************************************
  * Tests
  **********************************************************************************************************************/
 
-ZTEST_F(communication, test_NodeConfiguration)
+ZTEST_F(cmclient, test_NodeConfiguration)
 {
     ConnectionSubscriberMock subscriber;
 
@@ -351,7 +200,7 @@ ZTEST_F(communication, test_NodeConfiguration)
     fixture->mCommunication.Unsubscribes(subscriber);
 }
 
-ZTEST_F(communication, test_GetUnitConfigStatus)
+ZTEST_F(cmclient, test_GetUnitConfigStatus)
 {
     auto version    = "1.1.1";
     auto unitConfig = "unitConfig";
@@ -378,7 +227,7 @@ ZTEST_F(communication, test_GetUnitConfigStatus)
         0);
 }
 
-ZTEST_F(communication, test_CheckUnitConfig)
+ZTEST_F(cmclient, test_CheckUnitConfig)
 {
     auto                                                 version    = "1.2.0";
     auto                                                 unitConfig = "unitConfig";
@@ -401,7 +250,7 @@ ZTEST_F(communication, test_CheckUnitConfig)
     zassert_equal(strlen(outgoingMessage.SMOutgoingMessage.unit_config_status.error), 0);
 }
 
-ZTEST_F(communication, test_SetUnitConfig)
+ZTEST_F(cmclient, test_SetUnitConfig)
 {
     auto                                                 version    = "1.2.0";
     auto                                                 unitConfig = "unitConfig";
@@ -426,7 +275,7 @@ ZTEST_F(communication, test_SetUnitConfig)
     zassert_equal(fixture->mResourceManager.GetUnitConfig(), unitConfig);
 }
 
-ZTEST_F(communication, test_RunInstances)
+ZTEST_F(cmclient, test_RunInstances)
 {
     servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
 
@@ -526,7 +375,7 @@ ZTEST_F(communication, test_RunInstances)
     zassert_equal(fixture->mLauncher.GetInstances(), instances);
 }
 
-ZTEST_F(communication, test_ImageContentInfo)
+ZTEST_F(cmclient, test_ImageContentInfo)
 {
     auto                                                 aosContentInfo = ImageContentInfo {42};
     servicemanager_v3_SMIncomingMessages incomingMessage servicemanager_v3_SMIncomingMessages_init_default;
@@ -561,7 +410,7 @@ ZTEST_F(communication, test_ImageContentInfo)
     zassert_equal(fixture->mDownloader.GetContentInfo(), aosContentInfo);
 }
 
-ZTEST_F(communication, test_ImageContent)
+ZTEST_F(cmclient, test_ImageContent)
 {
     uint8_t data[]       = {12, 23, 45, 32, 21, 56, 12, 18};
     auto    aosFileChunk = FileChunk {43, "path/to/file1", 4, 1, aos::Array<uint8_t>(data, sizeof(data))};
@@ -583,7 +432,7 @@ ZTEST_F(communication, test_ImageContent)
     zassert_equal(fixture->mDownloader.GetFileChunk(), aosFileChunk);
 }
 
-ZTEST_F(communication, test_InstancesRunStatus)
+ZTEST_F(cmclient, test_InstancesRunStatus)
 {
     aos::InstanceStatusStaticArray sendRunStatus {};
 
@@ -616,7 +465,7 @@ ZTEST_F(communication, test_InstancesRunStatus)
     zassert_equal(receiveRunStatus, sendRunStatus);
 }
 
-ZTEST_F(communication, test_InstancesUpdateStatus)
+ZTEST_F(cmclient, test_InstancesUpdateStatus)
 {
     aos::InstanceStatusStaticArray sendUpdateStatus {};
 
@@ -647,7 +496,7 @@ ZTEST_F(communication, test_InstancesUpdateStatus)
     zassert_equal(receiveUpdateStatus, sendUpdateStatus);
 }
 
-ZTEST_F(communication, test_ImageContentRequest)
+ZTEST_F(cmclient, test_ImageContentRequest)
 {
     ImageContentRequest sendContentRequest {"content URL", 42, aos::DownloadContentEnum::eService};
 
@@ -670,7 +519,7 @@ ZTEST_F(communication, test_ImageContentRequest)
     zassert_equal(receiveContentRequest, sendContentRequest);
 }
 
-ZTEST_F(communication, test_MonitoringData)
+ZTEST_F(cmclient, test_MonitoringData)
 {
     aos::monitoring::NodeMonitoringData sendMonitoringData {"", {1024, 100, {}, 10, 20}, {10, 20}};
 
@@ -729,7 +578,7 @@ ZTEST_F(communication, test_MonitoringData)
     zassert_equal(receiveMonitoringData, sendMonitoringData);
 }
 
-ZTEST_F(communication, test_ClockSync)
+ZTEST_F(cmclient, test_ClockSync)
 {
     fixture->mCommunication.ClockUnsynced();
 

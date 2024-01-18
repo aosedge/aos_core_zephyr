@@ -65,6 +65,7 @@ target_sources(
             src/clocksync/clocksync.cpp
             src/communication/cmclient.cpp
             src/communication/communication.cpp
+            src/communication/iamserver.cpp
             src/communication/vchannel.cpp
             src/downloader/downloader.cpp
             src/logger/logger.cpp
@@ -163,7 +164,10 @@ ExternalProject_Add(
     DEPENDS zephyr_interface
 )
 
+file(MAKE_DIRECTORY ${aoscore_build_dir}/include)
+
 # aoscommon
+
 add_library(aoscommon STATIC IMPORTED GLOBAL)
 
 add_dependencies(aoscommon aoscore)
@@ -174,7 +178,6 @@ set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aosco
 target_link_libraries(app PUBLIC aoscommon)
 
 # aossm
-file(MAKE_DIRECTORY ${aoscore_build_dir}/include)
 
 add_library(aossm STATIC IMPORTED GLOBAL)
 
@@ -184,3 +187,14 @@ set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/li
 set_target_properties(aossm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aossm)
+
+# aosiam
+
+add_library(aosiam STATIC IMPORTED GLOBAL)
+
+add_dependencies(aosiam aoscore)
+
+set_target_properties(aosiam PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaosiamcpp.a)
+set_target_properties(aosiam PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
+
+target_link_libraries(app PUBLIC aosiam)

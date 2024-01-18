@@ -15,6 +15,7 @@
 #include "channeltype.hpp"
 #include "cmclient.hpp"
 #include "commchannel.hpp"
+#include "iamserver.hpp"
 
 /**
  * Communication instance.
@@ -33,6 +34,7 @@ public:
      * @param openChannel open channel instance.
      * @param secureChannel secure channel instance.
      * @param launcher launcher instance.
+     * @param certHandler certificate handler instance.
      * @param resourceManager resource manager instance.
      * @param resourceMonitor resource monitor instance.
      * @param downloader downloader instance.
@@ -40,8 +42,9 @@ public:
      * @return aos::Error.
      */
     aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
-        aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync);
+        aos::sm::launcher::LauncherItf& launcher, aos::iam::certhandler::CertHandlerItf& certHandler,
+        ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
+        DownloadReceiverItf& downloader, ClockSyncItf& clockSync);
 
     /**
      * Destructor.
@@ -136,7 +139,8 @@ private:
 
     ClockSyncItf* mClockSync {};
 
-    CMClient mCMClient;
+    CMClient  mCMClient;
+    IAMServer mIAMServer;
 
     bool mClockSynced = false;
 };
