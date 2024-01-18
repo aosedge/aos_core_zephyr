@@ -66,8 +66,12 @@ aos::Error App::Init()
         return err;
     }
 
+    if (!(err = mProvisioning.Init()).IsNone()) {
+        return err;
+    }
+
     if (!(err = mCommunication.Init(mCommOpenChannel, mCommSecureChannel, mLauncher, mCertHandler, mResourceManager,
-              mResourceMonitor, mDownloader, mClockSync))
+              mResourceMonitor, mDownloader, mClockSync, mProvisioning))
              .IsNone()) {
         return err;
     }

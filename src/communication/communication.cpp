@@ -35,6 +35,7 @@ Communication::~Communication()
         }
 
         mClose = true;
+        mCondVar.NotifyOne();
     }
 
     for (auto i = 0; i < static_cast<int>(ChannelEnum::eNumChannels); i++) {
@@ -51,18 +52,19 @@ Communication::~Communication()
 aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
     aos::sm::launcher::LauncherItf& launcher, aos::iam::certhandler::CertHandlerItf& certHandler,
     ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
-    DownloadReceiverItf& downloader, ClockSyncItf& clockSync)
+    DownloadReceiverItf& downloader, ClockSyncItf& clockSync, ProvisioningItf& provisioning)
 {
     LOG_DBG() << "Initialize communication";
 
-    mClockSync = &clockSync;
+    mClockSync    = &clockSync;
+    mProvisioning = &provisioning;
 
     auto err = mCMClient.Init(launcher, resourceManager, resourceMonitor, downloader, clockSync, *this);
     if (!err.IsNone()) {
         return err;
     }
 
-    err = mIAMServer.Init(certHandler, *this);
+    err = mIAMServer.Init(certHandler, provisioning, *this);
     if (!err.IsNone()) {
         return err;
     }
@@ -226,9 +228,14 @@ aos::Error Communication::ConnectChannel(aos::UniqueLock& lock, Channel channel)
         if (!mClockSynced) {
             LOG_DBG() << "Wait open channel is connected...";
 
-            auto err = mCondVar.Wait(lock, [this]() { return mChannels[Channel(ChannelEnum::eOpen)]->IsConnected(); });
+            auto err = mCondVar.Wait(
+                lock, [this]() { return mChannels[Channel(ChannelEnum::eOpen)]->IsConnected() || mClose; });
             if (!err.IsNone()) {
                 return AOS_ERROR_WRAP(err);
+            }
+
+            if (mClose) {
+                return aos::ErrorEnum::eNone;
             }
 
             err = mClockSync->Start();
@@ -238,9 +245,13 @@ aos::Error Communication::ConnectChannel(aos::UniqueLock& lock, Channel channel)
 
             LOG_DBG() << "Wait clock is synced...";
 
-            err = mCondVar.Wait(lock, [this]() { return mClockSynced; });
+            err = mCondVar.Wait(lock, [this]() { return mClockSynced || mClose; });
             if (!err.IsNone()) {
                 return AOS_ERROR_WRAP(err);
+            }
+
+            if (mClose) {
+                return aos::ErrorEnum::eNone;
             }
         }
     }
@@ -397,7 +408,7 @@ size_t Communication::GetNumConnectedChannels()
 
 void Communication::ConnectNotification(bool connected)
 {
-    LOG_INF() << "Connection notification: " << connected;
+    LOG_INF() << "Connection notification: " << (connected ? "connected" : "disconnected");
 
     for (auto& subscriber : mConnectionSubscribers) {
         if (connected) {

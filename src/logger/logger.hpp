@@ -24,6 +24,7 @@ public:
         eCommunication,
         eDownloader,
         eOCISpec,
+        eProvisioning,
         eResourceManager,
         eRunner,
         eStorage,

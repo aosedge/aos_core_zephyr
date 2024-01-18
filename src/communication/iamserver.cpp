@@ -17,7 +17,8 @@
  * Public
  **********************************************************************************************************************/
 
-aos::Error IAMServer::Init(aos::iam::certhandler::CertHandlerItf& certHandler, MessageSenderItf& messageSender)
+aos::Error IAMServer::Init(
+    aos::iam::certhandler::CertHandlerItf& certHandler, ProvisioningItf& provisioning, MessageSenderItf& messageSender)
 {
     LOG_DBG() << "Initialize IAM server";
 
@@ -26,7 +27,9 @@ aos::Error IAMServer::Init(aos::iam::certhandler::CertHandlerItf& certHandler, M
         return err;
     }
 
-    mCertHandler = &certHandler;
+    mCertHandler   = &certHandler;
+    mProvisioning  = &provisioning;
+    mMessageSender = &messageSender;
 
     aos::StaticString<cMaxServiceLen + cMaxMethodLen> fullMethodName;
 
@@ -72,11 +75,13 @@ aos::Error IAMServer::Init(aos::iam::certhandler::CertHandlerItf& certHandler, M
 
     // Register services
 
-    if (!(err = RegisterService(mProvisioningService, ChannelEnum::eOpen)).IsNone()) {
-        return err;
+    if (!mProvisioning->IsProvisioned()) {
+        if (!(err = RegisterService(mProvisioningService, ChannelEnum::eSecure)).IsNone()) {
+            return err;
+        }
     }
 
-    if (!(err = RegisterService(mCertificateService, ChannelEnum::eOpen)).IsNone()) {
+    if (!(err = RegisterService(mCertificateService, ChannelEnum::eSecure)).IsNone()) {
         return err;
     }
 
@@ -193,9 +198,19 @@ aos::Error IAMServer::ProcessEncryptDisk(Channel channel, uint64_t requestID, co
 
 aos::Error IAMServer::ProcessFinishProvisioning(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
 {
-    aos::Error err;
+    aos::Error messageError;
 
-    return SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    auto err = RemoveService(mProvisioningService, ChannelEnum::eSecure);
+    if (!err.IsNone() && !messageError.IsNone()) {
+        messageError = err;
+    }
+
+    err = mProvisioning->FinishProvisioning();
+    if (!err.IsNone() && !messageError.IsNone()) {
+        messageError = err;
+    }
+
+    return SendPBMessage(channel, requestID, nullptr, nullptr, messageError);
 }
 
 aos::Error IAMServer::ProcessCreateKey(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
