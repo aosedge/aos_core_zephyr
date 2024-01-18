@@ -17,6 +17,7 @@
 #include "mocks/downloadermock.hpp"
 #include "mocks/launchermock.hpp"
 #include "mocks/monitoringmock.hpp"
+#include "mocks/provisioningmock.hpp"
 #include "mocks/resourcemanagermock.hpp"
 #include "utils.hpp"
 
@@ -33,6 +34,7 @@ struct iamserver_fixture {
     ResourceMonitorMock mResourceMonitor;
     DownloaderMock      mDownloader;
     ClockSyncMock       mClockSync;
+    ProvisioningMock    mProvisioning;
     Communication       mCommunication;
 };
 
@@ -58,10 +60,15 @@ ZTEST_SUITE(
 
         auto err = fixture->mCommunication.Init(fixture->mOpenChannel, fixture->mSecureChannel, fixture->mLauncher,
             fixture->mCertHandler, fixture->mResourceManager, fixture->mResourceMonitor, fixture->mDownloader,
-            fixture->mClockSync);
+            fixture->mClockSync, fixture->mProvisioning);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
         fixture->mCommunication.ClockSynced();
+
+        // Wait node configuration message
+
+        err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_SM, "", 0);
+        zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
         return fixture;
     },
@@ -76,6 +83,7 @@ ZTEST_SUITE(
         f->mResourceMonitor.Clear();
         f->mDownloader.Clear();
         f->mClockSync.Clear();
+        f->mProvisioning.SetProvisioned(false);
     },
     nullptr, [](void* fixture) { delete static_cast<iamserver_fixture*>(fixture); });
 
@@ -85,14 +93,14 @@ ZTEST_SUITE(
 
 ZTEST_F(iamserver, test_GetAllNodeIDs)
 {
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodGetAllNodeIDs), 0);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     iamanager_v4_NodesID nodesID;
 
     err = ReceivePBMessage(
-        fixture->mOpenChannel, AOS_VCHAN_IAM, "", 0, &iamanager_v4_NodesID_msg, &nodesID, iamanager_v4_NodesID_size);
+        fixture->mSecureChannel, AOS_VCHAN_IAM, "", 0, &iamanager_v4_NodesID_msg, &nodesID, iamanager_v4_NodesID_size);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(nodesID.ids_count, 1);
@@ -105,13 +113,13 @@ ZTEST_F(iamserver, test_GetCertTypes)
 
     fixture->mCertHandler.SetCertTypes(certTypes);
 
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodGetCertTypes), 0);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     iamanager_v4_CertTypes pbCertTypes;
 
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 0, &iamanager_v4_CertTypes_msg, &pbCertTypes,
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 0, &iamanager_v4_CertTypes_msg, &pbCertTypes,
         iamanager_v4_CertTypes_size);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
@@ -126,12 +134,12 @@ ZTEST_F(iamserver, test_SetOwner)
 {
     iamanager_v4_SetOwnerRequest pbSetOwner {CONFIG_AOS_NODE_ID, "certType", "password"};
 
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodSetOwner), 42,
         &iamanager_v4_SetOwnerRequest_msg, &pbSetOwner, iamanager_v4_SetOwnerRequest_size);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 42);
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 42);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_equal(fixture->mCertHandler.GetCertType(), pbSetOwner.type);
@@ -142,12 +150,12 @@ ZTEST_F(iamserver, test_Clear)
 {
     iamanager_v4_ClearRequest pbClear {CONFIG_AOS_NODE_ID, "certType"};
 
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodClear), 43, &iamanager_v4_ClearRequest_msg,
         &pbClear, iamanager_v4_ClearRequest_size);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 43);
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 43);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
     zassert_true(fixture->mCertHandler.GetClear());
@@ -157,23 +165,13 @@ ZTEST_F(iamserver, test_DiskEncryption)
 {
     iamanager_v4_EncryptDiskRequest pbEncryptDisk {CONFIG_AOS_NODE_ID, "password"};
 
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodEncryptDisk), 44,
         &iamanager_v4_EncryptDiskRequest_msg, &pbEncryptDisk, iamanager_v4_EncryptDiskRequest_size);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 44);
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 44);
     zassert_true(err.Is(aos::ErrorEnum::eNotSupported), "Wrong error received: %s", err.Message());
-}
-
-ZTEST_F(iamserver, test_FinishProvisioning)
-{
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
-        FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodFinishProvisioning), 45);
-    zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
-
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 45);
-    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 }
 
 ZTEST_F(iamserver, test_CreateKey)
@@ -184,14 +182,14 @@ ZTEST_F(iamserver, test_CreateKey)
 
     fixture->mCertHandler.SetCSR(csr);
 
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceCertificate, IAMServer::cMethodCreateKey), 46,
         &iamanager_v4_CreateKeyRequest_msg, &pbCreateKeyRequest, iamanager_v4_CreateKeyRequest_size);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     iamanager_v4_CreateKeyResponse pbCreateKeyResponse iamanager_v4_CreateKeyResponse_init_default;
 
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 46, &iamanager_v4_CreateKeyResponse_msg,
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 46, &iamanager_v4_CreateKeyResponse_msg,
         &pbCreateKeyResponse, iamanager_v4_CreateKeyResponse_size);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
@@ -211,14 +209,14 @@ ZTEST_F(iamserver, test_ApplyCert)
 
     fixture->mCertHandler.SetCertInfo(certInfo);
 
-    auto err = SendPBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM,
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
         FullMethodName(IAMServer::cServiceCertificate, IAMServer::cMethodApplyCert), 47,
         &iamanager_v4_ApplyCertRequest_msg, &pbApplyCertRequest, iamanager_v4_ApplyCertRequest_size);
     zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
 
     iamanager_v4_ApplyCertResponse pbApplyCertResponse iamanager_v4_ApplyCertResponse_init_default;
 
-    err = ReceivePBMessage(fixture->mOpenChannel, AOS_VCHAN_IAM, "", 47, &iamanager_v4_ApplyCertResponse_msg,
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 47, &iamanager_v4_ApplyCertResponse_msg,
         &pbApplyCertResponse, iamanager_v4_ApplyCertResponse_size);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
@@ -232,4 +230,17 @@ ZTEST_F(iamserver, test_ApplyCert)
     zassert_equal(fixture->mCertHandler.GetCertificate(), pbApplyCertRequest.cert);
     zassert_equal(certInfo.mCertURL, pbApplyCertResponse.cert_url);
     zassert_equal(strSerial, pbApplyCertResponse.serial);
+}
+
+// Tests are executed by alphabetical order.
+// This test should be run at the end as it removes provisioning PB services from open channel.
+ZTEST_F(iamserver, test_ZZZ_FinishProvisioning)
+{
+
+    auto err = SendPBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM,
+        FullMethodName(IAMServer::cServiceProvisioning, IAMServer::cMethodFinishProvisioning), 45);
+    zassert_true(err.IsNone(), "Error sending message: %s", err.Message());
+
+    err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_IAM, "", 45);
+    zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 }

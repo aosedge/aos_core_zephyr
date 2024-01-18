@@ -39,12 +39,13 @@ public:
      * @param resourceMonitor resource monitor instance.
      * @param downloader downloader instance.
      * @param clockSync clock sync instance.
+     * @param provisioning provisioning instance.
      * @return aos::Error.
      */
     aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
         aos::sm::launcher::LauncherItf& launcher, aos::iam::certhandler::CertHandlerItf& certHandler,
         ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
-        DownloadReceiverItf& downloader, ClockSyncItf& clockSync);
+        DownloadReceiverItf& downloader, ClockSyncItf& clockSync, ProvisioningItf& provisioning);
 
     /**
      * Destructor.
@@ -137,7 +138,8 @@ private:
 
     aos::StaticArray<aos::ConnectionSubscriberItf*, cMaxSubscribers> mConnectionSubscribers;
 
-    ClockSyncItf* mClockSync {};
+    ClockSyncItf*    mClockSync {};
+    ProvisioningItf* mProvisioning {};
 
     CMClient  mCMClient;
     IAMServer mIAMServer;

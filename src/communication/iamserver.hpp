@@ -12,6 +12,8 @@
 
 #include <proto/iamanager/v4/iamanager.pb.h>
 
+#include "provisioning/provisioning.hpp"
+
 #include "messagehandler.hpp"
 
 /**
@@ -56,10 +58,12 @@ public:
      * Initializes CM client instance.
      *
      * @param certHandler certificate handler instance.
+     * @param provisioning provisioning instance.
      * @param messageSender message sender instance.
      * @return aos::Error.
      */
-    aos::Error Init(aos::iam::certhandler::CertHandlerItf& certHandler, MessageSenderItf& messageSender);
+    aos::Error Init(aos::iam::certhandler::CertHandlerItf& certHandler, ProvisioningItf& provisioning,
+        MessageSenderItf& messageSender);
 
 private:
     static constexpr auto cProvisioningServiceMethodCount = 6;
@@ -95,6 +99,8 @@ private:
     }
 
     aos::iam::certhandler::CertHandlerItf* mCertHandler {};
+    ProvisioningItf*                       mProvisioning {};
+    MessageSenderItf*                      mMessageSender {};
 
     PBService<cProvisioningServiceMethodCount> mProvisioningService;
     PBService<cCertificateServiceMethodCount>  mCertificateService;

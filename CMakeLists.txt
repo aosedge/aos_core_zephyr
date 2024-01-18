@@ -71,6 +71,7 @@ target_sources(
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
             src/ocispec/ocispec.cpp
+            src/provisioning/provisioning.cpp
             src/resourcemanager/resourcemanager.cpp
             src/runner/runner.cpp
             src/storage/storage.cpp

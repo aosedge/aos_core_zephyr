@@ -18,6 +18,7 @@
 #include "mocks/downloadermock.hpp"
 #include "mocks/launchermock.hpp"
 #include "mocks/monitoringmock.hpp"
+#include "mocks/provisioningmock.hpp"
 #include "mocks/resourcemanagermock.hpp"
 #include "utils.hpp"
 
@@ -34,6 +35,7 @@ struct cmclient_fixture {
     ResourceMonitorMock mResourceMonitor;
     DownloaderMock      mDownloader;
     ClockSyncMock       mClockSync;
+    ProvisioningMock    mProvisioning;
     Communication       mCommunication;
 };
 
@@ -102,9 +104,11 @@ ZTEST_SUITE(
 
         auto fixture = new cmclient_fixture;
 
+        fixture->mProvisioning.SetProvisioned(true);
+
         auto err = fixture->mCommunication.Init(fixture->mOpenChannel, fixture->mSecureChannel, fixture->mLauncher,
             fixture->mCertHandler, fixture->mResourceManager, fixture->mResourceMonitor, fixture->mDownloader,
-            fixture->mClockSync);
+            fixture->mClockSync, fixture->mProvisioning);
         zassert_true(err.IsNone(), "Can't initialize communication: %s", err.Message());
 
         fixture->mCommunication.ClockSynced();
@@ -132,6 +136,7 @@ ZTEST_SUITE(
         f->mResourceMonitor.Clear();
         f->mDownloader.Clear();
         f->mClockSync.Clear();
+        f->mProvisioning.SetProvisioned(true);
     },
     nullptr, [](void* fixture) { delete static_cast<cmclient_fixture*>(fixture); });
 

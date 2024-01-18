@@ -1,0 +1,12 @@
+# Copyright (C) 2023 Renesas Electronics Corporation.
+# Copyright (C) 2023 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Aos zephyr application"
+
+config AOS_PROVISIONING_FILE
+	string "Path to provisioning file."
+	default "/tmp/aos/.provisioned"
+
+source "Kconfig"

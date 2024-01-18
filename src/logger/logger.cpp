@@ -56,6 +56,7 @@ LOG_CALLBACK(clocksync);
 LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
+LOG_CALLBACK(provisioning);
 LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(storage);
@@ -106,6 +107,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(Module::eOCISpec):
         log_ocispec::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(Module::eProvisioning):
+        log_provisioning::LogCallback(level, message);
 
         break;
 

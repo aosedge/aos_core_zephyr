@@ -1,0 +1,6 @@
+tests:
+  aoszephyrapp.provisioning:
+    build_only: false
+    tags: provisioning
+    timeout: 500
+    platform_allow: native_posix_64 native_posix
