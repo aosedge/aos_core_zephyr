@@ -49,4 +49,8 @@ config AOS_CLOCK_SYNC_MAX_DIFF_MSEC
 	int "Maximum allowed difference between source and current time."
 	default 10000
 
+config AOS_PROVISIONING_FILE
+	string "Path to provisioning file."
+	default "/aos/.provisioned"
+
 source "Kconfig"

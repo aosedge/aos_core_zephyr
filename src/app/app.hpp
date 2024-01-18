@@ -19,6 +19,7 @@
 #include "communication/vchannel.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "ocispec/ocispec.hpp"
+#include "provisioning/provisioning.hpp"
 #include "runner/runner.hpp"
 #include "storage/storage.hpp"
 
@@ -56,6 +57,7 @@ private:
     ResourceUsageProvider                   mResourceUsageProvider;
     Runner                                  mRunner;
     Storage                                 mStorage;
+    Provisioning                            mProvisioning;
 };
 
 #endif
