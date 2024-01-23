@@ -97,9 +97,9 @@ public:
     aos::Error Sync(const aos::Time& time) override;
 
 private:
-    static constexpr auto cSendPeriod  = CONFIG_AOS_CLOCK_SYNC_SEND_PERIOD_SEC * aos::Time::Seconds;
-    static constexpr auto cSyncTimeout = CONFIG_AOS_CLOCK_SYNC_TIMEOUT_SEC * aos::Time::Seconds;
-    static constexpr auto cMaxTimeDiff = CONFIG_AOS_CLOCK_SYNC_MAX_DIFF_MSEC * aos::Time::Milliseconds;
+    static constexpr auto cSendPeriod  = CONFIG_AOS_CLOCK_SYNC_SEND_PERIOD_SEC * aos::Time::cSeconds;
+    static constexpr auto cSyncTimeout = CONFIG_AOS_CLOCK_SYNC_TIMEOUT_SEC * aos::Time::cSeconds;
+    static constexpr auto cMaxTimeDiff = CONFIG_AOS_CLOCK_SYNC_MAX_DIFF_MSEC * aos::Time::cMilliseconds;
 
     ClockSyncSenderItf* mSender {};
 
