@@ -197,15 +197,12 @@ public:
     virtual aos::Error SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec) override;
 
 private:
-    static constexpr size_t cJsonMaxContentSize = 4096;
-    static constexpr size_t cAllocationSize     = 2048;
-    static constexpr size_t cMaxNumAllocations  = 32;
-
-    aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path);
-    aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path);
+    static constexpr size_t cJsonMaxContentLen = 4096;
+    static constexpr size_t cAllocationSize    = 2048;
+    static constexpr size_t cMaxNumAllocations = 32;
 
     aos::Mutex                                                mMutex;
-    aos::StaticBuffer<cJsonMaxContentSize>                    mJsonFileBuffer;
+    aos::StaticString<cJsonMaxContentLen>                     mJsonFileContent;
     aos::StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
 };
 
