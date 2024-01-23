@@ -7,6 +7,7 @@
 
 #include <fcntl.h>
 
+#include <aos/common/tools/fs.hpp>
 #include <aos/common/tools/memory.hpp>
 
 #include "log.hpp"
@@ -94,9 +95,9 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
 
     LOG_DBG() << "Load image manifest: " << path;
 
-    auto readRet = ReadFileContentToBuffer(path);
-    if (!readRet.mError.IsNone()) {
-        return readRet.mError;
+    auto err = aos::FS::ReadFileToString(path, mJsonFileContent);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
     mAllocator.Clear();
@@ -111,7 +112,7 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
     jsonImageManifest->aosService.mediaType = "";
     jsonImageManifest->aosService.digest    = "";
 
-    int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageManifestDescr,
+    int ret = json_obj_parse(mJsonFileContent.Get(), mJsonFileContent.Size(), ImageManifestDescr,
         ARRAY_SIZE(ImageManifestDescr), jsonImageManifest);
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
@@ -241,10 +242,18 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
             {const_cast<char*>(serviceSize->CStr()), serviceSize->Size()}};
     }
 
-    json_obj_encode_buf(ImageManifestDescr, ARRAY_SIZE(ImageManifestDescr), jsonImageManifest,
-        static_cast<char*>(mJsonFileBuffer.Get()), mJsonFileBuffer.Size());
+    auto ret = json_obj_encode_buf(ImageManifestDescr, ARRAY_SIZE(ImageManifestDescr), jsonImageManifest,
+        mJsonFileContent.Get(), mJsonFileContent.MaxSize());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
 
-    err = WriteEncodedJsonBufferToFile(path);
+    err = mJsonFileContent.Resize(strlen(mJsonFileContent.CStr()));
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    err = aos::FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -258,9 +267,9 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
 
     LOG_DBG() << "Load image spec: " << path;
 
-    auto readRet = ReadFileContentToBuffer(path);
-    if (!readRet.mError.IsNone()) {
-        return readRet.mError;
+    auto err = aos::FS::ReadFileToString(path, mJsonFileContent);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
     mAllocator.Clear();
@@ -269,8 +278,8 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
 
     memset(jsonImageSpec, 0, sizeof(ImageSpec));
 
-    int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, ImageSpecDescr,
-        ARRAY_SIZE(ImageSpecDescr), jsonImageSpec);
+    int ret = json_obj_parse(
+        mJsonFileContent.Get(), mJsonFileContent.Size(), ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), jsonImageSpec);
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
@@ -332,10 +341,18 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
         jsonImageSpec->config.Cmd[i] = imageSpec.mConfig.mCmd[i].CStr();
     }
 
-    json_obj_encode_buf(ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), jsonImageSpec,
-        static_cast<char*>(mJsonFileBuffer.Get()), mJsonFileBuffer.Size());
+    auto ret = json_obj_encode_buf(
+        ImageSpecDescr, ARRAY_SIZE(ImageSpecDescr), jsonImageSpec, mJsonFileContent.Get(), mJsonFileContent.MaxSize());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
 
-    auto err = WriteEncodedJsonBufferToFile(path);
+    auto err = mJsonFileContent.Resize(strlen(mJsonFileContent.CStr()));
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    err = aos::FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -349,9 +366,9 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 
     LOG_DBG() << "Load runtime spec: " << path;
 
-    auto readRet = ReadFileContentToBuffer(path);
-    if (!readRet.mError.IsNone()) {
-        return readRet.mError;
+    auto err = aos::FS::ReadFileToString(path, mJsonFileContent);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
     mAllocator.Clear();
@@ -365,7 +382,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
     jsonRuntimeSpec->vm.kernel.path         = "";
     jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
 
-    int ret = json_obj_parse(static_cast<char*>(mJsonFileBuffer.Get()), readRet.mValue, RuntimeSpecDescr,
+    int ret = json_obj_parse(mJsonFileContent.Get(), mJsonFileContent.Size(), RuntimeSpecDescr,
         ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec);
     if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
@@ -544,72 +561,21 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
         }
     }
 
-    json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec,
-        static_cast<char*>(mJsonFileBuffer.Get()), mJsonFileBuffer.Size());
+    auto ret = json_obj_encode_buf(RuntimeSpecDescr, ARRAY_SIZE(RuntimeSpecDescr), jsonRuntimeSpec,
+        mJsonFileContent.Get(), mJsonFileContent.MaxSize());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
 
-    auto err = WriteEncodedJsonBufferToFile(path);
+    auto err = mJsonFileContent.Resize(strlen(mJsonFileContent.CStr()));
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    err = aos::FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
 
     return aos::ErrorEnum::eNone;
-}
-
-/***********************************************************************************************************************
- * Private
- **********************************************************************************************************************/
-
-aos::RetWithError<size_t> OCISpec::ReadFileContentToBuffer(const aos::String& path)
-{
-    aos::RetWithError<size_t> err(0, aos::ErrorEnum::eNone);
-
-    auto file = open(path.CStr(), O_RDONLY);
-    if (file < 0) {
-        err.mError = AOS_ERROR_WRAP(errno);
-        return err;
-    }
-
-    err.mValue = read(file, mJsonFileBuffer.Get(), cJsonMaxContentSize);
-    if (err.mValue < 0) {
-        err.mError = AOS_ERROR_WRAP(errno);
-    }
-
-    auto ret = close(file);
-    if (err.mError.IsNone() && (ret < 0)) {
-        err.mError = AOS_ERROR_WRAP(errno);
-        err.mValue = ret;
-    }
-
-    return err;
-}
-
-aos::Error OCISpec::WriteEncodedJsonBufferToFile(const aos::String& path)
-{
-    aos::Error err = aos::ErrorEnum::eNone;
-
-    // zephyr doesn't support O_TRUNC flag. This is WA to trunc file if it exists.
-    auto ret = unlink(path.CStr());
-    if (ret < 0 && errno != ENOENT) {
-        return AOS_ERROR_WRAP(errno);
-    }
-
-    auto file = open(path.CStr(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (file < 0) {
-        return AOS_ERROR_WRAP(errno);
-    }
-
-    auto len     = strlen(static_cast<char*>(mJsonFileBuffer.Get()));
-    auto written = write(file, mJsonFileBuffer.Get(), len);
-    if (written < 0) {
-        err = AOS_ERROR_WRAP(errno);
-    } else if ((size_t)written != len) {
-        err = AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
-    }
-
-    ret = close(file);
-    if (err.IsNone() && (ret < 0)) {
-        err = AOS_ERROR_WRAP(errno);
-    }
-
-    return err;
 }
