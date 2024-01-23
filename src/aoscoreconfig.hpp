@@ -44,7 +44,6 @@
 
 /**
  * Set Aos runtime dir.
- * TODO: we should have memory disk for runtime
  */
 #define AOS_CONFIG_LAUNCHER_RUNTIME_DIR CONFIG_AOS_RUNTIME_DIR
 
@@ -52,5 +51,15 @@
  * Set Aos services dir.
  */
 #define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR CONFIG_AOS_SERVICES_DIR
+
+/**
+ * Use static PKCS11 lib.
+ */
+#define AOS_CONFIG_PKCS11_USE_STATIC_LIB 1
+
+/**
+ * Default static PKCS11 lib.
+ */
+#define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
 
 #endif
