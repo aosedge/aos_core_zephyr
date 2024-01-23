@@ -122,8 +122,14 @@ add_dependencies(app version)
 
 find_package(CoreAPI)
 
-set(CORE_API_CXX_FLAGS -I${CMAKE_CURRENT_SOURCE_DIR}/src -I${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_lib_cpp/include
-                       -include ${CMAKE_BINARY_DIR}/zephyr/include/generated/autoconf.h -include ${AOS_CORE_CONFIG}
+set(CORE_API_CXX_FLAGS
+    -I${CMAKE_CURRENT_SOURCE_DIR}/src
+    -I${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_lib_cpp/include
+    -include
+    ${CMAKE_BINARY_DIR}/zephyr/include/generated/autoconf.h
+    -include
+    ${AOS_CORE_CONFIG}
+    -DARCH_STACK_PTR_ALIGN=16
 )
 
 core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../aos_core_api ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
