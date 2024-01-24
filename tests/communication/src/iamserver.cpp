@@ -65,11 +65,6 @@ ZTEST_SUITE(
 
         fixture->mCommunication.ClockSynced();
 
-        // Wait node configuration message
-
-        err = ReceivePBMessage(fixture->mSecureChannel, AOS_VCHAN_SM, "", 0);
-        zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
-
         return fixture;
     },
     [](void* fixture) {
