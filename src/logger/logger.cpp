@@ -63,9 +63,11 @@ LOG_CALLBACK(storage);
 
 // Aos lib logs
 
+LOG_CALLBACK(certhandler);
 LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
 LOG_CALLBACK(servicemanager);
+LOG_CALLBACK(pkcs11);
 
 /***********************************************************************************************************************
  * Public
@@ -132,6 +134,11 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         // Aos lib logs
 
+    case static_cast<int>(aos::LogModuleEnum::eIAMCertHandler):
+        log_certhandler::LogCallback(level, message);
+
+        break;
+
     case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
         log_launcher::LogCallback(level, message);
 
@@ -147,7 +154,14 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         break;
 
+    case static_cast<int>(aos::LogModuleEnum::eCommonPKCS11):
+        log_pkcs11::LogCallback(level, message);
+
+        break;
+
     default:
-        __ASSERT(false, "Log from unknown module received: %s", module.ToString().CStr());
+        LOG_MODULE_WRN(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
+            << "Log from unknown module received: module = " << module << ", level = " << level
+            << ", message = " << message;
     }
 }
