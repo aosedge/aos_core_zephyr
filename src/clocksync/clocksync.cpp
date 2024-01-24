@@ -79,7 +79,7 @@ aos::Error ClockSync::Sync(const aos::Time& time)
 
     LOG_DBG() << "Sync: time = " << time;
 
-    if (abs(aos::Time::Now().Sub(time)) > cMaxTimeDiff) {
+    if (llabs(aos::Time::Now().Sub(time)) > cMaxTimeDiff) {
         LOG_DBG() << "Set time: time = " << time;
 
         auto ts = time.UnixTime();
