@@ -33,6 +33,9 @@ aos::Error VChannel::Connect()
         return AOS_ERROR_WRAP(ret);
     }
 
+    mReadHandle.blocking  = true;
+    mWriteHandle.blocking = true;
+
     mConnected = true;
 
     return aos::ErrorEnum::eNone;
