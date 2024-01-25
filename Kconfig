@@ -93,4 +93,7 @@ config DOMD_DTB_PATH
 	string "Location of Domain-D partial device-tree"
 	default "prebuilt/ipl.dtb"
 
+config TA_DEPLOY_DIR
+	string "Location of optee TA's deploy dir"
+
 source "Kconfig"
