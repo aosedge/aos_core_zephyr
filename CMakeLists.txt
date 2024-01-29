@@ -88,9 +88,6 @@ target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/do
 target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c)
 target_sources_ifdef(CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c)
 
-# Include source files for qemu boards.
-target_sources_ifdef(CONFIG_BOARD_QEMU_CORTEX_A53 app PRIVATE src/domains/domd/domd_cfg_xenvm.c)
-
 # Include HW-specific source file
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
 

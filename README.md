@@ -37,14 +37,12 @@ west build -t run
 ```
 
 For test and debug purpose `native_posix_64` or `native_posix` board can be used.
-For simulation `qemu_x86` or `qemu_x86_64` board can be used.
-For xen based system `xenvm-qemu` board can be used.
 
 ```sh
-west build -b ${BOARD} -p auto -- -DSHIELD=xenvm_dom0
+west build -b ${BOARD} -p auto -- -DSHIELD=xen_dom0 -D'CONFIG_DOMD_UBOOT_PATH="your_path/ipl.bin"' -D'CONFIG_DOMD_DTB_PATH="your_path/ipl.dtb"'
 ```
 
-Supported ${BOARD}: `rcar_spider` and `rcar_salvator_xs_m3`
+Supported ${BOARD}: `rcar_spider`, `rcar_salvator_xs_m3` and `rcar_h3ulcb_ca57`
 
 ## Run
 
