@@ -45,14 +45,14 @@ manifest:
 
     - name: littlefs
       remote: zephyrproject-rtos
-      revision: ca583fd297ceb48bced3c2548600dc615d67af24
+      revision: zephyr
       path: modules/fs/littlefs
       groups:
         - fs
 
     - name: nanopb
       remote: zephyrproject-rtos
-      revision: 42fa8b211e946b90b9d968523fce7b1cfe27617e
+      revision: zephyr
       path: modules/lib/nanopb
 
     - name: mbedtls
