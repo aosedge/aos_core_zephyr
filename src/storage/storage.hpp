@@ -9,7 +9,7 @@
 #define STORAGE_HPP_
 
 #include <aos/common/tools/thread.hpp>
-#include <aos/iam/modules/certmodule.hpp>
+#include <aos/iam/certmodules/certmodule.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
