@@ -70,9 +70,68 @@ aos::Error App::Init()
         return err;
     }
 
+    if (!(err = mCryptoProvider.Init()).IsNone()) {
+        return err;
+    }
+
+    if (!(err = InitCertHandler()).IsNone()) {
+        return err;
+    }
+
     if (!(err = mCommunication.Init(mCommOpenChannel, mCommSecureChannel, mLauncher, mCertHandler, mResourceManager,
               mResourceMonitor, mDownloader, mClockSync, mProvisioning))
              .IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
+
+aos::Error App::InitCertHandler()
+{
+    aos::Error                              err;
+    aos::iam::certhandler::ExtendedKeyUsage keyUsage[] = {aos::iam::certhandler::ExtendedKeyUsageEnum::eClientAuth,
+        aos::iam::certhandler::ExtendedKeyUsageEnum::eServerAuth};
+
+    // Register iam cert module
+
+    if (!(err = mIAMHSMModule.Init(
+              "iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel}, mPKCS11Manager, mCryptoProvider))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mIAMCertModule.Init("iam",
+              {aos::crypto::KeyTypeEnum::eECDSA, 1, aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, 2)},
+              mCryptoProvider, mIAMHSMModule, mStorage))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCertHandler.RegisterModule(mIAMCertModule)).IsNone()) {
+        return err;
+    }
+
+    // Register sm cert module
+
+    if (!(err = mSMHSMModule.Init(
+              "sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel}, mPKCS11Manager, mCryptoProvider))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mSMCertModule.Init("sm",
+              {aos::crypto::KeyTypeEnum::eECDSA, 1, aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, 2)},
+              mCryptoProvider, mSMHSMModule, mStorage))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCertHandler.RegisterModule(mSMCertModule)).IsNone()) {
         return err;
     }
 
