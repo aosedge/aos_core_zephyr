@@ -5,8 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <tinycrypt/constants.h>
-#include <tinycrypt/sha256.h>
+#include <mbedtls/sha256.h>
 
 #include "checksum.hpp"
 
@@ -16,7 +15,7 @@
 
 aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(const aos::Array<uint8_t>& data)
 {
-    tc_sha256_state_struct                      s;
+    mbedtls_sha256_context                      ctx;
     aos::StaticArray<uint8_t, aos::cSHA256Size> digest;
 
     digest.Resize(aos::cSHA256Size);
@@ -25,20 +24,30 @@ aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(c
         return digest;
     }
 
-    auto ret = tc_sha256_init(&s);
-    if (TC_CRYPTO_SUCCESS != ret) {
+    mbedtls_sha256_init(&ctx);
+
+    auto ret = mbedtls_sha256_starts(&ctx, 0);
+    if (ret != 0) {
+        mbedtls_sha256_free(&ctx);
+
         return {digest, AOS_ERROR_WRAP(ret)};
     }
 
-    ret = tc_sha256_update(&s, data.Get(), data.Size());
-    if (TC_CRYPTO_SUCCESS != ret) {
+    ret = mbedtls_sha256_update(&ctx, data.Get(), data.Size());
+    if (ret != 0) {
+        mbedtls_sha256_free(&ctx);
+
         return {digest, AOS_ERROR_WRAP(ret)};
     }
 
-    ret = tc_sha256_final(static_cast<uint8_t*>(digest.Get()), &s);
-    if (TC_CRYPTO_SUCCESS != ret) {
+    ret = mbedtls_sha256_finish(&ctx, static_cast<uint8_t*>(digest.Get()));
+    if (ret != 0) {
+        mbedtls_sha256_free(&ctx);
+
         return {digest, AOS_ERROR_WRAP(ret)};
     }
+
+    mbedtls_sha256_free(&ctx);
 
     return digest;
 }
