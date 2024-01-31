@@ -55,13 +55,6 @@ manifest:
       revision: 42fa8b211e946b90b9d968523fce7b1cfe27617e
       path: modules/lib/nanopb
 
-    - name: tinycrypt
-      remote: zephyrproject-rtos
-      revision: 3e9a49d2672ec01435ffbf0d788db6d95ef28de0
-      path: modules/crypto/tinycrypt
-      groups:
-        - crypto
-
     - name: mbedtls
       remote: zephyrproject-rtos
       revision: zephyr

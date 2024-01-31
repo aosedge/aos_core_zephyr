@@ -43,7 +43,6 @@ core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_api ${CMAKE_CURR
 # ######################################################################################################################
 
 target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/../../../aos_core_lib_cpp/include)
-target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/../../../modules/lib/nanopb)
 target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/../../src)
 target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/src)
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
