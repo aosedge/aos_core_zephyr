@@ -44,7 +44,8 @@ int main(void)
     auto& app = App::Get();
 
     auto err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s", err.Message());
+    __ASSERT(
+        err.IsNone(), "Error initializing application: %s (%s:%d)", err.Message(), err.FileName(), err.LineNumber());
 
     return 0;
 }
