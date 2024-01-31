@@ -25,6 +25,16 @@
  */
 #define AOS_CONFIG_TIMER_SIGEV_NOTIFY SIGEV_SIGNAL
 
+/**
+ * Use static PKCS11 lib.
+ */
+#define AOS_CONFIG_PKCS11_USE_STATIC_LIB 1
+
+/**
+ * Default PKCS11 library.
+ */
+#define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
+
 #endif // CONFIG_POSIX_API
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
@@ -51,11 +61,6 @@
  * Set Aos services dir.
  */
 #define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR CONFIG_AOS_SERVICES_DIR
-
-/**
- * Use static PKCS11 lib.
- */
-#define AOS_CONFIG_PKCS11_USE_STATIC_LIB 1
 
 /**
  * Default static PKCS11 lib.
