@@ -211,17 +211,6 @@ ExternalProject_Add(
 
 file(MAKE_DIRECTORY ${aoscore_build_dir}/include)
 
-# aoscommon
-
-add_library(aoscommon STATIC IMPORTED GLOBAL)
-
-add_dependencies(aoscommon aoscore)
-
-set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommoncpp.a)
-set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
-
-target_link_libraries(app PUBLIC aoscommon)
-
 # aossm
 
 add_library(aossm STATIC IMPORTED GLOBAL)
@@ -243,3 +232,14 @@ set_target_properties(aosiam PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/l
 set_target_properties(aosiam PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aosiam)
+
+# aoscommon
+
+add_library(aoscommon STATIC IMPORTED GLOBAL)
+
+add_dependencies(aoscommon aoscore)
+
+set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommoncpp.a)
+set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
+
+target_link_libraries(app PUBLIC aoscommon)
