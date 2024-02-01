@@ -85,6 +85,9 @@ config AOS_PROVISIONING_FILE
 	string "Path to provisioning file."
 	default "/aos/.provisioned"
 	
+config AOS_ROOT_CA_PATH
+	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
+
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"
 	default "prebuilt/ipl.bin"
