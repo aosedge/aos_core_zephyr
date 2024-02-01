@@ -31,8 +31,17 @@ public:
     aos::Error Init(const aos::String& xsReadPath, const aos::String xsWritePath);
 
     /**
+     * Set the secure channel.
+     *
+     * @param certType Certificate type.
+     * @return aos::Error
+     */
+    aos::Error SetSecure(const aos::String& certType) override;
+
+    /**
      * Connects to communication channel.
      *
+     * @param secure specifies if secure connection is required.
      * @return aos::Error.
      */
     aos::Error Connect() override;

@@ -19,6 +19,15 @@ aos::Error VChannel::Init(const aos::String& xsReadPath, const aos::String xsWri
     return aos::ErrorEnum::eNone;
 }
 
+aos::Error VChannel::SetSecure(const aos::String& certType)
+{
+    if (certType != "") {
+        return aos::ErrorEnum::eNotSupported;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
 aos::Error VChannel::Connect()
 {
     auto ret = vch_connect(cDomdID, mXSReadPath.CStr(), &mReadHandle);

@@ -16,8 +16,17 @@
 class CommChannelItf {
 public:
     /**
+     * Set the secure channel.
+     *
+     * @param certType Certificate type.
+     * @return aos::Error.
+     */
+    virtual aos::Error SetSecure(const aos::String& certType) = 0;
+
+    /**
      * Connects to communication channel.
      *
+     * @param secure specifies if secure connection is required.
      * @return aos::Error.
      */
     virtual aos::Error Connect() = 0;

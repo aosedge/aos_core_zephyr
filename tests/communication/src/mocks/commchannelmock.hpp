@@ -12,10 +12,14 @@
 #include <mutex>
 #include <vector>
 
+#include <aos/common/tools/string.hpp>
+
 #include "communication/commchannel.hpp"
 
 class CommChannelMock : public CommChannelItf {
 public:
+    aos::Error SetSecure(const aos::String& certType) override { return aos::ErrorEnum::eNone; }
+
     aos::Error Connect() override
     {
         std::lock_guard<std::mutex> lock(mMutex);
