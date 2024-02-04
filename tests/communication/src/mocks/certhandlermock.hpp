@@ -46,7 +46,7 @@ public:
     }
 
     aos::Error CreateKey(const aos::String& certType, const aos::String& subjectCommonName, const aos::String& password,
-        aos::Array<uint8_t>& pemCSR) override
+        aos::String& pemCSR) override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
@@ -54,13 +54,13 @@ public:
         mSubject  = subjectCommonName.CStr();
         mPassword = password.CStr();
 
-        pemCSR = aos::Array<uint8_t>(reinterpret_cast<const uint8_t*>(mCSR.data()), mCSR.size());
+        pemCSR = mCSR.c_str();
 
         return aos::ErrorEnum::eNone;
     }
 
     aos::Error ApplyCertificate(
-        const aos::String& certType, const aos::Array<uint8_t>& pemCert, aos::iam::certhandler::CertInfo& info) override
+        const aos::String& certType, const aos::String& pemCert, aos::iam::certhandler::CertInfo& info) override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
