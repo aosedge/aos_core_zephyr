@@ -14,7 +14,6 @@
 #include <vchanapi.h>
 
 #include "channeltype.hpp"
-#include "log.hpp"
 
 /**
  * Max service length.
@@ -286,8 +285,6 @@ public:
             auto err = (fullMethodName[0] != '/' ? fullMethodName : aos::String(&fullMethodName.CStr()[1]))
                            .Split(names, '/');
             if (!err.IsNone()) {
-                LOG_ERR() << "Can't get service and method names: " << err;
-
                 return AOS_ERROR_WRAP(err);
             }
         }
@@ -299,10 +296,7 @@ public:
         auto service = mServices[channel].Find([&names](auto item) { return item->GetServiceName() == names[0]; });
 
         if (!service.mError.IsNone() || !(*service.mValue)->IsMethodRegistered(names[1])) {
-
-            LOG_WRN() << "Method is not allowed: " << fullMethodName;
-
-            return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
+            return AOS_ERROR_WRAP(aos::ErrorEnum::eNotSupported);
         }
 
         return ProcessMessage(channel, **service.mValue, names[1], requestID, data);
