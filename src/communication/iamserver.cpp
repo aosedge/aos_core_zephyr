@@ -228,8 +228,7 @@ aos::Error IAMServer::ProcessCreateKey(Channel channel, uint64_t requestID, cons
     }
 
     if (err.IsNone()) {
-        auto csr = aos::Array<uint8_t>(
-            reinterpret_cast<uint8_t*>(pbCreateKeyResponse->csr), sizeof(pbCreateKeyResponse->csr) - 1);
+        auto csr = aos::String(pbCreateKeyResponse->csr, sizeof(pbCreateKeyResponse->csr) - 1);
 
         err = mCertHandler->CreateKey(
             pbCreateKeyRequest->type, pbCreateKeyRequest->subject, pbCreateKeyRequest->password, csr);
@@ -257,9 +256,7 @@ aos::Error IAMServer::ProcessApplyCert(Channel channel, uint64_t requestID, cons
     if (err.IsNone()) {
         auto certInfo = aos::MakeUnique<aos::iam::certhandler::CertInfo>(&mAllocator);
 
-        err = mCertHandler->ApplyCertificate(pbApplyCertRequest->type,
-            aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(pbApplyCertRequest->cert), strlen(pbApplyCertRequest->cert)),
-            *certInfo);
+        err = mCertHandler->ApplyCertificate(pbApplyCertRequest->type, pbApplyCertRequest->cert, *certInfo);
         if (err.IsNone()) {
             StringToPB(certInfo->mCertURL, pbApplyCertResponse->cert_url);
             err = aos::String(pbApplyCertResponse->serial, sizeof(pbApplyCertResponse->serial) - 1)
