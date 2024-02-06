@@ -99,8 +99,8 @@ aos::Error App::InitCertHandler()
 
     // Register iam cert module
 
-    if (!(err = mIAMHSMModule.Init(
-              "iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel}, mPKCS11Manager, mCryptoProvider))
+    if (!(err = mIAMHSMModule.Init("iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+              mPKCS11Manager, mCryptoProvider))
              .IsNone()) {
         return err;
     }
@@ -118,8 +118,8 @@ aos::Error App::InitCertHandler()
 
     // Register sm cert module
 
-    if (!(err = mSMHSMModule.Init(
-              "sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel}, mPKCS11Manager, mCryptoProvider))
+    if (!(err = mSMHSMModule.Init("sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+              mPKCS11Manager, mCryptoProvider))
              .IsNone()) {
         return err;
     }
