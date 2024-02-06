@@ -46,6 +46,7 @@ public:
 private:
     static constexpr auto cPKCS11ModuleLibrary    = AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB;
     static constexpr auto cPKCS11ModuleTokenLabel = "aoscore";
+    static constexpr auto cPKCS11ModulePinFile    = CONFIG_AOS_PKCS11_MODULE_PIN_FILE;
 
     aos::Error InitCertHandler();
 
