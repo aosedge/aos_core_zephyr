@@ -227,9 +227,9 @@ ZTEST_F(cmclient, test_GetUnitConfigStatus)
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_unit_config_status_tag);
     zassert_equal(strcmp(outgoingMessage.SMOutgoingMessage.unit_config_status.vendor_version, version), 0);
-    zassert_equal(strcmp(outgoingMessage.SMOutgoingMessage.unit_config_status.error,
-                      aos::Error(aos::ErrorEnum::eFailed).Message()),
-        0);
+    zassert_not_equal(strstr(outgoingMessage.SMOutgoingMessage.unit_config_status.error,
+                          aos::Error(aos::ErrorEnum::eFailed).Message()),
+        nullptr);
 }
 
 ZTEST_F(cmclient, test_CheckUnitConfig)
