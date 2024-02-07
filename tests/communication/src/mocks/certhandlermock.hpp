@@ -73,6 +73,9 @@ public:
     aos::Error GetCertificate(const aos::String& certType, const aos::Array<uint8_t>& issuer,
         const aos::Array<uint8_t>& serial, aos::iam::certhandler::CertInfo& resCert) override
     {
+        resCert.mCertURL = CERT_DIR "/client.cer";
+        resCert.mKeyURL  = CERT_DIR "/client.key";
+
         return aos::ErrorEnum::eNone;
     }
 
