@@ -61,8 +61,8 @@ aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
 
     return mInstanceDatabase.Update(ConvertInstanceInfo(instance), [&instance](const InstanceInfo& data) {
         return data.mInstanceIdent.mInstance == instance.mInstanceIdent.mInstance
-            && strcmp(data.mInstanceIdent.mSubjectID, instance.mInstanceIdent.mSubjectID.CStr()) == 0
-            && strcmp(data.mInstanceIdent.mServiceID, instance.mInstanceIdent.mServiceID.CStr()) == 0;
+            && data.mInstanceIdent.mSubjectID == instance.mInstanceIdent.mSubjectID
+            && data.mInstanceIdent.mServiceID == instance.mInstanceIdent.mServiceID;
     });
 
     return aos::ErrorEnum::eNone;
@@ -76,8 +76,8 @@ aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
 
     return mInstanceDatabase.Remove([&instanceIdent](const InstanceInfo& data) {
         return data.mInstanceIdent.mInstance == instanceIdent.mInstance
-            && strcmp(data.mInstanceIdent.mSubjectID, instanceIdent.mSubjectID.CStr()) == 0
-            && strcmp(data.mInstanceIdent.mServiceID, instanceIdent.mServiceID.CStr()) == 0;
+            && data.mInstanceIdent.mSubjectID == instanceIdent.mSubjectID
+            && data.mInstanceIdent.mServiceID == instanceIdent.mServiceID;
     });
 
     return aos::ErrorEnum::eNone;
@@ -118,7 +118,7 @@ aos::Error Storage::UpdateService(const aos::sm::servicemanager::ServiceData& se
     LOG_DBG() << "Update service: " << service.mServiceID;
 
     return mServiceDatabase.Update(ConvertServiceData(service),
-        [&service](const ServiceData& data) { return strcmp(data.mServiceID, service.mServiceID.CStr()) == 0; });
+        [&service](const ServiceData& data) { return data.mServiceID == service.mServiceID; });
 }
 
 aos::Error Storage::RemoveService(const aos::String& serviceID, uint64_t aosVersion)
@@ -128,7 +128,7 @@ aos::Error Storage::RemoveService(const aos::String& serviceID, uint64_t aosVers
     LOG_DBG() << "Remove service: " << serviceID;
 
     return mServiceDatabase.Remove([&serviceID, aosVersion](const ServiceData& data) {
-        return strcmp(data.mServiceID, serviceID.CStr()) == 0 && data.mVersionInfo.mAosVersion == aosVersion;
+        return data.mServiceID == serviceID && data.mVersionInfo.mAosVersion == aosVersion;
     });
 }
 
@@ -161,7 +161,7 @@ aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(cons
     ServiceData serviceData;
 
     auto err = mServiceDatabase.ReadRecordByFilter(
-        serviceData, [&serviceID](const ServiceData& data) { return strcmp(data.mServiceID, serviceID.CStr()) == 0; });
+        serviceData, [&serviceID](const ServiceData& data) { return data.mServiceID == serviceID; });
 
     if (!err.IsNone()) {
         return aos::RetWithError<aos::sm::servicemanager::ServiceData>(aos::sm::servicemanager::ServiceData {}, err);
@@ -185,9 +185,8 @@ aos::Error Storage::RemoveCertInfo(const aos::String& certType, const aos::Strin
 
     LOG_DBG() << "Remove cert info: " << certType;
 
-    return mCertDatabase.Remove([&certType, &certURL](const CertInfo& data) {
-        return strcmp(data.mCertType, certType.CStr()) == 0 && strcmp(data.mCertURL, certURL.CStr()) == 0;
-    });
+    return mCertDatabase.Remove(
+        [&certType, &certURL](const CertInfo& data) { return data.mCertType == certType && data.mCertURL == certURL; });
 }
 
 aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
@@ -196,8 +195,7 @@ aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
 
     LOG_DBG() << "Remove all cert info: " << certType;
 
-    return mCertDatabase.Remove(
-        [&certType](const CertInfo& data) { return strcmp(data.mCertType, certType.CStr()) == 0; });
+    return mCertDatabase.Remove([&certType](const CertInfo& data) { return data.mCertType == certType; });
 }
 
 aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo)
@@ -207,7 +205,7 @@ aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::ia
     LOG_DBG() << "Get cert info: " << certType;
 
     auto err = mCertDatabase.ReadRecords([&certsInfo, &certType, this](const CertInfo& certInfo) -> aos::Error {
-        if (strcmp(certInfo.mCertType, certType.CStr()) == 0) {
+        if (certInfo.mCertType == certType) {
             auto cert = ConvertCertInfo(certInfo);
 
             auto err = certsInfo.PushBack(cert);
