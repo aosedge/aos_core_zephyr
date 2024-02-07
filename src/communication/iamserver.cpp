@@ -121,7 +121,12 @@ aos::Error IAMServer::ProcessGetAllNodeIDs(Channel channel, uint64_t requestID, 
     nodesID.ids_count = 1;
     StringToPB(cNodeID, nodesID.ids[0]);
 
-    return SendPBMessage(channel, requestID, &iamanager_v4_NodesID_msg, &nodesID);
+    auto err = SendPBMessage(channel, requestID, &iamanager_v4_NodesID_msg, &nodesID);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error IAMServer::ProcessGetGetCertTypes(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -140,7 +145,12 @@ aos::Error IAMServer::ProcessGetGetCertTypes(Channel channel, uint64_t requestID
         }
     }
 
-    return SendPBMessage(channel, requestID, &iamanager_v4_CertTypes_msg, &pbCertTypes, err);
+    auto sendErr = SendPBMessage(channel, requestID, &iamanager_v4_CertTypes_msg, &pbCertTypes, err);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::ProcessSetOwner(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -157,7 +167,12 @@ aos::Error IAMServer::ProcessSetOwner(Channel channel, uint64_t requestID, const
         err = mCertHandler->SetOwner(pbSetOwner.type, pbSetOwner.password);
     }
 
-    return SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    auto sendErr = SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::ProcessClear(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -174,7 +189,12 @@ aos::Error IAMServer::ProcessClear(Channel channel, uint64_t requestID, const ao
         err = mCertHandler->Clear(pbClear.type);
     }
 
-    return SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    auto sendErr = SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::ProcessEncryptDisk(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -193,7 +213,12 @@ aos::Error IAMServer::ProcessEncryptDisk(Channel channel, uint64_t requestID, co
         LOG_ERR() << "Disk encryption error: " << err;
     }
 
-    return SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    auto sendErr = SendPBMessage(channel, requestID, nullptr, nullptr, err);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::ProcessFinishProvisioning(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -210,7 +235,12 @@ aos::Error IAMServer::ProcessFinishProvisioning(Channel channel, uint64_t reques
         messageError = err;
     }
 
-    return SendPBMessage(channel, requestID, nullptr, nullptr, messageError);
+    auto sendErr = SendPBMessage(channel, requestID, nullptr, nullptr, messageError);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::ProcessCreateKey(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -236,7 +266,13 @@ aos::Error IAMServer::ProcessCreateKey(Channel channel, uint64_t requestID, cons
         pbCreateKeyResponse->csr[csr.Size()] = 0;
     }
 
-    return SendPBMessage(channel, requestID, &iamanager_v4_CreateKeyResponse_msg, pbCreateKeyResponse.Get(), err);
+    auto sendErr
+        = SendPBMessage(channel, requestID, &iamanager_v4_CreateKeyResponse_msg, pbCreateKeyResponse.Get(), err);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::ProcessApplyCert(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data)
@@ -264,7 +300,13 @@ aos::Error IAMServer::ProcessApplyCert(Channel channel, uint64_t requestID, cons
         }
     }
 
-    return SendPBMessage(channel, requestID, &iamanager_v4_ApplyCertResponse_msg, pbApplyCertResponse.Get(), err);
+    auto sendErr
+        = SendPBMessage(channel, requestID, &iamanager_v4_ApplyCertResponse_msg, pbApplyCertResponse.Get(), err);
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return AOS_ERROR_WRAP(err);
 }
 
 aos::Error IAMServer::DecodePBMessage(const aos::Array<uint8_t>& data, const pb_msgdesc_t* fields, void* message)

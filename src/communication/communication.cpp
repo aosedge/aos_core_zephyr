@@ -314,12 +314,12 @@ aos::Error Communication::SendMessage(Channel channel, AosVChanSource source, co
     auto err = mChannels[channel]->Write(
         aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(VChanMessageHeader)));
     if (!err.IsNone()) {
-        return err;
+        return AOS_ERROR_WRAP(err);
     }
 
     err = mChannels[channel]->Write(data);
     if (!err.IsNone()) {
-        return err;
+        return AOS_ERROR_WRAP(err);
     }
 
     return aos::ErrorEnum::eNone;
