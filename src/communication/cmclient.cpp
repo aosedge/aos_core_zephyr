@@ -305,6 +305,7 @@ aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel, uint64_t reques
 
     auto err = mResourceManager->GetUnitConfigInfo(version);
     if (!err.IsNone()) {
+        err = AOS_ERROR_WRAP(err);
         ErrorToPB(err, pbConfigStatus.error);
     }
 
@@ -312,7 +313,12 @@ aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel, uint64_t reques
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
+    auto sendErr = SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return err;
 }
 
 aos::Error CMClient::ProcessCheckUnitConfig(
@@ -328,6 +334,7 @@ aos::Error CMClient::ProcessCheckUnitConfig(
 
     auto err = mResourceManager->CheckUnitConfig(pbUnitConfig.vendor_version, pbUnitConfig.unit_config);
     if (!err.IsNone()) {
+        err = AOS_ERROR_WRAP(err);
         ErrorToPB(err, pbConfigStatus.error);
     }
 
@@ -338,7 +345,12 @@ aos::Error CMClient::ProcessCheckUnitConfig(
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
+    auto sendErr = SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return err;
 }
 
 aos::Error CMClient::ProcessSetUnitConfig(
@@ -354,6 +366,7 @@ aos::Error CMClient::ProcessSetUnitConfig(
 
     auto err = mResourceManager->UpdateUnitConfig(pbUnitConfig.vendor_version, pbUnitConfig.unit_config);
     if (!err.IsNone()) {
+        err = AOS_ERROR_WRAP(err);
         ErrorToPB(err, pbConfigStatus.error);
     }
 
@@ -361,7 +374,12 @@ aos::Error CMClient::ProcessSetUnitConfig(
 
     LOG_DBG() << "Send SM message: message = UnitConfigStatus";
 
-    return SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
+    auto sendErr = SendPBMessage(channel, requestID, &servicemanager_v3_SMOutgoingMessages_msg, outgoingMessage.Get());
+    if (!sendErr.IsNone() && err.IsNone()) {
+        err = sendErr;
+    }
+
+    return err;
 }
 
 aos::Error CMClient::ProcessRunInstances(const servicemanager_v3_RunInstances& pbRunInstances)

@@ -353,8 +353,13 @@ protected:
             }
         }
 
-        return mMessageSender->SendMessage(channel, mSource, "", requestID,
+        auto err = mMessageSender->SendMessage(channel, mSource, "", requestID,
             aos::Array<uint8_t>(static_cast<uint8_t*>(GetSendBuffer().Get()), outStream.bytes_written), messageError);
+        if (!err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+
+        return aos::ErrorEnum::eNone;
     }
 
 private:
