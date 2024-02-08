@@ -64,6 +64,7 @@ LOG_CALLBACK(storage);
 // Aos lib logs
 
 LOG_CALLBACK(certhandler);
+LOG_CALLBACK(crypto);
 LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
 LOG_CALLBACK(servicemanager);
@@ -134,6 +135,16 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
         // Aos lib logs
 
+    case static_cast<int>(aos::LogModuleEnum::eCommonPKCS11):
+        log_pkcs11::LogCallback(level, message);
+
+        break;
+
+    case static_cast<int>(aos::LogModuleEnum::eCommonCrypto):
+        log_crypto::LogCallback(level, message);
+
+        break;
+
     case static_cast<int>(aos::LogModuleEnum::eIAMCertHandler):
         log_certhandler::LogCallback(level, message);
 
@@ -151,11 +162,6 @@ void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::
 
     case static_cast<int>(aos::LogModuleEnum::eSMServiceManager):
         log_servicemanager::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonPKCS11):
-        log_pkcs11::LogCallback(level, message);
 
         break;
 
