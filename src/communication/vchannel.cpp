@@ -53,22 +53,25 @@ aos::Error VChannel::Close()
 
 aos::Error VChannel::Read(aos::Array<uint8_t>& data, size_t size)
 {
+    size_t read = 0;
+
     auto err = data.Resize(size);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    auto ret = vch_read(&mReadHandle, data.Get(), size);
-    if (ret < 0) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    if (static_cast<size_t>(ret) != size) {
-        err = data.Resize(ret);
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
+    while (read < size) {
+        auto ret = vch_read(&mReadHandle, data.Get() + read, size - read);
+        if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
         }
 
+        read += ret;
+    }
+
+    assert(read <= data.MaxSize());
+
+    if (read != size) {
         return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
     }
 
@@ -77,12 +80,18 @@ aos::Error VChannel::Read(aos::Array<uint8_t>& data, size_t size)
 
 aos::Error VChannel::Write(const aos::Array<uint8_t>& data)
 {
-    auto ret = vch_write(&mWriteHandle, data.Get(), data.Size());
-    if (ret < 0) {
-        return AOS_ERROR_WRAP(ret);
+    size_t written = 0;
+
+    while (written < data.Size()) {
+        auto ret = vch_write(&mWriteHandle, data.Get() + written, data.Size() - written);
+        if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+
+        written += ret;
     }
 
-    if (static_cast<size_t>(ret) != data.Size()) {
+    if (written != data.Size()) {
         return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
     }
 
