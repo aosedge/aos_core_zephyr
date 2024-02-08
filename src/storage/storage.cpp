@@ -195,7 +195,12 @@ aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
 
     LOG_DBG() << "Remove all cert info: " << certType;
 
-    return mCertDatabase.Remove([&certType](const CertInfo& data) { return data.mCertType == certType; });
+    auto err = mCertDatabase.Remove([&certType](const CertInfo& data) { return data.mCertType == certType; });
+    if (!err.IsNone() && !err.Is(aos::ErrorEnum::eNotFound)) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo)
