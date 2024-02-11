@@ -98,15 +98,15 @@ aos::Error IAMServer::ProcessMessage(Channel channel, PBServiceItf& service, con
     LOG_DBG() << "Receive IAM message: "
               << "service = " << service.GetServiceName() << ", method = " << methodName;
 
-    aos::StaticString<cMaxServiceLen + cMaxMethodLen> fullMethodName;
+    auto fullMethodName = aos::MakeUnique<aos::StaticString<cMaxServiceLen + cMaxMethodLen>>(&mAllocator);
 
-    auto err = service.GetFullMethodName(methodName, fullMethodName);
+    auto err = service.GetFullMethodName(methodName, *fullMethodName);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
     auto methodHandler
-        = mHandlers.Find([&fullMethodName](const auto& item) { return item.mMethodName == fullMethodName; });
+        = mHandlers.Find([&fullMethodName](const auto& item) { return item.mMethodName == *fullMethodName; });
     if (!methodHandler.mError.IsNone()) {
         return AOS_ERROR_WRAP(methodHandler.mError);
     }
