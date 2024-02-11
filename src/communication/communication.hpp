@@ -145,6 +145,8 @@ private:
     IAMServer mIAMServer;
 
     bool mClockSynced = false;
+
+    aos::StaticAllocator<sizeof(VChanMessageHeader) * (static_cast<int>(ChannelEnum::eNumChannels) + 1)> mAllocator;
 };
 
 #endif
