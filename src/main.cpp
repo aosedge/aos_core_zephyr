@@ -31,15 +31,15 @@ int main(void)
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
     auto ret = littlefs_mount();
-    __ASSERT(ret == 0, "Error mounting little FS: %d (%s)", ret, strerror(ret));
+    __ASSERT(ret == 0, "Error mounting little FS: %s [%d]", strerror(ret), ret);
 
     ret = TEE_SupplicantInit();
-    __ASSERT(ret == 0, "Error initializing TEE supplicant: %d (%s)", ret, strerror(ret));
+    __ASSERT(ret == 0, "Error initializing TEE supplicant: %s [%d]", strerror(ret), ret);
 
     reboot_watcher_init();
 
     ret = create_domains();
-    __ASSERT(ret == 0, "Error creating domains: %d (%s)", ret, strerror(ret));
+    __ASSERT(ret == 0, "Error creating domains: %s [%d]", strerror(ret), ret);
 #endif
 
     Logger::Init();
@@ -47,8 +47,8 @@ int main(void)
     auto& app = App::Get();
 
     auto err = app.Init();
-    __ASSERT(
-        err.IsNone(), "Error initializing application: %s (%s:%d)", err.Message(), err.FileName(), err.LineNumber());
+    __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
+        err.FileName(), err.LineNumber());
 
     return 0;
 }
