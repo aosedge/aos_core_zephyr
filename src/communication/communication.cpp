@@ -299,8 +299,9 @@ aos::Error Communication::SendMessage(Channel channel, AosVChanSource source, co
     LOG_DBG() << "Send message: channel = " << channel << ", source = " << source << ", method = " << methodName
               << ", size = " << data.Size() << " error = " << messageError;
 
-    VChanMessageHeader header = {source, static_cast<uint32_t>(data.Size()), requestID, messageError.Errno(),
-        static_cast<int32_t>(messageError.Value())};
+    auto header = aos::MakeUnique<VChanMessageHeader>(&mAllocator,
+        VChanMessageHeader {source, static_cast<uint32_t>(data.Size()), requestID, messageError.Errno(),
+            static_cast<int32_t>(messageError.Value())});
 
     if (data.Size()) {
         auto checksum = CalculateSha256(data);
@@ -308,11 +309,11 @@ aos::Error Communication::SendMessage(Channel channel, AosVChanSource source, co
             return AOS_ERROR_WRAP(checksum.mError);
         }
 
-        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header.mSha256), aos::cSHA256Size) = checksum.mValue;
+        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header->mSha256), aos::cSHA256Size) = checksum.mValue;
     }
 
     auto err = mChannels[channel]->Write(
-        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(VChanMessageHeader)));
+        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header.Get()), sizeof(VChanMessageHeader)));
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -327,15 +328,14 @@ aos::Error Communication::SendMessage(Channel channel, AosVChanSource source, co
 
 aos::Error Communication::ProcessMessages(Channel channel)
 {
-    auto headerData = aos::StaticArray<uint8_t, sizeof(VChanMessageHeader)>();
+    auto header     = aos::MakeUnique<VChanMessageHeader>(&mAllocator);
+    auto headerData = aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header.Get()), sizeof(VChanMessageHeader));
 
     while (true) {
         auto err = mChannels[channel]->Read(headerData, sizeof(VChanMessageHeader));
         if (!err.IsNone()) {
             return err;
         }
-
-        auto header = reinterpret_cast<VChanMessageHeader*>(headerData.Get());
 
         LOG_DBG() << "Receive message: channel = " << channel << ", source = " << header->mSource
                   << ", method = " << header->mMethodName << ", size = " << header->mDataSize;

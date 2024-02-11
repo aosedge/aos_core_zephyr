@@ -107,7 +107,8 @@ private:
 
     aos::StaticArray<MethodHandler, cProvisioningServiceMethodCount + cCertificateServiceMethodCount> mHandlers;
 
-    aos::StaticAllocator<aos::Max(sizeof(iamanager_v4_CreateKeyRequest) + sizeof(iamanager_v4_CreateKeyResponse),
+    aos::StaticAllocator<aos::Max(sizeof(aos::StaticString<cMaxServiceLen + cMaxMethodLen>)
+            + sizeof(iamanager_v4_CreateKeyRequest) + sizeof(iamanager_v4_CreateKeyResponse),
         sizeof(iamanager_v4_ApplyCertRequest) + sizeof(iamanager_v4_ApplyCertResponse)
             + sizeof(aos::iam::certhandler::CertInfo))>
         mAllocator;

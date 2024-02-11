@@ -9,6 +9,7 @@
 #define MESSAGEHANDLER_HPP_
 
 #include <aos/common/tools/array.hpp>
+#include <aos/common/tools/memory.hpp>
 
 #include <pb_encode.h>
 #include <vchanapi.h>
@@ -279,27 +280,28 @@ public:
     aos::Error ReceiveMessage(Channel channel, const aos::String& fullMethodName, uint64_t requestID,
         const aos::Array<uint8_t>& data) override
     {
-        aos::StaticArray<aos::StaticString<aos::Max(cMaxServiceLen, cMaxMethodLen)>, 2> names;
+        auto names = aos::MakeUnique<aos::StaticArray<aos::StaticString<aos::Max(cMaxServiceLen, cMaxMethodLen)>, 2>>(
+            &mAllocator);
 
         if (fullMethodName.Size() > 0) {
             auto err = (fullMethodName[0] != '/' ? fullMethodName : aos::String(&fullMethodName.CStr()[1]))
-                           .Split(names, '/');
+                           .Split(*names, '/');
             if (!err.IsNone()) {
                 return AOS_ERROR_WRAP(err);
             }
         }
 
-        for (auto i = names.Size(); i < names.MaxSize(); i++) {
-            names.PushBack("");
+        for (auto i = names->Size(); i < names->MaxSize(); i++) {
+            names->PushBack("");
         }
 
-        auto service = mServices[channel].Find([&names](auto item) { return item->GetServiceName() == names[0]; });
+        auto service = mServices[channel].Find([&names](auto item) { return item->GetServiceName() == (*names)[0]; });
 
-        if (!service.mError.IsNone() || !(*service.mValue)->IsMethodRegistered(names[1])) {
+        if (!service.mError.IsNone() || !(*service.mValue)->IsMethodRegistered((*names)[1])) {
             return AOS_ERROR_WRAP(aos::ErrorEnum::eNotSupported);
         }
 
-        return ProcessMessage(channel, **service.mValue, names[1], requestID, data);
+        return ProcessMessage(channel, **service.mValue, (*names)[1], requestID, data);
     }
 
     /**
@@ -368,6 +370,8 @@ private:
     aos::StaticBuffer<cSendBufferSize>               mSendBuffer;
     aos::StaticBuffer<cReceiveBufferSize>            mReceiveBuffer;
     aos::StaticArray<PBServiceItf*, cMaxNumServices> mServices[static_cast<size_t>(ChannelEnum::eNumChannels)];
+    aos::StaticAllocator<sizeof(aos::StaticArray<aos::StaticString<aos::Max(cMaxServiceLen, cMaxMethodLen)>, 2>)>
+        mAllocator;
 };
 
 #endif
