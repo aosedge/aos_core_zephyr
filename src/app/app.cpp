@@ -135,11 +135,11 @@ aos::Error App::InitCommunication()
 {
     aos::Error err;
 
-    if (!(err = mOpenVChannel.Init(VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath, "open")).IsNone()) {
+    if (!(err = mOpenVChannel.Init("open", VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath)).IsNone()) {
         return err;
     }
 
-    if (!(err = mSecureVChannel.Init(VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath, "secure")).IsNone()) {
+    if (!(err = mSecureVChannel.Init("secure", VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath)).IsNone()) {
         return err;
     }
 
