@@ -116,18 +116,21 @@ public:
     virtual void Unsubscribes(aos::ConnectionSubscriberItf& subscriber) override;
 
 private:
-    static constexpr auto cMaxSubscribers       = 1;
-    static constexpr auto cConnectionTimeoutSec = 5;
+    static constexpr auto cConnectionTimeoutSec  = 5;
+    static constexpr auto cSecureChannelCertType = "sm";
 
     aos::Error SendMessage(Channel channel, AosVChanSource source, const aos::String& methodName, uint64_t requestID,
         const aos::Array<uint8_t> data, aos::Error messageError) override;
     void       ConnectNotification(bool connected);
     aos::Error StartChannelThreads();
     void       ChannelHandler(Channel channel);
+    aos::Error WaitTimeSynced(aos::UniqueLock& lock);
     aos::Error ConnectChannel(aos::UniqueLock& lock, Channel channel);
     aos::Error CloseChannel(Channel channel);
     size_t     GetNumConnectedChannels();
     aos::Error ProcessMessages(Channel channel);
+    aos::Error ReadMessage(Channel channel, aos::Array<uint8_t>& data, size_t size);
+    aos::Error WriteMessage(Channel channel, const aos::Array<uint8_t>& data);
 
     aos::Mutex               mMutex;
     aos::ConditionalVariable mCondVar;

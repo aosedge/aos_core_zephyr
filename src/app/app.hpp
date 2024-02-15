@@ -9,6 +9,7 @@
 #define APP_HPP_
 
 #include <aos/common/crypto/mbedtls/cryptoprovider.hpp>
+#include <aos/common/cryptoutils.hpp>
 #include <aos/common/monitoring.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
@@ -49,6 +50,7 @@ private:
     static constexpr auto cPKCS11ModulePinFile    = CONFIG_AOS_PKCS11_MODULE_PIN_FILE;
 
     aos::Error InitCertHandler();
+    aos::Error InitCommunication();
 
     static App                              sApp;
     aos::monitoring::ResourceMonitor        mResourceMonitor;
@@ -60,11 +62,12 @@ private:
     aos::iam::certhandler::PKCS11Module     mSMHSMModule;
     aos::iam::certhandler::CertHandler      mCertHandler;
     aos::crypto::MbedTLSCryptoProvider      mCryptoProvider;
+    aos::cryptoutils::CertLoader            mCertLoader;
     aos::pkcs11::PKCS11Manager              mPKCS11Manager;
     ClockSync                               mClockSync;
     Communication                           mCommunication;
-    VChannel                                mCommOpenChannel;
-    VChannel                                mCommSecureChannel;
+    VChannel                                mOpenVChannel;
+    VChannel                                mSecureVChannel;
     Downloader                              mDownloader;
     OCISpec                                 mJsonOciSpec;
     ResourceManager                         mResourceManager;
