@@ -116,6 +116,7 @@ public:
     virtual void Unsubscribes(aos::ConnectionSubscriberItf& subscriber) override;
 
 private:
+    static constexpr auto cThreadStackSize       = 16384;
     static constexpr auto cMaxSubscribers        = 2;
     static constexpr auto cConnectionTimeoutSec  = 5;
     static constexpr auto cSecureChannelCertType = "sm";
@@ -135,7 +136,8 @@ private:
 
     aos::Mutex               mMutex;
     aos::ConditionalVariable mCondVar;
-    aos::Thread<>            mChannelThreads[static_cast<int>(ChannelEnum::eNumChannels)];
+    aos::Thread<aos::cDefaultFunctionMaxSize, cThreadStackSize>
+        mChannelThreads[static_cast<int>(ChannelEnum::eNumChannels)];
 
     CommChannelItf* mChannels[static_cast<int>(ChannelEnum::eNumChannels)] {};
     bool            mClose = false;
