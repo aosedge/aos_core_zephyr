@@ -139,11 +139,10 @@ aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
 {
     aos::LockGuard lock(mMutex);
 
-    if (mConnectionSubscribers.Size() >= cMaxSubscribers) {
-        return aos::ErrorEnum::eOutOfRange;
+    auto err = mConnectionSubscribers.PushBack(&subscriber);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
-
-    mConnectionSubscribers.PushBack(&subscriber);
 
     return aos::ErrorEnum::eNone;
 }
