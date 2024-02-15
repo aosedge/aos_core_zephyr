@@ -38,9 +38,22 @@ west build -t run
 
 For test and debug purpose `native_posix_64` or `native_posix` board can be used.
 
+For real hardware with Xen the following command shall be used:
+
 ```sh
-west build -b ${BOARD} -p auto -- -DSHIELD=xen_dom0 -D'CONFIG_DOMD_UBOOT_PATH="your_path/ipl.bin"' -D'CONFIG_DOMD_DTB_PATH="your_path/ipl.dtb"'
+west build -b ${BOARD} -p auto -- -DSHIELD=xen_dom0 \
+-D'CONFIG_DOMD_UBOOT_PATH="path/to/domd/u-boot"' \
+-D'CONFIG_DOMD_DTB_PATH="path/to/domd/dtb"' \
+-D'CONFIG_TA_DEPLOY_DIR="path/to/folder/with/ta's"'
+-D'CONFIG_AOS_ROOT_CA_PATH="path/to/aos/root/cert"'
 ```
+
+where:
+
+* `CONFIG_DOMD_UBOOT_PATH` - path to DomD u-boot binary;
+* `CONFIG_DOMD_DTB_PATH` - path to DomD DTB file;
+* `CONFIG_TA_DEPLOY_DIR` - path to directory with OPTEE TA's that shall to be build-in application;
+* `CONFIG_AOS_ROOT_CA_PATH` - path to Aos root CA certificate.
 
 Supported ${BOARD}: `rcar_spider`, `rcar_salvator_xs_m3` and `rcar_h3ulcb_ca57`
 
