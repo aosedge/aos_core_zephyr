@@ -116,6 +116,7 @@ public:
     virtual void Unsubscribes(aos::ConnectionSubscriberItf& subscriber) override;
 
 private:
+    static constexpr auto cMaxSubscribers        = 2;
     static constexpr auto cConnectionTimeoutSec  = 5;
     static constexpr auto cSecureChannelCertType = "sm";
 
