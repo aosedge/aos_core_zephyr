@@ -13,6 +13,7 @@
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_PLATFORM_MEMORY
 #define MBEDTLS_MEMORY_BUFFER_ALLOC_C
+#define MBEDTLS_TEST_SW_INET_PTON
 
 #include "../../aos_core_lib_cpp/include/aos/common/crypto/mbedtls/mbedtls_config.h"
 
