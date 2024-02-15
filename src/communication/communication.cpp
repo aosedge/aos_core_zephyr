@@ -223,35 +223,56 @@ void Communication::ChannelHandler(Channel channel)
     }
 }
 
+aos::Error Communication::WaitTimeSynced(aos::UniqueLock& lock)
+{
+    LOG_DBG() << "Wait open channel is connected...";
+
+    auto err
+        = mCondVar.Wait(lock, [this]() { return mChannels[Channel(ChannelEnum::eOpen)]->IsConnected() || mClose; });
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (mClose) {
+        return aos::ErrorEnum::eNone;
+    }
+
+    err = mClockSync->Start();
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    LOG_DBG() << "Wait clock is synced...";
+
+    err = mCondVar.Wait(lock, [this]() { return mClockSynced || mClose; });
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
 aos::Error Communication::ConnectChannel(aos::UniqueLock& lock, Channel channel)
 {
-    if (channel == ChannelEnum::eSecure && !mClockSynced) {
-        LOG_DBG() << "Wait open channel is connected...";
+    if (channel == ChannelEnum::eSecure) {
+        if (!mClockSynced) {
+            auto err = WaitTimeSynced(lock);
+            if (!err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
 
-        auto err
-            = mCondVar.Wait(lock, [this]() { return mChannels[Channel(ChannelEnum::eOpen)]->IsConnected() || mClose; });
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
+            if (mClose) {
+                return aos::ErrorEnum::eNone;
+            }
         }
 
-        if (mClose) {
-            return aos::ErrorEnum::eNone;
-        }
+        if (mProvisioning->IsProvisioned()) {
+            LOG_INF() << "Set secure channel TLS config: certType = " << cSecureChannelCertType;
 
-        err = mClockSync->Start();
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
-
-        LOG_DBG() << "Wait clock is synced...";
-
-        err = mCondVar.Wait(lock, [this]() { return mClockSynced || mClose; });
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
-
-        if (mClose) {
-            return aos::ErrorEnum::eNone;
+            auto err = mChannels[channel]->SetTLSConfig(cSecureChannelCertType);
+            if (!err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
         }
     }
 
@@ -416,4 +437,51 @@ void Communication::ConnectNotification(bool connected)
             subscriber->OnDisconnect();
         }
     }
+}
+
+aos::Error Communication::ReadMessage(Channel channel, aos::Array<uint8_t>& data, size_t size)
+{
+    size_t read = 0;
+
+    auto err = data.Resize(size);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    while (read < size) {
+        auto ret = mChannels[channel]->Read(data.Get() + read, size - read);
+        if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+
+        read += ret;
+    }
+
+    assert(read <= data.MaxSize());
+
+    if (read != size) {
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error Communication::WriteMessage(Channel channel, const aos::Array<uint8_t>& data)
+{
+    size_t written = 0;
+
+    while (written < data.Size()) {
+        auto ret = mChannels[channel]->Write(data.Get() + written, data.Size() - written);
+        if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+
+        written += ret;
+    }
+
+    if (written != data.Size()) {
+        return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
+    }
+
+    return aos::ErrorEnum::eNone;
 }

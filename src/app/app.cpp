@@ -54,14 +54,6 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mCommOpenChannel.Init(VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath)).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mCommSecureChannel.Init(VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath)).IsNone()) {
-        return err;
-    }
-
     if (!(err = mClockSync.Init(mCommunication)).IsNone()) {
         return err;
     }
@@ -74,13 +66,15 @@ aos::Error App::Init()
         return err;
     }
 
+    if (!(err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager)).IsNone()) {
+        return err;
+    }
+
     if (!(err = InitCertHandler()).IsNone()) {
         return err;
     }
 
-    if (!(err = mCommunication.Init(mCommOpenChannel, mCommSecureChannel, mLauncher, mCertHandler, mResourceManager,
-              mResourceMonitor, mDownloader, mClockSync, mProvisioning))
-             .IsNone()) {
+    if (!(err = InitCommunication()).IsNone()) {
         return err;
     }
 
@@ -94,8 +88,7 @@ aos::Error App::Init()
 aos::Error App::InitCertHandler()
 {
     aos::Error                              err;
-    aos::iam::certhandler::ExtendedKeyUsage keyUsage[] = {aos::iam::certhandler::ExtendedKeyUsageEnum::eClientAuth,
-        aos::iam::certhandler::ExtendedKeyUsageEnum::eServerAuth};
+    aos::iam::certhandler::ExtendedKeyUsage keyUsage[] = {aos::iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
 
     // Register iam cert module
 
@@ -132,6 +125,27 @@ aos::Error App::InitCertHandler()
     }
 
     if (!(err = mCertHandler.RegisterModule(mSMCertModule)).IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error App::InitCommunication()
+{
+    aos::Error err;
+
+    if (!(err = mOpenVChannel.Init(VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath, "open")).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mSecureVChannel.Init(VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath, "secure")).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCommunication.Init(mOpenVChannel, mSecureVChannel, mLauncher, mCertHandler, mResourceManager,
+              mResourceMonitor, mDownloader, mClockSync, mProvisioning))
+             .IsNone()) {
         return err;
     }
 
