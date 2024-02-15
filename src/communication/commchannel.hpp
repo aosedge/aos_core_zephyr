@@ -16,6 +16,14 @@
 class CommChannelItf {
 public:
     /**
+     * Set TLS config.
+     *
+     * @param certType certificate type.
+     * @return aos::Error.
+     */
+    virtual aos::Error SetTLSConfig(const aos::String& certType) = 0;
+
+    /**
      * Connects to communication channel.
      *
      * @return aos::Error.
@@ -37,19 +45,20 @@ public:
     /**
      * Reads data from channel to array.
      *
-     * @param data array where data is placed to.
+     * @param data buffer where data is placed to.
      * @param size specifies how many bytes to read.
-     * @return aos::Error.
+     * @return int num read bytes.
      */
-    virtual aos::Error Read(aos::Array<uint8_t>& data, size_t size) = 0;
+    virtual int Read(void* data, size_t size) = 0;
 
     /**
      * Writes data from array to channel.
      *
-     * @param data array where data is placed to.
-     * @return aos::Error.
+     * @param data data buffer.
+     * @param size specifies how many bytes to write.
+     * @return int num written bytes.
      */
-    virtual aos::Error Write(const aos::Array<uint8_t>& data) = 0;
+    virtual int Write(const void* data, size_t size) = 0;
 
     /**
      * Destructor.

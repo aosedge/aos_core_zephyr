@@ -16,6 +16,8 @@
 
 class CommChannelMock : public CommChannelItf {
 public:
+    aos::Error SetTLSConfig(const aos::String& certType) override { return aos::ErrorEnum::eNone; }
+
     aos::Error Connect() override
     {
         std::lock_guard<std::mutex> lock(mMutex);
@@ -36,40 +38,37 @@ public:
         return mConnectError;
     }
 
-    aos::Error Read(aos::Array<uint8_t>& data, size_t size) override
+    int Read(void* data, size_t size) override
     {
         std::unique_lock<std::mutex> lock(mMutex);
-
-        data.Clear();
 
         mCV.wait(lock, [&] { return mReadData.size() >= size || !mReadError.IsNone() || !mConnected; });
 
         if (!mConnected) {
-            return aos::ErrorEnum::eFailed;
+            return -1;
         }
 
         if (!mReadError.IsNone()) {
-            auto err   = mReadError;
             mReadError = aos::ErrorEnum::eNone;
-
-            return err;
+            return -1;
         }
 
-        data += aos::Array<uint8_t>(mReadData.data(), size);
+        std::copy(mReadData.begin(), mReadData.begin() + size, static_cast<uint8_t*>(data));
         mReadData.erase(mReadData.begin(), mReadData.begin() + size);
 
-        return aos::ErrorEnum::eNone;
+        return size;
     }
 
-    aos::Error Write(const aos::Array<uint8_t>& data) override
+    int Write(const void* data, size_t size) override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
-        mWriteData.insert(mWriteData.end(), data.begin(), data.end());
+        mWriteData.insert(
+            mWriteData.end(), static_cast<const uint8_t*>(data), static_cast<const uint8_t*>(data) + size);
 
         mCV.notify_one();
 
-        return mWriteError;
+        return size;
     }
 
     bool IsConnected() const override

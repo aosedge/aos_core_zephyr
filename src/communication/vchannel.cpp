@@ -6,15 +6,26 @@
  */
 
 #include "vchannel.hpp"
+#include "log.hpp"
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error VChannel::Init(const aos::String& xsReadPath, const aos::String xsWritePath)
+aos::Error VChannel::Init(const aos::String& name, const aos::String& xsReadPath, const aos::String& xsWritePath)
 {
     mXSReadPath  = xsReadPath;
     mXSWritePath = xsWritePath;
+    mName        = name;
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error VChannel::SetTLSConfig(const aos::String& certType)
+{
+    if (certType != "") {
+        return aos::ErrorEnum::eNotSupported;
+    }
 
     return aos::ErrorEnum::eNone;
 }
@@ -51,49 +62,24 @@ aos::Error VChannel::Close()
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error VChannel::Read(aos::Array<uint8_t>& data, size_t size)
+int VChannel::Read(void* data, size_t size)
 {
-    size_t read = 0;
+    LOG_DBG() << "Channel wants read: channel = " << mName << ", size = " << size;
 
-    auto err = data.Resize(size);
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
+    auto ret = vch_read(&mReadHandle, data, size);
 
-    while (read < size) {
-        auto ret = vch_read(&mReadHandle, data.Get() + read, size - read);
-        if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
-        }
+    LOG_DBG() << "Channel read: channel = " << mName << ", size = " << ret;
 
-        read += ret;
-    }
-
-    assert(read <= data.MaxSize());
-
-    if (read != size) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
-    }
-
-    return aos::ErrorEnum::eNone;
+    return ret;
 }
 
-aos::Error VChannel::Write(const aos::Array<uint8_t>& data)
+int VChannel::Write(const void* data, size_t size)
 {
-    size_t written = 0;
+    LOG_DBG() << "Channel wants write: channel = " << mName << ", size = " << size;
 
-    while (written < data.Size()) {
-        auto ret = vch_write(&mWriteHandle, data.Get() + written, data.Size() - written);
-        if (ret < 0) {
-            return AOS_ERROR_WRAP(ret);
-        }
+    auto ret = vch_write(&mWriteHandle, data, size);
 
-        written += ret;
-    }
+    LOG_DBG() << "Channel wrote: channel = " << mName << ", size = " << size;
 
-    if (written != data.Size()) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
-    }
-
-    return aos::ErrorEnum::eNone;
+    return ret;
 }

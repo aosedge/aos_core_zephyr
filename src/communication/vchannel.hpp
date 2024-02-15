@@ -28,7 +28,15 @@ public:
      * @param xsWritePath Xen store write vchan path.
      * @return aos::Error.
      */
-    aos::Error Init(const aos::String& xsReadPath, const aos::String xsWritePath);
+    aos::Error Init(const aos::String& name, const aos::String& xsReadPath, const aos::String& xsWritePath);
+
+    /**
+     * Set TLS config.
+     *
+     * @param certType certificate type.
+     * @return aos::Error
+     */
+    aos::Error SetTLSConfig(const aos::String& certType) override;
 
     /**
      * Connects to communication channel.
@@ -52,23 +60,25 @@ public:
     /**
      * Reads data from channel to array.
      *
-     * @param data array where data is placed to.
+     * @param data buffer where data is placed to.
      * @param size specifies how many bytes to read.
-     * @return aos::Error.
+     * @return int num read bytes.
      */
-    aos::Error Read(aos::Array<uint8_t>& data, size_t size) override;
+    int Read(void* data, size_t size) override;
 
     /**
      * Writes data from array to channel.
      *
-     * @param data array where data is placed to.
-     * @return aos::Error.
+     * @param data data buffer.
+     * @param size specifies how many bytes to write.
+     * @return int num written bytes.
      */
-    aos::Error Write(const aos::Array<uint8_t>& data) override;
+    int Write(const void* data, size_t size) override;
 
 private:
-    static constexpr auto cXSPathLen = 128;
-    static constexpr auto cDomdID    = CONFIG_AOS_DOMD_ID;
+    static constexpr auto cXSPathLen      = 128;
+    static constexpr auto cDomdID         = CONFIG_AOS_DOMD_ID;
+    static constexpr auto cChannelNameLen = 32;
 
     aos::StaticString<cXSPathLen> mXSReadPath;
     aos::StaticString<cXSPathLen> mXSWritePath;
@@ -77,6 +87,8 @@ private:
     vch_handle mWriteHandle;
 
     bool mConnected = false;
+
+    aos::StaticString<cChannelNameLen> mName;
 };
 
 #endif
