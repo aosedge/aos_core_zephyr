@@ -91,6 +91,7 @@ config AOS_PKCS11_MODULE_PIN_FILE
 
 config AOS_ROOT_CA_PATH
 	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
+	default "prebuilt/rootca.pem"
 
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"
