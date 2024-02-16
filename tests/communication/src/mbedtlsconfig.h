@@ -12,6 +12,6 @@
 #define MBEDTLS_ENTROPY_HARDWARE_ALT
 #define MBEDTLS_NET_C
 
-#include "../../aos_core_lib_cpp/include/aos/common/crypto/mbedtls/mbedtls_config.h"
+#include "../../../aos_core_lib_cpp/include/aos/common/crypto/mbedtls/mbedtls_config.h"
 
 #endif
