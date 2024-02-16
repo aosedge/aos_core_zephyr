@@ -235,7 +235,7 @@ private:
         char     mCertURL[aos::cURLLen + 1];
         char     mKeyURL[aos::cURLLen + 1];
         char     mCertType[aos::iam::certhandler::cCertTypeLen + 1];
-        uint64_t mNotAfter;
+        timespec mNotAfter;
 
         /**
          * Compares cert info.
@@ -248,21 +248,28 @@ private:
             return mIssuerSize == rhs.mIssuerSize && mSerialSize == rhs.mSerialSize
                 && memcmp(mIssuer, rhs.mIssuer, mIssuerSize) == 0 && memcmp(mSerial, rhs.mSerial, mSerialSize) == 0
                 && strcmp(mCertURL, rhs.mCertURL) == 0 && strcmp(mKeyURL, rhs.mKeyURL) == 0
-                && strcmp(mCertType, rhs.mCertType) == 0 && mNotAfter == rhs.mNotAfter;
+                && strcmp(mCertType, rhs.mCertType) == 0 && mNotAfter.tv_sec == rhs.mNotAfter.tv_sec
+                && mNotAfter.tv_nsec == rhs.mNotAfter.tv_nsec;
         }
     };
 
-    InstanceInfo                         ConvertInstanceInfo(const aos::InstanceInfo& instance);
-    aos::InstanceInfo                    ConvertInstanceInfo(const InstanceInfo& instance);
-    ServiceData                          ConvertServiceData(const aos::sm::servicemanager::ServiceData& service);
-    aos::sm::servicemanager::ServiceData ConvertServiceData(const ServiceData& service);
-    CertInfo ConvertCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo);
-    aos::iam::certhandler::CertInfo ConvertCertInfo(const CertInfo& certInfo);
+    aos::UniquePtr<InstanceInfo>      ConvertInstanceInfo(const aos::InstanceInfo& instance);
+    aos::UniquePtr<aos::InstanceInfo> ConvertInstanceInfo(const InstanceInfo& instance);
+    aos::UniquePtr<ServiceData>       ConvertServiceData(const aos::sm::servicemanager::ServiceData& service);
+    aos::UniquePtr<aos::sm::servicemanager::ServiceData> ConvertServiceData(const ServiceData& service);
+    aos::UniquePtr<CertInfo>                             ConvertCertInfo(
+                                    const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo);
+    aos::UniquePtr<aos::iam::certhandler::CertInfo> ConvertCertInfo(const CertInfo& certInfo);
 
     FileStorage<InstanceInfo> mInstanceDatabase;
     FileStorage<ServiceData>  mServiceDatabase;
     FileStorage<CertInfo>     mCertDatabase;
     aos::Mutex                mMutex;
+
+    aos::StaticAllocator<aos::Max(sizeof(InstanceInfo), sizeof(aos::InstanceInfo))
+        + aos::Max(sizeof(ServiceData), sizeof(aos::sm::servicemanager::ServiceData))
+        + aos::Max(sizeof(CertInfo), sizeof(aos::iam::certhandler::CertInfo))>
+        mAllocator;
 };
 
 #endif
