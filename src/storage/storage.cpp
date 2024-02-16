@@ -335,11 +335,11 @@ aos::iam::certhandler::CertInfo Storage::ConvertCertInfo(const Storage::CertInfo
     aos::Array<uint8_t> issuer(certInfo.mIssuer, certInfo.mIssuerSize);
     aos::Array<uint8_t> serial(certInfo.mSerial, certInfo.mSerialSize);
 
-    cert.mIssuer  = issuer;
-    cert.mSerial  = serial;
-    cert.mCertURL = certInfo.mCertURL;
-    cert.mKeyURL  = certInfo.mKeyURL;
-    cert.mNotAfter.Add(certInfo.mNotAfter);
+    cert.mIssuer   = issuer;
+    cert.mSerial   = serial;
+    cert.mCertURL  = certInfo.mCertURL;
+    cert.mKeyURL   = certInfo.mKeyURL;
+    cert.mNotAfter = aos::Time().Add(certInfo.mNotAfter * aos::Time::cNanoseconds);
 
     return cert;
 }
