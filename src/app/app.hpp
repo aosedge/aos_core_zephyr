@@ -19,6 +19,7 @@
 
 #include "clocksync/clocksync.hpp"
 #include "communication/communication.hpp"
+#include "communication/tlschannel.hpp"
 #include "communication/vchannel.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "ocispec/ocispec.hpp"
@@ -68,6 +69,7 @@ private:
     Communication                           mCommunication;
     VChannel                                mOpenVChannel;
     VChannel                                mSecureVChannel;
+    TLSChannel                              mSecureTLSChannel;
     Downloader                              mDownloader;
     OCISpec                                 mJsonOciSpec;
     ResourceManager                         mResourceManager;

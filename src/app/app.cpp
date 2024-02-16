@@ -143,7 +143,11 @@ aos::Error App::InitCommunication()
         return err;
     }
 
-    if (!(err = mCommunication.Init(mOpenVChannel, mSecureVChannel, mLauncher, mCertHandler, mResourceManager,
+    if (!(err = mSecureTLSChannel.Init(mCertHandler, mCertLoader, mSecureVChannel)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCommunication.Init(mOpenVChannel, mSecureTLSChannel, mLauncher, mCertHandler, mResourceManager,
               mResourceMonitor, mDownloader, mClockSync, mProvisioning))
              .IsNone()) {
         return err;
