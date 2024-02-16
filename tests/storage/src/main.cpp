@@ -197,11 +197,14 @@ ZTEST(storage, test_AddRemoveCertInfo)
 
     const aos::String certTypePkcs = "pkcs11";
 
+    auto certTime = aos::Time::Now();
+
     aos::iam::certhandler::CertInfo certInfo;
-    certInfo.mIssuer  = StringToDN("issuer");
-    certInfo.mSerial  = StringToDN("serial");
-    certInfo.mCertURL = "cert_url";
-    certInfo.mKeyURL  = "key_url";
+    certInfo.mIssuer   = StringToDN("issuer");
+    certInfo.mSerial   = StringToDN("serial");
+    certInfo.mCertURL  = "cert_url";
+    certInfo.mKeyURL   = "key_url";
+    certInfo.mNotAfter = certTime;
 
     certInfos.PushBack(certInfo);
 
