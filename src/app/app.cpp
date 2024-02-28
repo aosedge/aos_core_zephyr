@@ -99,7 +99,8 @@ aos::Error App::InitCertHandler()
     }
 
     if (!(err = mIAMCertModule.Init("iam",
-              {aos::crypto::KeyTypeEnum::eECDSA, 1, aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, 2)},
+              {aos::crypto::KeyTypeEnum::eECDSA, 2,
+                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
               mCryptoProvider, mIAMHSMModule, mStorage))
              .IsNone()) {
         return err;
@@ -118,7 +119,8 @@ aos::Error App::InitCertHandler()
     }
 
     if (!(err = mSMCertModule.Init("sm",
-              {aos::crypto::KeyTypeEnum::eECDSA, 1, aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, 2)},
+              {aos::crypto::KeyTypeEnum::eECDSA, 2,
+                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
               mCryptoProvider, mSMHSMModule, mStorage))
              .IsNone()) {
         return err;
