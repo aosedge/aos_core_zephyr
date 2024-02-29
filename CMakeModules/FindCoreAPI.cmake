@@ -32,7 +32,7 @@ set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto google/protobuf/empty.proto
 #   CORE_API_DIR = Variable to define dir with aos_core_api repository
 # ######################################################################################################################
 function(CORE_API_GENERATE CORE_API_DIR SCRIPTS_DIR)
-    set(NANOPB_IMPORT_DIRS ${CORE_API_DIR} ${PROTO_INCLUDE})
+    get_filename_component(CORE_API_DIR ${CORE_API_DIR} ABSOLUTE)
 
     if(NOT CORE_API_CXX)
         set(CORE_API_CXX g++)
