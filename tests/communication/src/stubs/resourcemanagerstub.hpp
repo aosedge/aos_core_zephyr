@@ -5,12 +5,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef RESOURCEMANAGERMOCK_HPP_
-#define RESOURCEMANAGERMOCK_HPP_
+#ifndef RESOURCEMANAGERSTUB_HPP_
+#define RESOURCEMANAGERSTUB_HPP_
 
 #include "resourcemanager/resourcemanager.hpp"
 
-class ResourceManagerMock : public ResourceManagerItf {
+class ResourceManagerStub : public ResourceManagerItf {
 public:
     aos::Error GetUnitConfigInfo(aos::String& version) const override
     {

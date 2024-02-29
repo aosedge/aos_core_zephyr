@@ -5,15 +5,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef CONNECTIONSUBSCRIBERMOCK_HPP_
-#define CONNECTIONSUBSCRIBERMOCK_HPP_
+#ifndef CONNECTIONSUBSCRIBERSTUB_HPP_
+#define CONNECTIONSUBSCRIBERSTUB_HPP_
 
 #include <condition_variable>
 #include <mutex>
 
 #include <aos/common/connectionsubsc.hpp>
 
-class ConnectionSubscriberMock : public aos::ConnectionSubscriberItf {
+class ConnectionSubscriberStub : public aos::ConnectionSubscriberItf {
 public:
     void OnConnect() override
     {

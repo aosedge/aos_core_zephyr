@@ -53,7 +53,7 @@ void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::Stri
     printk("%0.3f [%s] %s\n", now, levelStr, message.CStr());
 }
 
-aos::Error SendMessageToChannel(CommChannelMock& channel, uint32_t source, const std::string& methodName,
+aos::Error SendMessageToChannel(CommChannelStub& channel, uint32_t source, const std::string& methodName,
     uint64_t requestID, const std::vector<uint8_t>& data, aos::Error messageError)
 {
     auto checksum = CalculateSha256(aos::Array<uint8_t>(data.data(), data.size()));
@@ -76,7 +76,7 @@ aos::Error SendMessageToChannel(CommChannelMock& channel, uint32_t source, const
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error ReceiveMessageFromChannel(CommChannelMock& channel, uint32_t source, const std::string& methodName,
+aos::Error ReceiveMessageFromChannel(CommChannelStub& channel, uint32_t source, const std::string& methodName,
     uint64_t requestID, std::vector<uint8_t>& data)
 {
     std::vector<uint8_t> headerData;
@@ -127,7 +127,7 @@ aos::Error ReceiveMessageFromChannel(CommChannelMock& channel, uint32_t source, 
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error SendPBMessage(CommChannelMock& channel, uint32_t source, const std::string& methodName, uint64_t requestID,
+aos::Error SendPBMessage(CommChannelStub& channel, uint32_t source, const std::string& methodName, uint64_t requestID,
     const pb_msgdesc_t* fields, const void* message, size_t messageSize)
 {
     std::vector<uint8_t> data(messageSize);
@@ -146,7 +146,7 @@ aos::Error SendPBMessage(CommChannelMock& channel, uint32_t source, const std::s
     return SendMessageToChannel(channel, source, methodName, requestID, data);
 }
 
-aos::Error ReceivePBMessage(CommChannelMock& channel, uint32_t source, const std::string& methodName,
+aos::Error ReceivePBMessage(CommChannelStub& channel, uint32_t source, const std::string& methodName,
     uint64_t requestID, const pb_msgdesc_t* fields, void* message, size_t messageSize)
 {
     std::vector<uint8_t> data(messageSize);

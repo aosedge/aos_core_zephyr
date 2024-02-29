@@ -11,15 +11,15 @@
 #include "communication/communication.hpp"
 #include "utils/pbconvert.hpp"
 
-#include "mocks/certhandlermock.hpp"
-#include "mocks/clocksyncmock.hpp"
-#include "mocks/commchannelmock.hpp"
-#include "mocks/connectionsubscribermock.hpp"
-#include "mocks/downloadermock.hpp"
-#include "mocks/launchermock.hpp"
-#include "mocks/monitoringmock.hpp"
-#include "mocks/provisioningmock.hpp"
-#include "mocks/resourcemanagermock.hpp"
+#include "stubs/certhandlerstub.hpp"
+#include "stubs/clocksyncstub.hpp"
+#include "stubs/commchannelstub.hpp"
+#include "stubs/connectionsubscriberstub.hpp"
+#include "stubs/downloaderstub.hpp"
+#include "stubs/launcherstub.hpp"
+#include "stubs/monitoringstub.hpp"
+#include "stubs/provisioningstub.hpp"
+#include "stubs/resourcemanagerstub.hpp"
 #include "utils.hpp"
 
 /***********************************************************************************************************************
@@ -27,15 +27,15 @@
  **********************************************************************************************************************/
 
 struct cmclient_fixture {
-    CommChannelMock     mOpenChannel;
-    CommChannelMock     mSecureChannel;
-    LauncherMock        mLauncher;
-    CertHandlerMock     mCertHandler;
-    ResourceManagerMock mResourceManager;
-    ResourceMonitorMock mResourceMonitor;
-    DownloaderMock      mDownloader;
-    ClockSyncMock       mClockSync;
-    ProvisioningMock    mProvisioning;
+    CommChannelStub     mOpenChannel;
+    CommChannelStub     mSecureChannel;
+    LauncherStub        mLauncher;
+    CertHandlerStub     mCertHandler;
+    ResourceManagerStub mResourceManager;
+    ResourceMonitorStub mResourceMonitor;
+    DownloaderStub      mDownloader;
+    ClockSyncStub       mClockSync;
+    ProvisioningStub    mProvisioning;
     Communication       mCommunication;
 };
 
@@ -81,13 +81,13 @@ static void PBToMonitoringData(
     aosMonitoring.mOutTraffic = pbMonitoring.out_traffic;
 }
 
-static aos::Error SendCMIncomingMessage(CommChannelMock& channel, const servicemanager_v3_SMIncomingMessages& message)
+static aos::Error SendCMIncomingMessage(CommChannelStub& channel, const servicemanager_v3_SMIncomingMessages& message)
 {
     return SendPBMessage(channel, AOS_VCHAN_SM, "", 0, &servicemanager_v3_SMIncomingMessages_msg, &message,
         servicemanager_v3_SMOutgoingMessages_size);
 }
 
-static aos::Error ReceiveCMOutgoingMessage(CommChannelMock& channel, servicemanager_v3_SMOutgoingMessages& message)
+static aos::Error ReceiveCMOutgoingMessage(CommChannelStub& channel, servicemanager_v3_SMOutgoingMessages& message)
 {
     return ReceivePBMessage(channel, AOS_VCHAN_SM, "", 0, &servicemanager_v3_SMOutgoingMessages_msg, &message,
         servicemanager_v3_SMOutgoingMessages_size);
@@ -146,7 +146,7 @@ ZTEST_SUITE(
 
 ZTEST_F(cmclient, test_NodeConfiguration)
 {
-    ConnectionSubscriberMock subscriber;
+    ConnectionSubscriberStub subscriber;
 
     fixture->mCommunication.Subscribes(subscriber);
 
