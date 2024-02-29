@@ -8,50 +8,127 @@
 #ifndef DOWNLOADER_HPP_
 #define DOWNLOADER_HPP_
 
-#include "aos/common/downloader.hpp"
-#include "aos/common/tools/array.hpp"
-#include "aos/common/tools/error.hpp"
-#include "aos/common/tools/string.hpp"
-#include "aos/common/tools/thread.hpp"
-#include "aos/common/tools/timer.hpp"
-#include "aos/common/types.hpp"
+#include <aos/common/downloader.hpp>
+#include <aos/common/tools/array.hpp>
+#include <aos/common/tools/error.hpp>
+#include <aos/common/tools/string.hpp>
+#include <aos/common/tools/thread.hpp>
+#include <aos/common/tools/timer.hpp>
+#include <aos/common/types.hpp>
 
 /**
  * Image content request.
  */
 struct ImageContentRequest {
-    aos::StaticString<aos::cURLLen> url;
-    uint64_t                        requestID;
-    aos::DownloadContent            contentType;
+    aos::StaticString<aos::cURLLen> mURL;
+    uint64_t                        mRequestID;
+    aos::DownloadContent            mContentType;
+
+    /**
+     * Compares image content request.
+     *
+     * @param request request to compare.
+     * @return bool.
+     */
+    bool operator==(const ImageContentRequest& request) const
+    {
+        return mURL == request.mURL && mRequestID == request.mRequestID && mContentType == request.mContentType;
+    }
+
+    /**
+     * Compares image content request.
+     *
+     * @param request request to compare.
+     * @return bool.
+     */
+    bool operator!=(const ImageContentRequest& request) const { return !operator==(request); }
 };
 
 /**
  * File info.
  */
 struct FileInfo {
-    aos::StaticString<aos::cFilePathLen> relativePath;
-    aos::StaticBuffer<aos::cSHA256Size>  sha256;
-    uint64_t                             size;
+    aos::StaticString<aos::cFilePathLen>        mRelativePath;
+    aos::StaticArray<uint8_t, aos::cSHA256Size> mSHA256;
+    uint64_t                                    mSize;
+
+    /**
+     * Compares file info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator==(const FileInfo& info) const
+    {
+        return mRelativePath == info.mRelativePath && mSHA256 == info.mSHA256 && mSize == info.mSize;
+    }
+
+    /**
+     * Compares file info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator!=(const FileInfo& info) const { return !operator==(info); }
 };
 
 /**
  * Image content info.
  */
 struct ImageContentInfo {
-    uint64_t                                 requestID;
-    aos::StaticArray<FileInfo, 32>           files;
-    aos::StaticString<aos::cErrorMessageLen> error;
+    uint64_t                                 mRequestID;
+    aos::StaticArray<FileInfo, 32>           mFiles;
+    aos::StaticString<aos::cErrorMessageLen> mError;
+
+    /**
+     * Compares content info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator==(const ImageContentInfo& info) const
+    {
+        return mRequestID == info.mRequestID && mFiles == info.mFiles && mError == info.mError;
+    }
+
+    /**
+     * Compares content info.
+     *
+     * @param info info to compare.
+     * @return bool.
+     */
+    bool operator!=(const ImageContentInfo& info) const { return !operator==(info); }
 };
 
 /**
  * File chunk.
  */
 struct FileChunk {
-    uint64_t                                       requestID;
-    aos::StaticString<aos::cFilePathLen>           relativePath;
-    uint64_t                                       partsCount;
-    uint64_t                                       part;
-    aos::StaticArray<uint8_t, aos::cFileChunkSize> data;
+    uint64_t                                       mRequestID;
+    aos::StaticString<aos::cFilePathLen>           mRelativePath;
+    uint64_t                                       mPartsCount;
+    uint64_t                                       mPart;
+    aos::StaticArray<uint8_t, aos::cFileChunkSize> mData;
+
+    /**
+     * Compares file chunks.
+     *
+     * @param chunk chunk to compare.
+     * @return bool.
+     */
+    bool operator==(const FileChunk& chunk) const
+    {
+        return mRequestID == chunk.mRequestID && mRelativePath == chunk.mRelativePath
+            && mPartsCount == chunk.mPartsCount && mPart == chunk.mPart && mData == chunk.mData;
+    }
+
+    /**
+     * Compares file chunks.
+     *
+     * @param chunk chunk to compare.
+     * @return bool.
+     */
+    bool operator!=(const FileChunk& chunk) const { return !operator==(chunk); }
 };
 
 /**
@@ -165,7 +242,7 @@ private:
 
     DownloadRequesterItf*                mDownloadRequester {};
     aos::Mutex                           mMutex;
-    aos::ConditionalVariable             mWaitDownload {mMutex};
+    aos::ConditionalVariable             mWaitDownload;
     aos::Error                           mErrProcessImageRequest {};
     aos::StaticString<aos::cFilePathLen> mRequestedPath {};
     aos::StaticArray<DownloadResult, 32> mDownloadResults {};

@@ -19,8 +19,8 @@
 static constexpr size_t cJsonMaxContentSize = 4096;
 
 static constexpr auto cImageManifestPath = "/tmp/aos/manifest.json";
-static constexpr auto cImageSpecPath = "/tmp/aos/image.json";
-static constexpr auto cRuntimeSpecPath = "/tmp/aos/runtime.json";
+static constexpr auto cImageSpecPath     = "/tmp/aos/image.json";
+static constexpr auto cRuntimeSpecPath   = "/tmp/aos/runtime.json";
 
 /***********************************************************************************************************************
  * Private
@@ -282,9 +282,9 @@ ZTEST(ocispec, test_ImageSpec)
         char                mContent[cJsonMaxContentSize];
     };
 
-    aos::StaticString<aos::oci::cMaxParamLen> envs[] = {"env0", "env1", "env2", "env3", "env4", "env5"};
+    aos::StaticString<aos::oci::cMaxParamLen> envs[]    = {"env0", "env1", "env2", "env3", "env4", "env5"};
     aos::StaticString<aos::oci::cMaxParamLen> entries[] = {"entry0", "entry1", "entry2"};
-    aos::StaticString<aos::oci::cMaxParamLen> cmds[] = {"cmd0", "cmd1"};
+    aos::StaticString<aos::oci::cMaxParamLen> cmds[]    = {"cmd0", "cmd1"};
 
     TestImageSpec testData[] = {
         // empty
@@ -438,7 +438,7 @@ ZTEST(ocispec, test_RuntimeSpec)
     aos::oci::VM vmEmpty {};
 
     aos::StaticString<aos::oci::cMaxParamLen> hypervisorParams[] = {"hyp0", "hyp1", "hyp2"};
-    aos::oci::VM                              vmWithHypervisor = {
+    aos::oci::VM                              vmWithHypervisor   = {
         {
             "path0",
             aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(hypervisorParams, aos::ArraySize(hypervisorParams)),
@@ -446,7 +446,7 @@ ZTEST(ocispec, test_RuntimeSpec)
     };
 
     aos::StaticString<aos::oci::cMaxParamLen> kernelParams[] = {"krnl0", "krnl1"};
-    aos::oci::VM                              vmWithKernel = {
+    aos::oci::VM                              vmWithKernel   = {
         {},
         {
             "path1",
@@ -454,9 +454,9 @@ ZTEST(ocispec, test_RuntimeSpec)
         },
     };
 
-    aos::StaticString<aos::oci::cMaxDTDevLen> dtdevs[] = {"dev0", "dev1", "dev2", "dev3"};
-    aos::oci::VMHWConfigIOMEM                 iomems[] = {{0, 1, 2}, {3, 4, 5}};
-    uint32_t                                  irqs[] = {1, 2, 3, 4, 5};
+    aos::StaticString<aos::oci::cMaxDTDevLen> dtdevs[]       = {"dev0", "dev1", "dev2", "dev3"};
+    aos::oci::VMHWConfigIOMEM                 iomems[]       = {{0, 1, 2}, {3, 4, 5}};
+    uint32_t                                  irqs[]         = {1, 2, 3, 4, 5};
     aos::oci::VM                              vmWithHWConfig = {
         {},
         {},

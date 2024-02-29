@@ -50,6 +50,7 @@ jobs:
           mkdir src/prebuilt
           touch src/prebuilt/ipl.bin
           touch src/prebuilt/ipl.dtb
+          touch src/prebuilt/rootca.pem
 
       - name: Build ${{ matrix.platform }}
         if: "!startsWith(matrix.platform, 'native')"

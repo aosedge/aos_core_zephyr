@@ -43,10 +43,10 @@ struct ImageManifest {
  */
 enum ImageManifestFields {
     eImageManifestSchemaVersionField = BIT(0),
-    eImageManifestMediaTypeField = BIT(1),
-    eImageManifestConfigField = BIT(2),
-    eImageManifestLayersField = BIT(3),
-    eImageManifestAosServiceField = BIT(4),
+    eImageManifestMediaTypeField     = BIT(1),
+    eImageManifestConfigField        = BIT(2),
+    eImageManifestLayersField        = BIT(3),
+    eImageManifestAosServiceField    = BIT(4),
 };
 
 /**
@@ -126,7 +126,7 @@ struct VM {
  */
 enum RuntimeSpecFields {
     eRuntimeOCIVersionField = BIT(0),
-    eRuntimeVMField = BIT(1),
+    eRuntimeVMField         = BIT(1),
 };
 
 /**
@@ -197,15 +197,12 @@ public:
     virtual aos::Error SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec) override;
 
 private:
-    static constexpr size_t cJsonMaxContentSize = 4096;
-    static constexpr size_t cAllocationSize = 2048;
+    static constexpr size_t cJsonMaxContentLen = 4096;
+    static constexpr size_t cAllocationSize    = 2048;
     static constexpr size_t cMaxNumAllocations = 32;
 
-    aos::RetWithError<size_t> ReadFileContentToBuffer(const aos::String& path);
-    aos::Error                WriteEncodedJsonBufferToFile(const aos::String& path);
-
     aos::Mutex                                                mMutex;
-    aos::StaticBuffer<cJsonMaxContentSize>                    mJsonFileBuffer;
+    aos::StaticString<cJsonMaxContentLen>                     mJsonFileContent;
     aos::StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
 };
 

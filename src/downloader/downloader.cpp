@@ -36,7 +36,7 @@ aos::Error Downloader::Init(DownloadRequesterItf& downloadRequester)
 
 aos::Error Downloader::Download(const aos::String& url, const aos::String& path, aos::DownloadContent contentType)
 {
-    aos::LockGuard lock(mMutex);
+    aos::UniqueLock lock(mMutex);
 
     LOG_DBG() << "Download: " << url;
 
@@ -51,14 +51,14 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
         return AOS_ERROR_WRAP(err);
     }
 
-    mRequestedPath = path;
+    mRequestedPath          = path;
     mErrProcessImageRequest = mDownloadRequester->SendImageContentRequest({url, ++mRequestID, contentType});
 
     if (!mErrProcessImageRequest.IsNone()) {
         return mErrProcessImageRequest;
     }
 
-    mWaitDownload.Wait([this] { return mFinishDownload; });
+    mWaitDownload.Wait(lock, [this] { return mFinishDownload; });
 
     err = mTimer.Stop();
     if (!err.IsNone()) {
@@ -87,12 +87,13 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
 
 aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 {
-    LOG_DBG() << "Receive file chunk: " << chunk.relativePath << ", chunk: " << chunk.part << "/" << chunk.partsCount;
+    LOG_DBG() << "Receive file chunk: path = " << chunk.mRelativePath << ", chunk = " << chunk.mPart << "/"
+              << chunk.mPartsCount;
 
     aos::LockGuard lock(mMutex);
 
     auto downloadResult = mDownloadResults.Find(
-        [&chunk](const DownloadResult& result) { return result.mRelativePath == chunk.relativePath; });
+        [&chunk](const DownloadResult& result) { return result.mRelativePath == chunk.mRelativePath; });
 
     if (!downloadResult.mError.IsNone()) {
         auto err = AOS_ERROR_WRAP(downloadResult.mError);
@@ -103,7 +104,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     }
 
     if (downloadResult.mValue->mFile == -1) {
-        auto path = aos::FS::JoinPath(mRequestedPath, chunk.relativePath);
+        auto path    = aos::FS::JoinPath(mRequestedPath, chunk.mRelativePath);
         auto dirPath = aos::FS::Dir(path);
 
         auto err = aos::FS::MakeDirAll(dirPath);
@@ -125,7 +126,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
         }
     }
 
-    auto ret = write(downloadResult.mValue->mFile, chunk.data.Get(), chunk.data.Size());
+    auto ret = write(downloadResult.mValue->mFile, chunk.mData.Get(), chunk.mData.Size());
     if (ret < 0) {
         auto err = AOS_ERROR_WRAP(errno);
 
@@ -136,7 +137,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 
     mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
 
-    if (chunk.part == chunk.partsCount) {
+    if (chunk.mPart == chunk.mPartsCount) {
         ret = close(downloadResult.mValue->mFile);
         if (ret < 0) {
             auto err = AOS_ERROR_WRAP(errno);
@@ -146,7 +147,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
             return err;
         }
 
-        downloadResult.mValue->mFile = -1;
+        downloadResult.mValue->mFile   = -1;
         downloadResult.mValue->mIsDone = true;
 
         if (IsAllDownloadDone()) {
@@ -164,12 +165,12 @@ aos::Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
 
     LOG_DBG() << "Receive image content info";
 
-    if (content.requestID != mRequestID) {
+    if (content.mRequestID != mRequestID) {
         return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
     }
 
-    if (content.error != "") {
-        LOG_ERR() << "Error: " << content.error;
+    if (content.mError != "") {
+        LOG_ERR() << "Error: " << content.mError;
 
         auto err = AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
 
@@ -178,8 +179,8 @@ aos::Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
         return err;
     }
 
-    for (auto& file : content.files) {
-        mDownloadResults.PushBack(DownloadResult {file.relativePath, -1, false});
+    for (auto& file : content.mFiles) {
+        mDownloadResults.PushBack(DownloadResult {file.mRelativePath, -1, false});
     }
 
     mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
@@ -204,7 +205,7 @@ bool Downloader::IsAllDownloadDone() const
 
 void Downloader::SetErrorAndNotify(const aos::Error& err)
 {
-    mFinishDownload = true;
+    mFinishDownload         = true;
     mErrProcessImageRequest = err;
     mWaitDownload.NotifyOne();
 }

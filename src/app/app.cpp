@@ -32,7 +32,7 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mDownloader.Init(mCMClient)).IsNone()) {
+    if (!(err = mDownloader.Init(mCommunication)).IsNone()) {
         return err;
     }
 
@@ -44,16 +44,114 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCMClient, mCMClient)).IsNone()) {
+    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCommunication, mCommunication)).IsNone()) {
         return err;
     }
 
-    if (!(err = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mCMClient, mStorage, mResourceMonitor))
+    if (!(err = mLauncher.Init(
+              mServiceManager, mRunner, mJsonOciSpec, mCommunication, mStorage, mResourceMonitor, mCommunication))
              .IsNone()) {
         return err;
     }
 
-    if (!(err = mCMClient.Init(mLauncher, mResourceManager, mDownloader, mResourceMonitor)).IsNone()) {
+    if (!(err = mClockSync.Init(mCommunication)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mProvisioning.Init()).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCryptoProvider.Init()).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = InitCertHandler()).IsNone()) {
+        return err;
+    }
+
+    if (!(err = InitCommunication()).IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
+
+aos::Error App::InitCertHandler()
+{
+    aos::Error                              err;
+    aos::iam::certhandler::ExtendedKeyUsage keyUsage[] = {aos::iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
+
+    // Register iam cert module
+
+    if (!(err = mIAMHSMModule.Init("iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+              mPKCS11Manager, mCryptoProvider))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mIAMCertModule.Init("iam",
+              {aos::crypto::KeyTypeEnum::eECDSA, 2,
+                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
+              mCryptoProvider, mIAMHSMModule, mStorage))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCertHandler.RegisterModule(mIAMCertModule)).IsNone()) {
+        return err;
+    }
+
+    // Register sm cert module
+
+    if (!(err = mSMHSMModule.Init("sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+              mPKCS11Manager, mCryptoProvider))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mSMCertModule.Init("sm",
+              {aos::crypto::KeyTypeEnum::eECDSA, 2,
+                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
+              mCryptoProvider, mSMHSMModule, mStorage))
+             .IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCertHandler.RegisterModule(mSMCertModule)).IsNone()) {
+        return err;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+aos::Error App::InitCommunication()
+{
+    aos::Error err;
+
+    if (!(err = mOpenVChannel.Init("open", VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mSecureVChannel.Init("secure", VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mSecureTLSChannel.Init(mCertHandler, mCertLoader, mSecureVChannel)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mCommunication.Init(mOpenVChannel, mSecureTLSChannel, mLauncher, mCertHandler, mResourceManager,
+              mResourceMonitor, mDownloader, mClockSync, mProvisioning))
+             .IsNone()) {
         return err;
     }
 

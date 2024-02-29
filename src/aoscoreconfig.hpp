@@ -25,11 +25,21 @@
  */
 #define AOS_CONFIG_TIMER_SIGEV_NOTIFY SIGEV_SIGNAL
 
+/**
+ * Use static PKCS11 lib.
+ */
+#define AOS_CONFIG_PKCS11_USE_STATIC_LIB 1
+
+/**
+ * Default PKCS11 library.
+ */
+#define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
+
 #endif // CONFIG_POSIX_API
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
 // Add condition to enable it for zephyr only to avoid the error.
-#if defined(__ZEPHYR__)
+#if defined(__ZEPHYR__) && !defined(CONFIG_EXTERNAL_LIBCPP)
 /**
  * Use Aos new operators.
  */
@@ -44,7 +54,6 @@
 
 /**
  * Set Aos runtime dir.
- * TODO: we should have memory disk for runtime
  */
 #define AOS_CONFIG_LAUNCHER_RUNTIME_DIR CONFIG_AOS_RUNTIME_DIR
 
@@ -52,5 +61,10 @@
  * Set Aos services dir.
  */
 #define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR CONFIG_AOS_SERVICES_DIR
+
+/**
+ * Default static PKCS11 lib.
+ */
+#define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
 
 #endif

@@ -9,6 +9,7 @@
 #define STORAGE_HPP_
 
 #include <aos/common/tools/thread.hpp>
+#include <aos/iam/certmodules/certmodule.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
@@ -19,6 +20,7 @@
  */
 class Storage : public aos::sm::launcher::StorageItf,
                 public aos::sm::servicemanager::StorageItf,
+                public aos::iam::certhandler::StorageItf,
                 private aos::NonCopyable {
 public:
     /**
@@ -100,12 +102,59 @@ public:
      */
     aos::RetWithError<aos::sm::servicemanager::ServiceData> GetService(const aos::String& serviceID) override;
 
+    /**
+     * Adds new certificate info to the storage.
+     *
+     * @param certType certificate type.
+     * @param certInfo certificate information.
+     * @return Error.
+     */
+    aos::Error AddCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo) override;
+
+    /**
+     * Returns information about certificate with specified issuer and serial number.
+     *
+     * @param issuer certificate issuer.
+     * @param serial serial number.
+     * @param cert result certificate.
+     * @return Error.
+     */
+    aos::Error GetCertInfo(const aos::Array<uint8_t>& issuer, const aos::Array<uint8_t>& serial,
+        aos::iam::certhandler::CertInfo& cert) override;
+
+    /**
+     * Returns info for all certificates with specified certificate type.
+     *
+     * @param certType certificate type.
+     * @param[out] certsInfo result certificates info.
+     * @return Error.
+     */
+    aos::Error GetCertsInfo(
+        const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo) override;
+
+    /**
+     * Removes certificate with specified certificate type and url.
+     *
+     * @param certType certificate type.
+     * @param certURL certificate URL.
+     * @return Error.
+     */
+    aos::Error RemoveCertInfo(const aos::String& certType, const aos::String& certURL) override;
+
+    /**
+     * Removes all certificates with specified certificate type.
+     *
+     * @param certType certificate type.
+     * @return Error.
+     */
+    aos::Error RemoveAllCertsInfo(const aos::String& certType) override;
+
 private:
     constexpr static auto cStoragePath = CONFIG_AOS_STORAGE_DIR;
 
     struct InstanceIdent {
-        char     mServiceID[aos::cServiceIDLen];
-        char     mSubjectID[aos::cSubjectIDLen];
+        char     mServiceID[aos::cServiceIDLen + 1];
+        char     mSubjectID[aos::cSubjectIDLen + 1];
         uint64_t mInstance;
 
         /**
@@ -125,8 +174,8 @@ private:
         InstanceIdent mInstanceIdent;
         uint32_t      mUID;
         uint64_t      mPriority;
-        char          mStoragePath[aos::cFilePathLen];
-        char          mStatePath[aos::cFilePathLen];
+        char          mStoragePath[aos::cFilePathLen + 1];
+        char          mStatePath[aos::cFilePathLen + 1];
 
         /**
          * Compares instance info.
@@ -143,8 +192,8 @@ private:
 
     struct VersionInfo {
         uint64_t mAosVersion;
-        char     mVendorVersion[aos::cVendorVersionLen];
-        char     mDescription[aos::cDescriptionLen];
+        char     mVendorVersion[aos::cVendorVersionLen + 1];
+        char     mDescription[aos::cDescriptionLen + 1];
 
         /**
          * Compares version info.
@@ -161,9 +210,9 @@ private:
 
     struct ServiceData {
         VersionInfo mVersionInfo;
-        char        mServiceID[aos::cServiceIDLen];
-        char        mProviderID[aos::cProviderIDLen];
-        char        mImagePath[aos::cFilePathLen];
+        char        mServiceID[aos::cServiceIDLen + 1];
+        char        mProviderID[aos::cProviderIDLen + 1];
+        char        mImagePath[aos::cFilePathLen + 1];
 
         /**
          * Compares service data.
@@ -178,14 +227,49 @@ private:
         }
     };
 
-    InstanceInfo                         ConvertInstanceInfo(const aos::InstanceInfo& instance);
-    aos::InstanceInfo                    ConvertInstanceInfo(const InstanceInfo& instance);
-    ServiceData                          ConvertServiceData(const aos::sm::servicemanager::ServiceData& service);
-    aos::sm::servicemanager::ServiceData ConvertServiceData(const ServiceData& service);
+    struct CertInfo {
+        uint8_t  mIssuer[aos::crypto::cCertIssuerSize];
+        size_t   mIssuerSize;
+        uint8_t  mSerial[aos::crypto::cSerialNumSize];
+        size_t   mSerialSize;
+        char     mCertURL[aos::cURLLen + 1];
+        char     mKeyURL[aos::cURLLen + 1];
+        char     mCertType[aos::iam::certhandler::cCertTypeLen + 1];
+        timespec mNotAfter;
+
+        /**
+         * Compares cert info.
+         *
+         * @param cert info to compare.
+         * @return bool.
+         */
+        bool operator==(const CertInfo& rhs) const
+        {
+            return mIssuerSize == rhs.mIssuerSize && mSerialSize == rhs.mSerialSize
+                && memcmp(mIssuer, rhs.mIssuer, mIssuerSize) == 0 && memcmp(mSerial, rhs.mSerial, mSerialSize) == 0
+                && strcmp(mCertURL, rhs.mCertURL) == 0 && strcmp(mKeyURL, rhs.mKeyURL) == 0
+                && strcmp(mCertType, rhs.mCertType) == 0 && mNotAfter.tv_sec == rhs.mNotAfter.tv_sec
+                && mNotAfter.tv_nsec == rhs.mNotAfter.tv_nsec;
+        }
+    };
+
+    aos::UniquePtr<InstanceInfo>      ConvertInstanceInfo(const aos::InstanceInfo& instance);
+    aos::UniquePtr<aos::InstanceInfo> ConvertInstanceInfo(const InstanceInfo& instance);
+    aos::UniquePtr<ServiceData>       ConvertServiceData(const aos::sm::servicemanager::ServiceData& service);
+    aos::UniquePtr<aos::sm::servicemanager::ServiceData> ConvertServiceData(const ServiceData& service);
+    aos::UniquePtr<CertInfo>                             ConvertCertInfo(
+                                    const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo);
+    aos::UniquePtr<aos::iam::certhandler::CertInfo> ConvertCertInfo(const CertInfo& certInfo);
 
     FileStorage<InstanceInfo> mInstanceDatabase;
     FileStorage<ServiceData>  mServiceDatabase;
+    FileStorage<CertInfo>     mCertDatabase;
     aos::Mutex                mMutex;
+
+    aos::StaticAllocator<aos::Max(sizeof(InstanceInfo), sizeof(aos::InstanceInfo))
+        + aos::Max(sizeof(ServiceData), sizeof(aos::sm::servicemanager::ServiceData))
+        + aos::Max(sizeof(CertInfo), sizeof(aos::iam::certhandler::CertInfo))>
+        mAllocator;
 };
 
 #endif

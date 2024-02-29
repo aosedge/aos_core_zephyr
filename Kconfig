@@ -9,13 +9,21 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_SM_VCHAN_TX_PATH
-	string "Path to the SM vchan"
-	default "/local/domain/1/tmp/vchan/sm_tx"
+config AOS_VCHAN_OPEN_TX_PATH
+	string "Path to open TX vchan"
+	default "/local/domain/1/tmp/vchan/aos/open/tx"
 
-config AOS_SM_VCHAN_RX_PATH
-	string "Path to the SM vchan"
-	default "/local/domain/1/tmp/vchan/sm_rx"
+config AOS_VCHAN_OPEN_RX_PATH
+	string "Path to open RX vchan"
+	default "/local/domain/1/tmp/vchan/aos/open/rx"
+
+config AOS_VCHAN_SECURE_TX_PATH
+	string "Path to secure TX vchan"
+	default "/local/domain/1/tmp/vchan/aos/secure/tx"
+
+config AOS_VCHAN_SECURE_RX_PATH
+	string "Path to secure RX vchan"
+	default "/local/domain/1/tmp/vchan/aos/secure/rx"
 
 config AOS_REBOOT_XEN_STORE_PATH
 	string "Path to user reboot request"
@@ -61,6 +69,30 @@ config AOS_DISK_MOUNT_POINT
 	string "Disk mount point"
 	default "/aos"
 
+config AOS_CLOCK_SYNC_SEND_PERIOD_SEC
+	int "Send clock sync period in seconds"
+	default 60
+
+config AOS_CLOCK_SYNC_TIMEOUT_SEC
+	int "Clock becomes unsynced if there is no clock sync update during this period."
+	default 600
+
+config AOS_CLOCK_SYNC_MAX_DIFF_MSEC
+	int "Maximum allowed difference between source and current time."
+	default 10000
+
+config AOS_PROVISIONING_FILE
+	string "Path to provisioning file."
+	default "/aos/.provisioned"
+	
+config AOS_PKCS11_MODULE_PIN_FILE
+	string "Path to PKCS11 module PIN file."
+	default "/aos/.pkcs11pin"
+
+config AOS_ROOT_CA_PATH
+	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
+	default "prebuilt/rootca.pem"
+
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"
 	default "prebuilt/ipl.bin"
@@ -68,5 +100,8 @@ config DOMD_UBOOT_PATH
 config DOMD_DTB_PATH
 	string "Location of Domain-D partial device-tree"
 	default "prebuilt/ipl.dtb"
+
+config TA_DEPLOY_DIR
+	string "Location of optee TA's deploy dir"
 
 source "Kconfig"

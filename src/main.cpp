@@ -16,6 +16,8 @@
 #include "version.hpp"
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
+#include <tee_supplicant.h>
+
 #include "bsp/mount.h"
 #include "bsp/reboot.h"
 #include "domains/dom_runner.h"
@@ -28,15 +30,16 @@ int main(void)
     printk("*** Aos core size: %lu ***\n", sizeof(App));
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
-    if (auto ret = littlefs_mount()) {
-        printk("Failed to mount littlefs (%d)\n", ret);
-    }
+    auto ret = littlefs_mount();
+    __ASSERT(ret == 0, "Error mounting little FS: %s [%d]", strerror(ret), ret);
+
+    ret = TEE_SupplicantInit();
+    __ASSERT(ret == 0, "Error initializing TEE supplicant: %s [%d]", strerror(ret), ret);
 
     reboot_watcher_init();
 
-    if (auto ret = create_domains()) {
-        printk("Failed to create domain (%d)\n", ret);
-    }
+    ret = create_domains();
+    __ASSERT(ret == 0, "Error creating domains: %s [%d]", strerror(ret), ret);
 #endif
 
     Logger::Init();
@@ -44,7 +47,8 @@ int main(void)
     auto& app = App::Get();
 
     auto err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s", err.Message());
+    __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
+        err.FileName(), err.LineNumber());
 
     return 0;
 }

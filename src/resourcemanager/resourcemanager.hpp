@@ -12,18 +12,23 @@
 #include <aos/common/tools/noncopyable.hpp>
 
 /**
- * Resource manager instance.
+ * Resource manager interface.
  */
 
-class ResourceManager : public aos::NonCopyable {
+class ResourceManagerItf {
 public:
+    /**
+     * Destructor
+     */
+    virtual ~ResourceManagerItf() = default;
+
     /**
      * Get current unit config version.
      *
-     * @param version  [out] param to store version.
+     * @param[out] version param to store version.
      * @return aos::Error.
      */
-    aos::Error GetUnitConfigInfo(char* version) const;
+    virtual aos::Error GetUnitConfigInfo(aos::String& version) const = 0;
 
     /**
      * Check new unit configuration.
@@ -32,7 +37,7 @@ public:
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
      */
-    aos::Error CheckUnitConfig(const char* version, const char* unitConfig) const;
+    virtual aos::Error CheckUnitConfig(const aos::String& version, const aos::String& unitConfig) const = 0;
 
     /**
      * Update unit configuration.
@@ -41,10 +46,43 @@ public:
      * @param unitConfig string with unit configuration.
      * @return aos::Error.
      */
-    aos::Error UpdateUnitConfig(const char* version, const char* unitConfig);
+    virtual aos::Error UpdateUnitConfig(const aos::String& version, const aos::String& unitConfig) = 0;
+};
+
+/**
+ * Resource manager instance.
+ */
+
+class ResourceManager : public ResourceManagerItf, private aos::NonCopyable {
+public:
+    /**
+     * Get current unit config version.
+     *
+     * @param[out] version param to store version.
+     * @return aos::Error.
+     */
+    aos::Error GetUnitConfigInfo(aos::String& version) const override;
+
+    /**
+     * Check new unit configuration.
+     *
+     * @param version unit config version
+     * @param unitConfig string with unit configuration.
+     * @return aos::Error.
+     */
+    aos::Error CheckUnitConfig(const aos::String& version, const aos::String& unitConfig) const override;
+
+    /**
+     * Update unit configuration.
+     *
+     * @param version unit config version.
+     * @param unitConfig string with unit configuration.
+     * @return aos::Error.
+     */
+    aos::Error UpdateUnitConfig(const aos::String& version, const aos::String& unitConfig) override;
 
 private:
-    static constexpr size_t cVersionLen = 10;
+    static constexpr auto cUnitConfigFilePath = CONFIG_AOS_UNIT_CONFIG_FILE;
 };
 
 #endif

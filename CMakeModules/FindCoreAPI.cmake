@@ -21,10 +21,10 @@ cmake_path(SET PROTO_INCLUDE NORMALIZE ${PROTO_EXEC}/../../include)
 # ######################################################################################################################
 
 # Aos core sources
-set(AOS_PROTO_SRC proto/servicemanager/v3/servicemanager.proto)
+set(AOS_PROTO_SRC proto/servicemanager/v3/servicemanager.proto proto/iamanager/v4/iamanager.proto)
 
 # Protobuf sources
-set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto)
+set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto google/protobuf/empty.proto)
 
 # ######################################################################################################################
 # CORE_API_GENERATE (public function)
