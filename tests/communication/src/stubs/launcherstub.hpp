@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef LAUNCHERMOCK_HPP_
-#define LAUNCHERMOCK_HPP_
+#ifndef LAUNCHERSTUB_HPP_
+#define LAUNCHERSTUB_HPP_
 
 #include <condition_variable>
 #include <mutex>
@@ -14,7 +14,7 @@
 #include <aos/common/types.hpp>
 #include <aos/sm/launcher.hpp>
 
-class LauncherMock : public aos::sm::launcher::LauncherItf {
+class LauncherStub : public aos::sm::launcher::LauncherItf {
 public:
     aos::Error RunInstances(const aos::Array<aos::ServiceInfo>& services, const aos::Array<aos::LayerInfo>& layers,
         const aos::Array<aos::InstanceInfo>& instances, bool forceRestart) override

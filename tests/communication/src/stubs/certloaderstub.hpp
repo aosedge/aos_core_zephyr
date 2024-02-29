@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef CERTLOADERMOCK_HPP_
-#define CERTLOADERMOCK_HPP_
+#ifndef CERTLOADERSTUB_HPP_
+#define CERTLOADERSTUB_HPP_
 
 #include <memory>
 
@@ -21,7 +21,7 @@
 
 #include "rsaprivatekey.hpp"
 
-class CertLoaderMock : public aos::cryptoutils::CertLoaderItf {
+class CertLoaderStub : public aos::cryptoutils::CertLoaderItf {
 public:
     aos::Error Init(aos::crypto::x509::ProviderItf& cryptoProvider, aos::pkcs11::PKCS11Manager& pkcs11Manager) override
     {
@@ -122,4 +122,4 @@ private:
     aos::StaticAllocator<cKeyAllocatorSize>  mKeyAllocator;
 };
 
-#endif /* CERTLOADERMOCK_HPP_ */
+#endif

@@ -5,50 +5,48 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef DOWNLOADERMOCK_HPP_
-#define DOWNLOADERMOCK_HPP_
+#ifndef CLOCKSYNCSTUB_HPP_
+#define CLOCKSYNCSTUB_HPP_
 
 #include <condition_variable>
 #include <mutex>
 
-#include "downloader/downloader.hpp"
+#include "clocksync/clocksync.hpp"
 
-class DownloaderMock : public DownloadReceiverItf {
+class ClockSyncStub : public ClockSyncItf {
 public:
-    aos::Error ReceiveFileChunk(const FileChunk& chunk) override
+    aos::Error Start() override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
-        mFileChunk     = chunk;
+        mStarted       = true;
         mEventReceived = true;
-
         mCV.notify_one();
 
         return aos::ErrorEnum::eNone;
     }
 
-    aos::Error ReceiveImageContentInfo(const ImageContentInfo& content) override
+    aos::Error Sync(const aos::Time& time) override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
-        mContentInfo   = content;
+        mSyncTime      = time;
         mEventReceived = true;
-
         mCV.notify_one();
 
         return aos::ErrorEnum::eNone;
     }
 
-    const FileChunk& GetFileChunk() const
+    bool GetStarted() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        return mFileChunk;
+        return mStarted;
     }
 
-    const ImageContentInfo& GetContentInfo() const
+    aos::Time GetSyncTime() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        return mContentInfo;
+        return mSyncTime;
     }
 
     aos::Error WaitEvent(const std::chrono::duration<double> timeout)
@@ -69,17 +67,16 @@ public:
         std::lock_guard<std::mutex> lock(mMutex);
 
         mEventReceived = false;
-        mContentInfo   = ImageContentInfo();
-        mFileChunk     = FileChunk();
+        mStarted       = false;
+        mSyncTime      = aos::Time();
     }
 
 private:
-    ImageContentInfo mContentInfo {};
-    FileChunk        mFileChunk {};
-
     std::condition_variable mCV;
     mutable std::mutex      mMutex;
     bool                    mEventReceived = false;
+    bool                    mStarted       = false;
+    aos::Time               mSyncTime;
 };
 
 #endif

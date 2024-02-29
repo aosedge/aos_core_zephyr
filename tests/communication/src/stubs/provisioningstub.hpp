@@ -5,14 +5,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef PROVISIONINGMOCK_HPP_
-#define PROVISIONINGMOCK_HPP_
+#ifndef PROVISIONINGSTUB_HPP_
+#define PROVISIONINGSTUB_HPP_
 
 #include <mutex>
 
 #include "provisioning/provisioning.hpp"
 
-class ProvisioningMock : public ProvisioningItf {
+class ProvisioningStub : public ProvisioningItf {
 public:
     aos::Error FinishProvisioning() override
     {

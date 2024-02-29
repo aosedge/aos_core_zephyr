@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef COMMCHANNELMOCK_HPP_
-#define COMMCHANNELMOCK_HPP_
+#ifndef COMMCHANNELSTUB_HPP_
+#define COMMCHANNELSTUB_HPP_
 
 #include <condition_variable>
 #include <mutex>
@@ -14,7 +14,7 @@
 
 #include "communication/commchannel.hpp"
 
-class CommChannelMock : public CommChannelItf {
+class CommChannelStub : public CommChannelItf {
 public:
     aos::Error SetTLSConfig(const aos::String& certType) override { return aos::ErrorEnum::eNone; }
 
