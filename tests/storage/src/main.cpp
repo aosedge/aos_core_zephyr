@@ -65,6 +65,10 @@ ZTEST(storage, test_AddUpdateRemoveInstance)
         zassert_equal(storage.AddInstance(instance), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
     }
 
+    instanceInfo2.mPriority    = 3;
+    instanceInfo2.mStoragePath = "storage_path";
+    zassert_equal(storage.AddInstance(instanceInfo2), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
+
     aos::StaticArray<aos::InstanceInfo, 2> instances2;
     zassert_equal(storage.GetAllInstances(instances2), aos::ErrorEnum::eNone, "Failed to get all instances");
 
@@ -141,6 +145,10 @@ ZTEST(storage, test_AddUpdateRemoveService)
     for (const auto& service : services) {
         zassert_equal(storage.AddService(service), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
     }
+
+    serviceData2.mImagePath  = "image_path3";
+    serviceData2.mProviderID = "provider_id3";
+    zassert_equal(storage.AddService(serviceData2), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
 
     aos::StaticArray<aos::sm::servicemanager::ServiceData, 2> services2;
     zassert_equal(storage.GetAllServices(services2), aos::ErrorEnum::eNone, "Failed to get all services");
@@ -251,6 +259,11 @@ ZTEST(storage, test_AddRemoveCertInfo)
     zassert_equal(storage.GetCertInfo(certInfoTpm.mIssuer, certInfoTpm.mSerial, certInfoGet), aos::ErrorEnum::eNone,
         "Failed to get cert info");
     zassert_equal(certInfoGet == certInfoTpm, true, "certInfoTpm != certInfoGet");
+
+    certInfoTpm.mCertURL = "cert_url_tpm2";
+    certInfoTpm.mKeyURL  = "key_url_tpm2";
+    zassert_equal(storage.AddCertInfo(certTypeTpm, certInfoTpm), aos::ErrorEnum::eAlreadyExist, "Unexpected error");
+
     zassert_equal(
         storage.RemoveCertInfo(certTypePkcs, certInfo.mCertURL), aos::ErrorEnum::eNone, "Failed to remove cert info");
 
