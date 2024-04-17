@@ -116,7 +116,7 @@ if(NOT GIT_FOUND)
     set(GIT_EXECUTABLE git)
 endif()
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 add_custom_target(
     version
