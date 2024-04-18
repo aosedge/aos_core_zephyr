@@ -11,6 +11,8 @@
 
 #include "utils/checksum.hpp"
 
+#include <zephyr/data/json.h>
+
 #include "communication.hpp"
 #include "log.hpp"
 
@@ -51,7 +53,7 @@ Communication::~Communication()
 
 aos::Error Communication::Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
     aos::sm::launcher::LauncherItf& launcher, aos::iam::certhandler::CertHandlerItf& certHandler,
-    ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
+    aos::sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
     DownloadReceiverItf& downloader, ClockSyncItf& clockSync, ProvisioningItf& provisioning)
 {
     LOG_DBG() << "Initialize communication";

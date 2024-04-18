@@ -149,6 +149,12 @@ aos::Error App::InitCommunication()
         return err;
     }
 
+    if (!(err = mResourceManager.Init(
+              mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cUnitConfigFile))
+             .IsNone()) {
+        return err;
+    }
+
     if (!(err = mCommunication.Init(mOpenVChannel, mSecureTLSChannel, mLauncher, mCertHandler, mResourceManager,
               mResourceMonitor, mDownloader, mClockSync, mProvisioning))
              .IsNone()) {

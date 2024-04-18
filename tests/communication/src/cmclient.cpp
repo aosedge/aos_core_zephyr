@@ -276,8 +276,11 @@ ZTEST_F(cmclient, test_SetUnitConfig)
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v3_SMOutgoingMessages_unit_config_status_tag);
     zassert_equal(strcmp(outgoingMessage.SMOutgoingMessage.unit_config_status.vendor_version, version), 0);
     zassert_equal(strlen(outgoingMessage.SMOutgoingMessage.unit_config_status.error), 0);
-    zassert_equal(fixture->mResourceManager.GetVersion(), version);
     zassert_equal(fixture->mResourceManager.GetUnitConfig(), unitConfig);
+
+    auto ret = fixture->mResourceManager.GetVersion();
+    zassert_true(ret.mError.IsNone(), "Failed to get version: %s", ret.mError.Message());
+    zassert_equal(ret.mValue, version);
 }
 
 ZTEST_F(cmclient, test_RunInstances)
