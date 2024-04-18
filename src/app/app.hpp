@@ -24,6 +24,7 @@
 #include "monitoring/resourceusageprovider.hpp"
 #include "ocispec/ocispec.hpp"
 #include "provisioning/provisioning.hpp"
+#include "resourcemanager/resourcemanager.hpp"
 #include "runner/runner.hpp"
 #include "storage/storage.hpp"
 
@@ -49,34 +50,39 @@ private:
     static constexpr auto cPKCS11ModuleLibrary    = AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB;
     static constexpr auto cPKCS11ModuleTokenLabel = "aoscore";
     static constexpr auto cPKCS11ModulePinFile    = CONFIG_AOS_PKCS11_MODULE_PIN_FILE;
+    static constexpr auto cNodeType               = CONFIG_AOS_NODE_TYPE;
+    static constexpr auto cUnitConfigFile         = CONFIG_AOS_UNIT_CONFIG_FILE;
 
     aos::Error InitCertHandler();
     aos::Error InitCommunication();
 
-    static App                              sApp;
-    aos::monitoring::ResourceMonitor        mResourceMonitor;
-    aos::sm::launcher::Launcher             mLauncher;
-    aos::sm::servicemanager::ServiceManager mServiceManager;
-    aos::iam::certhandler::CertModule       mIAMCertModule;
-    aos::iam::certhandler::PKCS11Module     mIAMHSMModule;
-    aos::iam::certhandler::CertModule       mSMCertModule;
-    aos::iam::certhandler::PKCS11Module     mSMHSMModule;
-    aos::iam::certhandler::CertHandler      mCertHandler;
-    aos::crypto::MbedTLSCryptoProvider      mCryptoProvider;
-    aos::cryptoutils::CertLoader            mCertLoader;
-    aos::pkcs11::PKCS11Manager              mPKCS11Manager;
-    ClockSync                               mClockSync;
-    Communication                           mCommunication;
-    VChannel                                mOpenVChannel;
-    VChannel                                mSecureVChannel;
-    TLSChannel                              mSecureTLSChannel;
-    Downloader                              mDownloader;
-    OCISpec                                 mJsonOciSpec;
-    ResourceManager                         mResourceManager;
-    ResourceUsageProvider                   mResourceUsageProvider;
-    Runner                                  mRunner;
-    Storage                                 mStorage;
-    Provisioning                            mProvisioning;
+    static App                                sApp;
+    aos::monitoring::ResourceMonitor          mResourceMonitor;
+    aos::sm::launcher::Launcher               mLauncher;
+    aos::sm::servicemanager::ServiceManager   mServiceManager;
+    aos::iam::certhandler::CertModule         mIAMCertModule;
+    aos::iam::certhandler::PKCS11Module       mIAMHSMModule;
+    aos::iam::certhandler::CertModule         mSMCertModule;
+    aos::iam::certhandler::PKCS11Module       mSMHSMModule;
+    aos::iam::certhandler::CertHandler        mCertHandler;
+    aos::crypto::MbedTLSCryptoProvider        mCryptoProvider;
+    aos::cryptoutils::CertLoader              mCertLoader;
+    aos::pkcs11::PKCS11Manager                mPKCS11Manager;
+    ClockSync                                 mClockSync;
+    Communication                             mCommunication;
+    VChannel                                  mOpenVChannel;
+    VChannel                                  mSecureVChannel;
+    TLSChannel                                mSecureTLSChannel;
+    Downloader                                mDownloader;
+    OCISpec                                   mJsonOciSpec;
+    ResourceManagerJSONProvider               mResourceManagerJSONProvider;
+    HostDeviceManager                         mHostDeviceManager;
+    HostGroupManager                          mHostGroupManager;
+    aos::sm::resourcemanager::ResourceManager mResourceManager;
+    ResourceUsageProvider                     mResourceUsageProvider;
+    Runner                                    mRunner;
+    Storage                                   mStorage;
+    Provisioning                              mProvisioning;
 };
 
 #endif
