@@ -8,7 +8,7 @@ find_package(
     REQUIRED HINTS $ENV{ZEPHYR_BASE}
 )
 
-set(CMAKE_MODULE_PATH ${APPLICATION_SOURCE_DIR}/../../CMakeModules)
+set(CMAKE_MODULE_PATH ${APPLICATION_SOURCE_DIR}/../../cmake)
 
 project(provisioning_test)
 

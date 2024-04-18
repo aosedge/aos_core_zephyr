@@ -5,12 +5,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef MONITORINGMOCK_HPP_
-#define MONITORINGMOCK_HPP_
+#ifndef MONITORINGSTUB_HPP_
+#define MONITORINGSTUB_HPP_
 
 #include <aos/common/monitoring.hpp>
 
-class ResourceMonitorMock : public aos::monitoring::ResourceMonitorItf {
+class ResourceMonitorStub : public aos::monitoring::ResourceMonitorItf {
 public:
     aos::Error GetNodeInfo(aos::monitoring::NodeInfo& nodeInfo) const override
     {

@@ -5,15 +5,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef CERTHANDLERMOCK_HPP_
-#define CERTHANDLERMOCK_HPP_
+#ifndef CERTHANDLERSTUB_HPP_
+#define CERTHANDLERSTUB_HPP_
 
 #include <mutex>
 #include <vector>
 
 #include <aos/iam/certhandler.hpp>
 
-class CertHandlerMock : public aos::iam::certhandler::CertHandlerItf {
+class CertHandlerStub : public aos::iam::certhandler::CertHandlerItf {
 public:
     aos::Error GetCertTypes(aos::Array<aos::StaticString<aos::iam::certhandler::cCertTypeLen>>& certTypes) override
     {

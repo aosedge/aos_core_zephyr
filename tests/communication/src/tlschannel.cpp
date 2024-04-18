@@ -22,9 +22,9 @@
 #include "communication/commchannel.hpp"
 #include "communication/tlschannel.hpp"
 
-#include "mocks/certhandlermock.hpp"
-#include "mocks/certloadermock.hpp"
-#include "mocks/rsaprivatekey.hpp"
+#include "stubs/certhandlerstub.hpp"
+#include "stubs/certloaderstub.hpp"
+#include "stubs/rsaprivatekey.hpp"
 
 /***********************************************************************************************************************
  * Types
@@ -235,8 +235,8 @@ ZTEST_F(tlschannel, test_TLSChannelConnect)
     psa_status_t status = psa_crypto_init();
     zassert_equal(status, PSA_SUCCESS, "psa_crypto_init failed");
 
-    CertLoaderMock  certLoader;
-    CertHandlerMock certHandler;
+    CertLoaderStub  certLoader;
+    CertHandlerStub certHandler;
     ClientChannel   vChannel;
 
     TLSChannel channel;

@@ -10,15 +10,15 @@
 
 #include "communication/communication.hpp"
 
-#include "mocks/certhandlermock.hpp"
-#include "mocks/clocksyncmock.hpp"
-#include "mocks/commchannelmock.hpp"
-#include "mocks/connectionsubscribermock.hpp"
-#include "mocks/downloadermock.hpp"
-#include "mocks/launchermock.hpp"
-#include "mocks/monitoringmock.hpp"
-#include "mocks/provisioningmock.hpp"
-#include "mocks/resourcemanagermock.hpp"
+#include "stubs/certhandlerstub.hpp"
+#include "stubs/clocksyncstub.hpp"
+#include "stubs/commchannelstub.hpp"
+#include "stubs/connectionsubscriberstub.hpp"
+#include "stubs/downloaderstub.hpp"
+#include "stubs/launcherstub.hpp"
+#include "stubs/monitoringstub.hpp"
+#include "stubs/provisioningstub.hpp"
+#include "stubs/resourcemanagerstub.hpp"
 #include "utils.hpp"
 
 /***********************************************************************************************************************
@@ -26,15 +26,15 @@
  **********************************************************************************************************************/
 
 struct iamserver_fixture {
-    CommChannelMock     mOpenChannel;
-    CommChannelMock     mSecureChannel;
-    LauncherMock        mLauncher;
-    CertHandlerMock     mCertHandler;
-    ResourceManagerMock mResourceManager;
-    ResourceMonitorMock mResourceMonitor;
-    DownloaderMock      mDownloader;
-    ClockSyncMock       mClockSync;
-    ProvisioningMock    mProvisioning;
+    CommChannelStub     mOpenChannel;
+    CommChannelStub     mSecureChannel;
+    LauncherStub        mLauncher;
+    CertHandlerStub     mCertHandler;
+    ResourceManagerStub mResourceManager;
+    ResourceMonitorStub mResourceMonitor;
+    DownloaderStub      mDownloader;
+    ClockSyncStub       mClockSync;
+    ProvisioningStub    mProvisioning;
     Communication       mCommunication;
 };
 
