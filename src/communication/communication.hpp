@@ -44,8 +44,9 @@ public:
      */
     aos::Error Init(CommChannelItf& openChannel, CommChannelItf& secureChannel,
         aos::sm::launcher::LauncherItf& launcher, aos::iam::certhandler::CertHandlerItf& certHandler,
-        ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
-        DownloadReceiverItf& downloader, ClockSyncItf& clockSync, ProvisioningItf& provisioning);
+        aos::sm::resourcemanager::ResourceManagerItf& resourceManager,
+        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync,
+        ProvisioningItf& provisioning);
 
     /**
      * Destructor.

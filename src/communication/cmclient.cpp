@@ -55,9 +55,9 @@ static void MonitoringDataToPB(
  * Public
  **********************************************************************************************************************/
 
-aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
-    aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync,
-    MessageSenderItf& messageSender)
+aos::Error CMClient::Init(aos::sm::launcher::LauncherItf& launcher,
+    aos::sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
+    DownloadReceiverItf& downloader, ClockSyncItf& clockSync, MessageSenderItf& messageSender)
 {
     LOG_DBG() << "Initialize CM client";
 
@@ -301,9 +301,10 @@ aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel, uint64_t reques
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
     pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_default;
 
+    aos::Error                          err;
     aos::StaticString<aos::cVersionLen> version;
 
-    auto err = mResourceManager->GetUnitConfigInfo(version);
+    aos::Tie(version, err) = mResourceManager->GetVersion();
     if (!err.IsNone()) {
         err = AOS_ERROR_WRAP(err);
         ErrorToPB(err, pbConfigStatus.error);

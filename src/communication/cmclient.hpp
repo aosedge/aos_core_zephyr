@@ -10,12 +10,12 @@
 
 #include <aos/common/monitoring.hpp>
 #include <aos/sm/launcher.hpp>
+#include <aos/sm/resourcemanager.hpp>
 
 #include <proto/servicemanager/v3/servicemanager.pb.h>
 
 #include "clocksync/clocksync.hpp"
 #include "downloader/downloader.hpp"
-#include "resourcemanager/resourcemanager.hpp"
 
 #include "messagehandler.hpp"
 
@@ -46,7 +46,8 @@ public:
      * @param messageSender message sender instance.
      * @return aos::Error.
      */
-    aos::Error Init(aos::sm::launcher::LauncherItf& launcher, ResourceManagerItf& resourceManager,
+    aos::Error Init(aos::sm::launcher::LauncherItf&   launcher,
+        aos::sm::resourcemanager::ResourceManagerItf& resourceManager,
         aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader, ClockSyncItf& clockSync,
         MessageSenderItf& messageSender);
 
@@ -112,11 +113,11 @@ private:
     aos::Error ProcessImageContent(const servicemanager_v3_ImageContent& pbContent);
     aos::Error ProcessClockSync(const servicemanager_v3_ClockSync& pbClockSync);
 
-    aos::sm::launcher::LauncherItf*      mLauncher {};
-    ResourceManagerItf*                  mResourceManager {};
-    aos::monitoring::ResourceMonitorItf* mResourceMonitor {};
-    DownloadReceiverItf*                 mDownloader {};
-    ClockSyncItf*                        mClockSync {};
+    aos::sm::launcher::LauncherItf*               mLauncher {};
+    aos::sm::resourcemanager::ResourceManagerItf* mResourceManager {};
+    aos::monitoring::ResourceMonitorItf*          mResourceMonitor {};
+    DownloadReceiverItf*                          mDownloader {};
+    ClockSyncItf*                                 mClockSync {};
 
     aos::StaticAllocator<sizeof(servicemanager_v3_SMIncomingMessages) + sizeof(servicemanager_v3_SMOutgoingMessages)
             + aos::Max(sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)

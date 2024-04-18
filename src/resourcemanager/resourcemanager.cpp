@@ -5,67 +5,144 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/fs/fs.h>
-
-#include <fcntl.h>
-#include <unistd.h>
+#include <aos/common/tools/memory.hpp>
 
 #include "log.hpp"
 #include "resourcemanager.hpp"
 
 /***********************************************************************************************************************
+ * Static
+ **********************************************************************************************************************/
+
+static const struct json_obj_descr cUnitConfigDescr[] = {
+    JSON_OBJ_DESCR_PRIM(UnitConfig, vendorVersion, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(UnitConfig, nodeType, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(UnitConfig, priority, JSON_TOK_NUMBER),
+};
+
+/***********************************************************************************************************************
+ * ResourceManagerJSONProvider
+ **********************************************************************************************************************/
+/***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error ResourceManager::GetUnitConfigInfo(aos::String& version) const
+// cppcheck-suppress unusedFunction
+aos::Error ResourceManagerJSONProvider::DumpUnitConfig(
+    const aos::sm::resourcemanager::UnitConfig& nodeUnitConfig, aos::String& json) const
 {
-    aos::Error err = aos::ErrorEnum::eNone;
+    aos::LockGuard lock(mMutex);
 
-    auto file = open(cUnitConfigFilePath, O_RDONLY);
-    if (file < 0) {
-        return AOS_ERROR_WRAP(errno);
-    }
+    mAllocator.Clear();
 
-    auto ret = read(file, version.Get(), version.MaxSize());
+    auto jsonUnitConfig = aos::MakeUnique<UnitConfig>(&mAllocator);
+
+    jsonUnitConfig->vendorVersion = nodeUnitConfig.mVendorVersion.CStr();
+    jsonUnitConfig->nodeType      = nodeUnitConfig.mNodeUnitConfig.mNodeType.CStr();
+    jsonUnitConfig->priority      = nodeUnitConfig.mNodeUnitConfig.mPriority;
+
+    auto ret = json_obj_encode_buf(
+        cUnitConfigDescr, ARRAY_SIZE(cUnitConfigDescr), jsonUnitConfig.Get(), json.Get(), json.MaxSize());
     if (ret < 0) {
-        err = AOS_ERROR_WRAP(errno);
-    } else {
-        version.Resize(ret);
+        return AOS_ERROR_WRAP(ret);
     }
 
-    ret = close(file);
-    if (err.IsNone() && (ret < 0)) {
-        err = AOS_ERROR_WRAP(errno);
+    auto err = json.Resize(strlen(json.CStr()));
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    return err;
-}
-
-aos::Error ResourceManager::CheckUnitConfig(const aos::String& version, const aos::String& unitConfig) const
-{
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error ResourceManager::UpdateUnitConfig(const aos::String& version, const aos::String& unitConfig)
+// cppcheck-suppress unusedFunction
+aos::Error ResourceManagerJSONProvider::ParseNodeUnitConfig(
+    const aos::String& json, aos::sm::resourcemanager::UnitConfig& nodeUnitConfig) const
 {
-    aos::Error err = aos::ErrorEnum::eNone;
+    aos::LockGuard lock(mMutex);
 
-    auto file = open(cUnitConfigFilePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (file < 0) {
-        return AOS_ERROR_WRAP(errno);
+    mAllocator.Clear();
+
+    // json_object_parse mutates the input string, so we need to copy it
+    mJSONBuffer = json;
+
+    auto parsedUnitConfig = aos::MakeUnique<UnitConfig>(&mAllocator);
+
+    auto ret = json_obj_parse(
+        mJSONBuffer.Get(), mJSONBuffer.Size(), cUnitConfigDescr, ARRAY_SIZE(cUnitConfigDescr), parsedUnitConfig.Get());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
     }
 
-    auto written = write(file, version.Get(), version.Size());
-    if (written < 0) {
-        err = AOS_ERROR_WRAP(written);
-    } else if ((size_t)written != version.Size()) {
-        err = AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
-    }
+    nodeUnitConfig.mVendorVersion            = parsedUnitConfig->vendorVersion;
+    nodeUnitConfig.mNodeUnitConfig.mNodeType = parsedUnitConfig->nodeType;
+    nodeUnitConfig.mNodeUnitConfig.mPriority = parsedUnitConfig->priority;
 
-    auto ret = close(file);
-    if (err.IsNone() && (ret < 0)) {
-        err = AOS_ERROR_WRAP(errno);
-    }
+    return aos::ErrorEnum::eNone;
+}
 
-    return err;
+/***********************************************************************************************************************
+ * HostDeviceManager
+ **********************************************************************************************************************/
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
+// cppcheck-suppress unusedFunction
+aos::Error HostDeviceManager::AllocateDevice(const aos::DeviceInfo& deviceInfo, const aos::String& instanceID)
+{
+    (void)deviceInfo;
+    (void)instanceID;
+
+    return aos::ErrorEnum::eNone;
+}
+
+// cppcheck-suppress unusedFunction
+aos::Error HostDeviceManager::RemoveInstanceFromDevice(const aos::String& deviceName, const aos::String& instanceID)
+{
+    (void)deviceName;
+    (void)instanceID;
+
+    return aos::ErrorEnum::eNone;
+}
+
+// cppcheck-suppress unusedFunction
+aos::Error HostDeviceManager::RemoveInstanceFromAllDevices(const aos::String& instanceID)
+{
+    (void)instanceID;
+
+    return aos::ErrorEnum::eNone;
+}
+
+// cppcheck-suppress unusedFunction
+aos::Error HostDeviceManager::GetDeviceInstances(
+    const aos::String& deviceName, aos::Array<aos::StaticString<aos::cInstanceIDLen>>& instanceIDs) const
+{
+    (void)deviceName;
+    (void)instanceIDs;
+
+    return aos::ErrorEnum::eNone;
+}
+
+// cppcheck-suppress unusedFunction
+bool HostDeviceManager::DeviceExists(const aos::String& device) const
+{
+    (void)device;
+
+    return false;
+}
+
+/***********************************************************************************************************************
+ * HostGroupManager
+ **********************************************************************************************************************/
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
+// cppcheck-suppress unusedFunction
+bool HostGroupManager::GroupExists(const aos::String& group) const
+{
+    (void)group;
+
+    return false;
 }
