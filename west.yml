@@ -24,24 +24,24 @@ manifest:
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: "69c911c737f9b304e135605e62a2e4771b60effb"
+      revision: "0b83be03e7036e17a22af09a72e0f2426b01c145"
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: "v0.3.0"
+      revision: "v0.3.1"
 
     - name: aos_core_api
       remote: aoscloud
-      revision: "v7.2.3"
+      revision: "v7.3.0"
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: "f93f5d6b59ce9c39b1a8ef980530dc5ae372c93f"
+      revision: "f530c7bd21821e98e5da3965082fb31fdbf46843"
 
     - name: zephyr-optee-client
       remote: xen-troops
-      revision: "f3f1455ef27fe1092856b17fcb22b331a8a2ad95"
+      revision: "2b94d818dccea22270e9edfee1d5531f194c6406"
 
     - name: littlefs
       remote: zephyrproject-rtos
@@ -52,7 +52,7 @@ manifest:
 
     - name: nanopb
       remote: zephyrproject-rtos
-      revision: "42fa8b211e946b90b9d968523fce7b1cfe27617e"
+      revision: "65cbefb4695bc7af1cb733ced99618afb3586b20"
       path: modules/lib/nanopb
 
     - name: mbedtls
