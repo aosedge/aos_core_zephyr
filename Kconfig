@@ -104,4 +104,17 @@ config DOMD_DTB_PATH
 config TA_DEPLOY_DIR
 	string "Location of optee TA's deploy dir"
 
+config DOMU_ENABLE
+	bool "Enable Domain-U creation"
+
+config DOMU_BIN_PATH
+	string "Location for Domain-U binary"
+	depends on DOMU_ENABLE
+	default "prebuilt/domu.bin"
+
+config DOMU_DTB_PATH
+	string "Location for Domain-U device-tree"
+	depends on DOMU_ENABLE
+	default "prebuilt/domu.dtb"
+
 source "Kconfig"
