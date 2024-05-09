@@ -16,6 +16,10 @@ endif()
 
 cmake_path(SET PROTO_INCLUDE NORMALIZE ${PROTO_EXEC}/../../include)
 
+list(APPEND CMAKE_MODULE_PATH ${ZEPHYR_NANOPB_MODULE_DIR}/extra)
+
+find_package(Nanopb REQUIRED)
+
 # ######################################################################################################################
 # Sources
 # ######################################################################################################################
@@ -32,6 +36,8 @@ set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto google/protobuf/empty.proto
 #   CORE_API_DIR = Variable to define dir with aos_core_api repository
 # ######################################################################################################################
 function(CORE_API_GENERATE CORE_API_DIR SCRIPTS_DIR)
+    set(NANOPB_GENERATE_CPP_STANDALONE OFF)
+
     get_filename_component(CORE_API_DIR ${CORE_API_DIR} ABSOLUTE)
 
     if(NOT CORE_API_CXX)
@@ -41,9 +47,6 @@ function(CORE_API_GENERATE CORE_API_DIR SCRIPTS_DIR)
     # Generate Aos core API
 
     foreach(src ${AOS_PROTO_SRC})
-        set(proto_sources)
-        set(proto_headers)
-
         get_filename_component(file_name ${src} NAME_WLE)
         get_filename_component(file_path ${src} DIRECTORY)
 
@@ -78,21 +81,20 @@ function(CORE_API_GENERATE CORE_API_DIR SCRIPTS_DIR)
             VERBATIM
         )
 
-        set(NANOPB_DEPENDS ${options_file})
-
-        nanopb_generate_cpp(proto_sources proto_headers RELPATH ${CORE_API_DIR} ${CORE_API_DIR}/${src})
-        target_sources(app PRIVATE ${proto_sources} ${proto_headers})
+        list(APPEND NANOPB_DEPENDS ${options_file})
     endforeach()
+
+    list(TRANSFORM AOS_PROTO_SRC PREPEND ${CORE_API_DIR}/)
+
+    nanopb_generate_cpp(proto_sources proto_headers RELPATH ${CORE_API_DIR} ${AOS_PROTO_SRC})
+    target_sources(app PRIVATE ${proto_sources} ${proto_headers})
 
     # Generate system protobuf API
 
-    foreach(src ${SYSTEM_PROTO_SRC})
-        set(proto_sources)
-        set(proto_headers)
+    list(TRANSFORM SYSTEM_PROTO_SRC PREPEND ${PROTO_INCLUDE}/)
 
-        nanopb_generate_cpp(proto_sources proto_headers RELPATH ${PROTO_INCLUDE} ${PROTO_INCLUDE}/${src})
-        target_sources(app PRIVATE ${proto_sources} ${proto_headers})
-    endforeach()
+    nanopb_generate_cpp(proto_sources proto_headers RELPATH ${PROTO_INCLUDE} ${SYSTEM_PROTO_SRC})
+    target_sources(app PRIVATE ${proto_sources} ${proto_headers})
 
     # Copy wchan API header
 
