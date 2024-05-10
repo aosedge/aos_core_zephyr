@@ -156,7 +156,7 @@ if(${CONFIG_BOARD_NATIVE_POSIX})
 endif()
 
 # WA to have get time on zephyr
-target_compile_definitions_ifndef(CONFIG_NATIVE_APPLICATION mbedTLS INTERFACE _POSIX_VERSION=199309L)
+target_compile_definitions_ifndef(CONFIG_NATIVE_APPLICATION mbedTLS INTERFACE _POSIX_VERSION=200809L)
 
 # Add Aos psa driver
 
@@ -168,10 +168,15 @@ set_source_files_properties(
     TARGET_DIRECTORY mbedTLS PROPERTIES HEADER_FILE_ONLY ON
 )
 
+target_include_directories(mbedTLSCrypto PRIVATE ${mbedtls_source_dir}/library)
+
 target_sources(
-    app PRIVATE ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto_driver_wrappers_no_static.c
-                ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto.c
+    mbedTLSCrypto
+    PRIVATE ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto_driver_wrappers_no_static.c
+            ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto.c ${mbedtls_source_dir}/library/pk_ecc.c
 )
+
+target_sources(mbedTLSX509 PRIVATE ${mbedtls_source_dir}/library/x509write.c)
 
 # ######################################################################################################################
 # External libs
