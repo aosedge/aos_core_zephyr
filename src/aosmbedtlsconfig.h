@@ -8,13 +8,13 @@
 #ifndef AOSMBEDTLSCONFIG_H_
 #define AOSMBEDTLSCONFIG_H_
 
-#define MBEDTLS_NO_PLATFORM_ENTROPY
-#define MBEDTLS_ENTROPY_HARDWARE_ALT
-#define MBEDTLS_PLATFORM_C
-#define MBEDTLS_PLATFORM_MEMORY
-#define MBEDTLS_MEMORY_BUFFER_ALLOC_C
+#define MBEDTLS_PEM_WRITE_C
+#define MBEDTLS_PK_HAVE_ECC_KEYS
 #define MBEDTLS_TEST_SW_INET_PTON
-
-#include "../../aos_core_lib_cpp/include/aos/common/crypto/mbedtls/mbedtls_config.h"
+#define MBEDTLS_X509_CREATE_C
+#define MBEDTLS_X509_CRT_WRITE_C
+#define MBEDTLS_X509_CSR_PARSE_C
+#define MBEDTLS_X509_CSR_WRITE_C
+#define PSA_CRYPTO_DRIVER_AOS
 
 #endif
