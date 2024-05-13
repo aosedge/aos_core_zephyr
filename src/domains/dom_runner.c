@@ -8,6 +8,10 @@
 #include <xen_dom_mgmt.h>
 #include <zephyr/logging/log.h>
 
+#ifdef CONFIG_DOMU_ENABLE
+#include "domu/domu_runner.h"
+#endif
+
 LOG_MODULE_REGISTER(domains);
 
 /* This is needed until we will not use domain names for backend confs */
@@ -28,6 +32,14 @@ int create_domains(void)
         LOG_ERR("Failed to start Domain-D with specified domid");
         return rc;
     }
+
+#ifdef CONFIG_DOMU_ENABLE
+    rc = domu_start();
+    if (rc < 0) {
+        LOG_ERR("Failed to start Domain-U, rc = %d", rc);
+        return rc;
+    }
+#endif
 
     return 0;
 }
