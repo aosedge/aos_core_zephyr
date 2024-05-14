@@ -301,7 +301,7 @@ aos::Error CMClient::ProcessGetUnitConfigStatus(Channel channel, uint64_t reques
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v3_SMOutgoingMessages_unit_config_status_tag;
     pbConfigStatus                           = servicemanager_v3_UnitConfigStatus_init_default;
 
-    aos::StaticString<aos::cVendorVersionLen> version;
+    aos::StaticString<aos::cVersionLen> version;
 
     auto err = mResourceManager->GetUnitConfigInfo(version);
     if (!err.IsNone()) {
@@ -338,7 +338,7 @@ aos::Error CMClient::ProcessCheckUnitConfig(
         ErrorToPB(err, pbConfigStatus.error);
     }
 
-    aos::StaticString<aos::cVendorVersionLen> version;
+    aos::StaticString<aos::cVersionLen> version;
 
     PBToString(pbUnitConfig.vendor_version, version);
     StringToPB(version, pbConfigStatus.vendor_version);

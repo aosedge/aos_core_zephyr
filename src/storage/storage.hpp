@@ -192,7 +192,7 @@ private:
 
     struct VersionInfo {
         uint64_t mAosVersion;
-        char     mVendorVersion[aos::cVendorVersionLen + 1];
+        char     mVendorVersion[aos::cVersionLen + 1];
         char     mDescription[aos::cDescriptionLen + 1];
 
         /**
