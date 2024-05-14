@@ -8,8 +8,6 @@
 #include <mem.h>
 
 /delete-node/ &sd0;
-/delete-node/ &vcc_sd0;
-/delete-node/ &vccq_sd0;
 /delete-node/ &gpio5;
 
 &emmc2 {
