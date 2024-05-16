@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef AOSMBEDTLSCONFIG_H_
-#define AOSMBEDTLSCONFIG_H_
+#ifndef TESTMBEDTLSCONFIG_H_
+#define TESTMBEDTLSCONFIG_H_
 
 #define MBEDTLS_PEM_WRITE_C
 #define MBEDTLS_PK_HAVE_ECC_KEYS
@@ -17,5 +17,6 @@
 #define MBEDTLS_X509_CSR_PARSE_C
 #define MBEDTLS_X509_CSR_WRITE_C
 #define PSA_CRYPTO_DRIVER_AOS
+#define MBEDTLS_NET_C
 
 #endif
