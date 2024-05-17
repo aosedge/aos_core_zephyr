@@ -89,14 +89,7 @@ private:
     aos::Error ProcessApplyCert(Channel channel, uint64_t requestID, const aos::Array<uint8_t>& data);
     aos::Error DecodePBMessage(const aos::Array<uint8_t>& data, const pb_msgdesc_t* fields, void* message);
     template <size_t cSize>
-    constexpr aos::Error CheckPBNodeID(const char (&pbNodeID)[cSize])
-    {
-        if (strncmp(pbNodeID, cNodeID, cSize) != 0) {
-            return aos::ErrorEnum::eFailed;
-        }
-
-        return aos::ErrorEnum::eNone;
-    }
+    aos::Error CheckPBNodeID(const char (&pbNodeID)[cSize]);
 
     aos::iam::certhandler::CertHandlerItf* mCertHandler {};
     ProvisioningItf*                       mProvisioning {};

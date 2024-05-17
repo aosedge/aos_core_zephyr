@@ -322,3 +322,15 @@ aos::Error IAMServer::DecodePBMessage(const aos::Array<uint8_t>& data, const pb_
 
     return aos::ErrorEnum::eNone;
 }
+
+template <size_t cSize>
+aos::Error IAMServer::CheckPBNodeID(const char (&pbNodeID)[cSize])
+{
+    if (strncmp(pbNodeID, cNodeID, cSize) != 0) {
+        LOG_ERR() << "Wrong node ID: " << pbNodeID;
+
+        return aos::ErrorEnum::eFailed;
+    }
+
+    return aos::ErrorEnum::eNone;
+}
