@@ -108,6 +108,7 @@ private:
     aos::ConditionalVariable mCondVar;
 
     aos::Time mSyncTime;
+    bool      mSync    = false;
     bool      mSynced  = false;
     bool      mStart   = false;
     bool      mStarted = false;

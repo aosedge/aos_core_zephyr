@@ -28,7 +28,7 @@ aos::Error ClockSync::Init(ClockSyncSenderItf& sender)
             auto now = aos::Time::Now(CLOCK_MONOTONIC);
 #endif
 
-            mCondVar.Wait(lock, now.Add(cSendPeriod), [this] { return mStart || mClose; });
+            mCondVar.Wait(lock, now.Add(cSendPeriod), [this] { return mStart || mClose || mSync; });
 
             if (mClose) {
                 return;
@@ -37,6 +37,18 @@ aos::Error ClockSync::Init(ClockSyncSenderItf& sender)
             if (mStart) {
                 mStart   = false;
                 mStarted = true;
+            }
+
+            if (mSync) {
+                mSync     = false;
+                mSyncTime = aos::Time::Now(CLOCK_MONOTONIC);
+
+                if (!mSynced) {
+                    mSynced = true;
+                    mSender->ClockSynced();
+                }
+
+                continue;
             }
 
             if (mSynced && abs(aos::Time::Now(CLOCK_MONOTONIC).Sub(mSyncTime)) > cSyncTimeout) {
@@ -90,12 +102,8 @@ aos::Error ClockSync::Sync(const aos::Time& time)
         }
     }
 
-    mSyncTime = aos::Time::Now(CLOCK_MONOTONIC);
-
-    if (!mSynced) {
-        mSynced = true;
-        mSender->ClockSynced();
-    }
+    mSync = true;
+    mCondVar.NotifyOne();
 
     return aos::ErrorEnum::eNone;
 }
