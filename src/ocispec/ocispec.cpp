@@ -89,6 +89,7 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
  * Public
  **********************************************************************************************************************/
 
+// cppcheck-suppress unusedFunction
 aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageManifest& manifest)
 {
     aos::LockGuard lock(mMutex);
@@ -182,6 +183,7 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::ImageManifest& manifest)
 {
     aos::LockGuard lock(mMutex);
@@ -261,6 +263,7 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& imageSpec)
 {
     aos::LockGuard lock(mMutex);
@@ -305,6 +308,7 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::ImageSpec& imageSpec)
 {
     aos::LockGuard lock(mMutex);
@@ -360,6 +364,7 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSpec& runtimeSpec)
 {
     aos::LockGuard lock(mMutex);
@@ -470,6 +475,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec)
 {
     aos::LockGuard lock(mMutex);

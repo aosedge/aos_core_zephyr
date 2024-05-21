@@ -44,6 +44,7 @@ aos::Error Storage::Init()
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::AddInstance(const aos::InstanceInfo& instance)
 {
     aos::LockGuard lock(mMutex);
@@ -58,6 +59,7 @@ aos::Error Storage::AddInstance(const aos::InstanceInfo& instance)
         });
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
 {
     aos::LockGuard lock(mMutex);
@@ -75,6 +77,7 @@ aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
 {
     aos::LockGuard lock(mMutex);
@@ -90,6 +93,7 @@ aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
 {
     aos::LockGuard lock(mMutex);
@@ -110,6 +114,7 @@ aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
     return err;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::AddService(const aos::sm::servicemanager::ServiceData& service)
 {
     aos::LockGuard lock(mMutex);
@@ -124,6 +129,7 @@ aos::Error Storage::AddService(const aos::sm::servicemanager::ServiceData& servi
     });
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::UpdateService(const aos::sm::servicemanager::ServiceData& service)
 {
     aos::LockGuard lock(mMutex);
@@ -147,6 +153,7 @@ aos::Error Storage::RemoveService(const aos::String& serviceID, uint64_t aosVers
     });
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceData>& services)
 {
     aos::LockGuard lock(mMutex);
@@ -167,6 +174,7 @@ aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceDa
     return err;
 }
 
+// cppcheck-suppress unusedFunction
 aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(const aos::String& serviceID)
 {
     aos::LockGuard lock(mMutex);
@@ -187,6 +195,7 @@ aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(cons
     return aos::RetWithError<aos::sm::servicemanager::ServiceData>(*retServiceData);
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::AddCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo)
 {
     aos::LockGuard lock(mMutex);
@@ -205,6 +214,7 @@ aos::Error Storage::AddCertInfo(const aos::String& certType, const aos::iam::cer
         });
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::RemoveCertInfo(const aos::String& certType, const aos::String& certURL)
 {
     aos::LockGuard lock(mMutex);
@@ -215,6 +225,7 @@ aos::Error Storage::RemoveCertInfo(const aos::String& certType, const aos::Strin
         [&certType, &certURL](const CertInfo& data) { return data.mCertType == certType && data.mCertURL == certURL; });
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
 {
     aos::LockGuard lock(mMutex);
@@ -229,6 +240,7 @@ aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo)
 {
     aos::LockGuard lock(mMutex);
@@ -251,6 +263,7 @@ aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::ia
     return err;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Storage::GetCertInfo(
     const aos::Array<uint8_t>& issuer, const aos::Array<uint8_t>& serial, aos::iam::certhandler::CertInfo& cert)
 {

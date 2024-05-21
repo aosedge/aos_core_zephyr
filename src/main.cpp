@@ -13,6 +13,8 @@
 
 #include "app/app.hpp"
 #include "logger/logger.hpp"
+
+// cppcheck-suppress missingInclude
 #include "version.hpp"
 
 #if !defined(CONFIG_NATIVE_APPLICATION)

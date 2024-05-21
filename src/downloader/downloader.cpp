@@ -34,6 +34,7 @@ aos::Error Downloader::Init(DownloadRequesterItf& downloadRequester)
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Downloader::Download(const aos::String& url, const aos::String& path, aos::DownloadContent contentType)
 {
     aos::UniqueLock lock(mMutex);
