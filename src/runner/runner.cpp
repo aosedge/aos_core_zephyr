@@ -25,6 +25,7 @@ aos::Error Runner::Init(RunStatusReceiverItf& statusReceiver)
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 RunStatus Runner::StartInstance(const aos::String& instanceID, const aos::String& runtimeDir)
 {
     RunStatus runStatus {instanceID, aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone};
@@ -38,6 +39,7 @@ RunStatus Runner::StartInstance(const aos::String& instanceID, const aos::String
     return runStatus;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Runner::StopInstance(const aos::String& instanceID)
 {
     auto ret = xrun_kill(instanceID.CStr());

@@ -68,6 +68,7 @@ aos::Error ResourceUsageProvider::GetNodeInfo(aos::monitoring::NodeInfo& nodeInf
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error ResourceUsageProvider::GetNodeMonitoringData(
     const aos::String& nodeID, aos::monitoring::MonitoringData& monitoringData)
 {
@@ -93,8 +94,8 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
         monitoringData.mCPU = ((cpuTimeDiff_ns / 10.0) / us_elapsed);
     }
 
-    LOG_DBG() << "Get node monitoring data: "
-              << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
+    LOG_DBG() << "Get node monitoring data: RAM(K): " << (monitoringData.mRAM / 1024)
+              << ", CPU: " << monitoringData.mCPU;
 
     mPrevNodeCPUTime = domain.cpu_ns;
     mPrevTime        = curTime;
@@ -116,6 +117,7 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
     const aos::String& instanceID, aos::monitoring::MonitoringData& monitoringData)
 {

@@ -135,6 +135,7 @@ void Communication::ClockUnsynced()
     mCondVar.NotifyOne();
 }
 
+// cppcheck-suppress unusedFunction
 aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
 {
     aos::LockGuard lock(mMutex);
@@ -147,6 +148,7 @@ aos::Error Communication::Subscribes(aos::ConnectionSubscriberItf& subscriber)
     return aos::ErrorEnum::eNone;
 }
 
+// cppcheck-suppress unusedFunction
 void Communication::Unsubscribes(aos::ConnectionSubscriberItf& subscriber)
 {
     aos::LockGuard lock(mMutex);

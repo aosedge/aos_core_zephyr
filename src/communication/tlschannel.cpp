@@ -185,6 +185,7 @@ aos::Error TLSChannel::SetupSSLConfig(const aos::String& certType)
     extern unsigned char __aos_root_ca_start[];
     extern unsigned char __aos_root_ca_end[];
 
+    // cppcheck-suppress comparePointers
     auto ret = mbedtls_x509_crt_parse(&mCACert, __aos_root_ca_start, __aos_root_ca_end - __aos_root_ca_start);
     if (ret != 0) {
         return AOS_ERROR_WRAP(ret);
