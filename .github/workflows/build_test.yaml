@@ -24,7 +24,7 @@ jobs:
       matrix:
         platform:
           [
-            rcar_spider,
+            rcar_spider_ca55,
             rcar_salvator_xs_m3,
             rcar_h3ulcb_ca57,
             native_posix,
@@ -55,7 +55,7 @@ jobs:
       - name: Build ${{ matrix.platform }}
         if: "!startsWith(matrix.platform, 'native')"
         run: |
-          west build -b ${{ matrix.platform }} -p always -- -DSHIELD=xen_dom0
+          west build -b ${{ matrix.platform }} -p always -S xen_dom0
 
       - name: Build ${{ matrix.platform }}
         if: startsWith(matrix.platform, 'native')

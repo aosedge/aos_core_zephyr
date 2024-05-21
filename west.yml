@@ -24,7 +24,7 @@ manifest:
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: "0b83be03e7036e17a22af09a72e0f2426b01c145"
+      revision: zephyr-v3.6.0-xt
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp

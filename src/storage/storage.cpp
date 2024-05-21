@@ -52,7 +52,10 @@ aos::Error Storage::AddInstance(const aos::InstanceInfo& instance)
 
     auto storageInstance = ConvertInstanceInfo(instance);
 
-    return mInstanceDatabase.Add(*storageInstance);
+    return mInstanceDatabase.Add(
+        *storageInstance, [](const InstanceInfo& storedInstance, const InstanceInfo& addedInstance) {
+            return storedInstance.mInstanceIdent == addedInstance.mInstanceIdent;
+        });
 }
 
 aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
@@ -115,7 +118,10 @@ aos::Error Storage::AddService(const aos::sm::servicemanager::ServiceData& servi
 
     auto storageService = ConvertServiceData(service);
 
-    return mServiceDatabase.Add(*storageService);
+    return mServiceDatabase.Add(*storageService, [](const ServiceData& storedService, const ServiceData& addedService) {
+        return strcmp(storedService.mServiceID, addedService.mServiceID) == 0
+            && storedService.mVersionInfo.mAosVersion == addedService.mVersionInfo.mAosVersion;
+    });
 }
 
 aos::Error Storage::UpdateService(const aos::sm::servicemanager::ServiceData& service)
@@ -189,7 +195,14 @@ aos::Error Storage::AddCertInfo(const aos::String& certType, const aos::iam::cer
 
     auto storageCertInfo = ConvertCertInfo(certType, certInfo);
 
-    return mCertDatabase.Add(*storageCertInfo);
+    return mCertDatabase.Add(
+        *storageCertInfo, [&storageCertInfo](const CertInfo& storedCertInfo, const CertInfo& addedCertInfo) {
+            return strcmp(storedCertInfo.mCertType, addedCertInfo.mCertType) == 0
+                && storedCertInfo.mIssuerSize == addedCertInfo.mIssuerSize
+                && storedCertInfo.mSerialSize == addedCertInfo.mSerialSize
+                && memcmp(storedCertInfo.mIssuer, addedCertInfo.mIssuer, storedCertInfo.mIssuerSize) == 0
+                && memcmp(storedCertInfo.mSerial, addedCertInfo.mSerial, storedCertInfo.mSerialSize) == 0;
+        });
 }
 
 aos::Error Storage::RemoveCertInfo(const aos::String& certType, const aos::String& certURL)

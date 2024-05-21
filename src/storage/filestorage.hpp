@@ -86,9 +86,11 @@ public:
      * Adds a new record to the database.
      *
      * @param data Record to add.
+     * @param filter Filter to check if record already exists.
      * @return Error
      */
-    aos::Error Add(const T& data)
+    template <typename F>
+    aos::Error Add(const T& data, F filter)
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
@@ -100,7 +102,7 @@ public:
         off_t                  deletedRecordOffset {-1};
 
         while ((nread = read(mFd, record.Get(), sizeof(Record))) == sizeof(Record)) {
-            if (!record->mDeleted && record->mData == data) {
+            if (!record->mDeleted && filter(record->mData, data)) {
                 return aos::ErrorEnum::eAlreadyExist;
             }
 

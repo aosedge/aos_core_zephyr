@@ -94,14 +94,17 @@ target_sources(
 # Enable vchannels and xrun mocks for native posix
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
 
-# Include domain IPL and dtb for xen_dom0 shield
-target_sources_ifdef(CONFIG_SHIELD_XEN_DOM0 app PRIVATE src/domains/domd/domain_bins.S)
+# Include domain IPL and dtb for xen_dom0 snippet
+target_sources_ifdef(CONFIG_XEN_DOM0 app PRIVATE src/domains/dom_runner.c src/domains/domain_bins.S)
 
 # Include source files for DomD support
 
 target_sources_ifdef(CONFIG_SOC_SERIES_RCAR_GEN4 app PRIVATE src/domains/domd/domd_cfg_spider.c)
 target_sources_ifdef(CONFIG_BOARD_RCAR_SALVATOR_XS_M3 app PRIVATE src/domains/domd/domd_cfg_salvator_xs.c)
 target_sources_ifdef(CONFIG_BOARD_RCAR_H3ULCB_CA57 app PRIVATE src/domains/domd/domd_cfg_h3ulcb.c)
+
+# Include configuration source file for DomU
+target_sources_ifdef(CONFIG_DOMU_ENABLE app PRIVATE src/domains/domu/domu_cfg.c)
 
 # Include HW-specific source file
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
@@ -156,7 +159,7 @@ if(${CONFIG_BOARD_NATIVE_POSIX})
 endif()
 
 # WA to have get time on zephyr
-target_compile_definitions_ifndef(CONFIG_NATIVE_APPLICATION mbedTLS INTERFACE _POSIX_VERSION=199309L)
+target_compile_definitions_ifndef(CONFIG_NATIVE_APPLICATION mbedTLS INTERFACE _POSIX_VERSION=200809L)
 
 # Add Aos psa driver
 
@@ -168,10 +171,15 @@ set_source_files_properties(
     TARGET_DIRECTORY mbedTLS PROPERTIES HEADER_FILE_ONLY ON
 )
 
+target_include_directories(mbedTLSCrypto PRIVATE ${mbedtls_source_dir}/library)
+
 target_sources(
-    app PRIVATE ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto_driver_wrappers_no_static.c
-                ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto.c
+    mbedTLSCrypto
+    PRIVATE ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto_driver_wrappers_no_static.c
+            ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto.c ${mbedtls_source_dir}/library/pk_ecc.c
 )
+
+target_sources(mbedTLSX509 PRIVATE ${mbedtls_source_dir}/library/x509write.c)
 
 # ######################################################################################################################
 # External libs

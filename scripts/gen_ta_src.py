@@ -53,7 +53,7 @@ def generate_c(uuids, output, tablename):
         uuid_str = str(u).replace("-", "_")
         file.write("\t{\n\t\t" + f'.uuid = "{str(u)}",\n' + "\t},\n")
     file.write("\t{\n\t\t.uuid = NULL,\n\t}\n};\n\n")
-    file.write("static int init_table(const struct device *dev)\n{\n")
+    file.write("static int init_table(void)\n{\n")
     i = 0
     for u in uuids:
         uuid_str = str(u).replace("-", "_")

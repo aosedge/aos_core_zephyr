@@ -9,8 +9,6 @@
 #include <xen_dom_mgmt.h>
 #include <zephyr/xen/public/domctl.h>
 
-#include <domains/dom_runner.h>
-
 static char* domd_dtdevs[] = {
     "/soc/dma-controller@e7350000",
     "/soc/dma-controller@e7351000",
@@ -283,8 +281,9 @@ static ssize_t get_ipl_image_size(void* image_info, uint64_t* size)
 }
 
 struct xen_domain_cfg domd_cfg = {
-    .machine_dt_compat = "renesas,r8a779f0",
-    .mem_kb            = 0x100000, /* 1Gb */
+    .machine_dt_compat    = (const char*[]) {"renesas,r8a779f0"},
+    .nr_machine_dt_compat = 1,
+    .mem_kb               = 0x100000, /* 1Gb */
 
     .flags               = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),
     .max_evtchns         = 10,
@@ -316,9 +315,4 @@ struct xen_domain_cfg domd_cfg = {
       "aosupdate.path=um/update_rootfs aosupdate.selinux_module=/usr/share/selinux/aos/base.pp",
     .dtb_start = __dtb_ipl_start,
     .dtb_end   = __dtb_ipl_end,
-};
-
-int create_domains(void)
-{
-    return domain_create(&domd_cfg, 1);
 };

@@ -35,10 +35,10 @@ add_definitions(-DCONFIG_AOS_ROOT_CA_PATH="${cert_dir}/ca.pem")
 # Includes
 # ######################################################################################################################
 
-target_include_directories(app PRIVATE ${aoscore_source_dir}/include)
-target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/../../src)
-target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/src)
-target_include_directories(app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+zephyr_include_directories(${aoscore_source_dir}/include)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/../../src)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # ######################################################################################################################
 #  Generate API
@@ -88,19 +88,29 @@ if(${CONFIG_BOARD_NATIVE_POSIX})
     target_compile_options(mbedTLS INTERFACE -mpclmul -msse2 -maes)
 endif()
 
-target_include_directories(mbedTLS INTERFACE ${APPLICATION_SOURCE_DIR}/src)
+# WA to have get time on zephyr
+target_compile_definitions_ifndef(CONFIG_NATIVE_APPLICATION mbedTLS INTERFACE _POSIX_VERSION=200809L)
+
+# Add Aos psa driver
+
+set(mbedtls_source_dir "${APPLICATION_SOURCE_DIR}/../../../modules/crypto/mbedtls")
+set(aoscore_source_dir "${APPLICATION_SOURCE_DIR}/../../../aos_core_lib_cpp")
 
 set_source_files_properties(
-    ${ZEPHYR_MBEDTLS_MODULE_DIR}/library/psa_crypto_driver_wrappers_no_static.c
-    ${ZEPHYR_MBEDTLS_MODULE_DIR}/library/psa_crypto.c TARGET_DIRECTORY mbedTLS PROPERTIES HEADER_FILE_ONLY ON
+    ${mbedtls_source_dir}/library/psa_crypto_driver_wrappers_no_static.c ${mbedtls_source_dir}/library/psa_crypto.c
+    TARGET_DIRECTORY mbedTLS PROPERTIES HEADER_FILE_ONLY ON
 )
 
+target_include_directories(mbedTLSCrypto PRIVATE ${mbedtls_source_dir}/library)
+
 target_sources(
-    app
+    mbedTLSCrypto
     PRIVATE ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto_driver_wrappers_no_static.c
             ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto.c
-            ${aoscore_source_dir}/src/common/crypto/mbedtls/driverwrapper.cpp
+            ${aoscore_source_dir}/src/common/crypto/mbedtls/driverwrapper.cpp ${mbedtls_source_dir}/library/pk_ecc.c
 )
+
+target_sources(mbedTLSX509 PRIVATE ${mbedtls_source_dir}/library/x509write.c)
 
 # ######################################################################################################################
 # Target
