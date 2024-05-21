@@ -24,24 +24,24 @@ manifest:
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: zephyr-v3.6.0-xt
+      revision: zephyr/v3.6.0/xt-v1.0.0
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: "v0.3.1"
+      revision: "v0.3.2"
 
     - name: aos_core_api
       remote: aoscloud
-      revision: "v7.3.0"
+      revision: "v7.3.1"
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: "f530c7bd21821e98e5da3965082fb31fdbf46843"
+      revision: "v2.0.0"
 
     - name: zephyr-optee-client
       remote: xen-troops
-      revision: "2b94d818dccea22270e9edfee1d5531f194c6406"
+      revision: "v0.0.1"
 
     - name: littlefs
       remote: zephyrproject-rtos
@@ -57,7 +57,7 @@ manifest:
 
     - name: mbedtls
       remote: zephyrproject-rtos
-      revision: "6ec4abdcda78dfc47315af568f93e5ad4398dea0"
+      revision: "3217c450180fd5e817601c6f479116de69e57461"
       path: modules/crypto/mbedtls
       groups:
         - crypto
