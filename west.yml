@@ -29,35 +29,35 @@ manifest:
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: "v0.3.1"
+      revision: "develop"
 
     - name: aos_core_api
       remote: aoscloud
-      revision: "v7.3.0"
+      revision: "develop"
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: "f530c7bd21821e98e5da3965082fb31fdbf46843"
+      revision: "main"
 
     - name: zephyr-optee-client
       remote: xen-troops
-      revision: "2b94d818dccea22270e9edfee1d5531f194c6406"
+      revision: "soafee_1.1_wip"
 
     - name: littlefs
       remote: zephyrproject-rtos
-      revision: "408c16a909dd6cf128874a76f21c793798c9e423"
+      revision: "zephyr"
       path: modules/fs/littlefs
       groups:
         - fs
 
     - name: nanopb
       remote: zephyrproject-rtos
-      revision: "65cbefb4695bc7af1cb733ced99618afb3586b20"
+      revision: "zephyr"
       path: modules/lib/nanopb
 
     - name: mbedtls
       remote: zephyrproject-rtos
-      revision: "6ec4abdcda78dfc47315af568f93e5ad4398dea0"
+      revision: "zephyr"
       path: modules/crypto/mbedtls
       groups:
         - crypto
