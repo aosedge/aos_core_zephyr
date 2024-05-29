@@ -1,4 +1,4 @@
-[![CI](https://github.com/aoscloud/aos_core_zephyr/workflows/Build/badge.svg)](https://github.com/aoscloud/aos_core_zephyr/actions?query=workflow%3ABuild)
+[![ci](https://github.com/aoscloud/aos_core_zephyr/actions/workflows/build_test.yaml/badge.svg)](https://github.com/aoscloud/aos_core_zephyr/actions/workflows/build_test.yaml)
 [![codecov](https://codecov.io/gh/aoscloud/aos_core_zephyr/branch/main/graph/badge.svg?token=ObQrD8aaAC)](https://codecov.io/gh/aoscloud/aos_core_zephyr)
 
 # AosCore zephyr application
