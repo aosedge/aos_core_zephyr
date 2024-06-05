@@ -29,11 +29,11 @@ manifest:
 
     - name: aos_core_lib_cpp
       remote: aoscloud
-      revision: "v0.3.3"
+      revision: "develop"
 
     - name: aos_core_api
       remote: aoscloud
-      revision: "v7.3.1"
+      revision: "develop"
 
     - name: zephyr-xenlib
       remote: xen-troops
