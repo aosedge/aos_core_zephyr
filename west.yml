@@ -15,8 +15,8 @@ manifest:
     - name: xen-troops
       url-base: https://github.com/xen-troops
 
-    - name: aoscloud
-      url-base: https://github.com/aoscloud
+    - name: aosedge
+      url-base: https://github.com/aosedge
 
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
@@ -28,12 +28,12 @@ manifest:
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
-      remote: aoscloud
+      remote: aosedge
       revision: "v0.3.3"
 
     - name: aos_core_api
-      remote: aoscloud
-      revision: "v7.3.1"
+      remote: aosedge
+      revision: "v7.3.3"
 
     - name: zephyr-xenlib
       remote: xen-troops
