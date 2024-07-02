@@ -1,5 +1,5 @@
-[![ci](https://github.com/aoscloud/aos_core_zephyr/actions/workflows/build_test.yaml/badge.svg)](https://github.com/aoscloud/aos_core_zephyr/actions/workflows/build_test.yaml)
-[![codecov](https://codecov.io/gh/aoscloud/aos_core_zephyr/branch/main/graph/badge.svg?token=ObQrD8aaAC)](https://codecov.io/gh/aoscloud/aos_core_zephyr)
+[![ci](https://github.com/aosedge/aos_core_zephyr/actions/workflows/build_test.yaml/badge.svg)](https://github.com/aosedge/aos_core_zephyr/actions/workflows/build_test.yaml)
+[![codecov](https://codecov.io/gh/aosedge/aos_core_zephyr/branch/main/graph/badge.svg?token=ObQrD8aaAC)](https://codecov.io/gh/aosedge/aos_core_zephyr)
 
 # AosCore zephyr application
 
@@ -21,7 +21,7 @@ The verified protobuf compiler version is v22.3: <https://github.com/protocolbuf
 Use zephyr `west` tool to fetch required repos:
 
 ```sh
-west init -m  https://github.com/aoscloud/aos_core_zephyr --mr main aos_zephyr_sdk
+west init -m  https://github.com/aosedge/aos_core_zephyr --mr main aos_zephyr_sdk
 cd aos_zephyr_sdk
 west update
 west zephyr-export
