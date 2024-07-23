@@ -37,7 +37,7 @@ manifest:
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: "v2.0.0"
+      revision: "v2.1.1"
 
     - name: zephyr-optee-client
       remote: xen-troops
