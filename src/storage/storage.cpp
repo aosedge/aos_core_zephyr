@@ -16,7 +16,7 @@
 
 aos::Error Storage::Init()
 {
-    LOG_DBG() << "Initialize storage: " << cStoragePath;
+    LOG_ERR() << "Initialize storage: " << cStoragePath;
 
     aos::Error err;
 

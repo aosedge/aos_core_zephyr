@@ -16,12 +16,17 @@
 #include "version.hpp"
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
-#include <tee_supplicant.h>
+//#include <tee_supplicant.h>
 
 #include "bsp/mount.h"
 #include "bsp/reboot.h"
 #include "domains/dom_runner.h"
 #endif
+
+
+
+
+
 
 int main(void)
 {
@@ -30,11 +35,8 @@ int main(void)
     printk("*** Aos core size: %lu ***\n", sizeof(App));
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
-    auto ret = littlefs_mount();
+    auto ret = storage_init();
     __ASSERT(ret == 0, "Error mounting little FS: %s [%d]", strerror(ret), ret);
-
-    ret = TEE_SupplicantInit();
-    __ASSERT(ret == 0, "Error initializing TEE supplicant: %s [%d]", strerror(ret), ret);
 
     reboot_watcher_init();
 
@@ -47,8 +49,9 @@ int main(void)
     auto& app = App::Get();
 
     auto err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
-        err.FileName(), err.LineNumber());
+//    __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
+//        err.FileName(), err.LineNumber());
 
+    while (1) k_msleep(100);
     return 0;
 }

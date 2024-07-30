@@ -43,13 +43,6 @@ manifest:
       remote: xen-troops
       revision: "v0.0.1"
 
-    - name: littlefs
-      remote: zephyrproject-rtos
-      revision: "408c16a909dd6cf128874a76f21c793798c9e423"
-      path: modules/fs/littlefs
-      groups:
-        - fs
-
     - name: nanopb
       remote: zephyrproject-rtos
       revision: "65cbefb4695bc7af1cb733ced99618afb3586b20"
@@ -61,3 +54,7 @@ manifest:
       path: modules/crypto/mbedtls
       groups:
         - crypto
+
+    - name: fatfs
+      remote: zephyrproject-rtos
+      revision: master
