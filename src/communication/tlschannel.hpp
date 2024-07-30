@@ -17,9 +17,10 @@
 #include <aos/common/tools/string.hpp>
 #include <aos/iam/certhandler.hpp>
 
+#include "channel.hpp"
 #include "commchannel.hpp"
 
-class TLSChannel : public CommChannelItf {
+class TLSChannel : public Channel {
 public:
     /**
      * Destructor.
@@ -34,7 +35,7 @@ public:
      * @param vChannel virtual channel.
      */
     aos::Error Init(aos::iam::certhandler::CertHandlerItf& certHandler, aos::cryptoutils::CertLoaderItf& certLoader,
-        CommChannelItf& vChannel);
+        CommunicationItf& communication, int port);
 
     /**
      * Set TLS config.
@@ -42,7 +43,7 @@ public:
      * @param certType certificate type.
      * @return aos::Error
      */
-    aos::Error SetTLSConfig(const aos::String& certType) override;
+    aos::Error SetTLSConfig(const aos::String& certType);
 
     /**
      * Connects to communication channel.
@@ -55,13 +56,6 @@ public:
      * Closes current connection.
      */
     aos::Error Close() override;
-
-    /**
-     * Returns if channel is connected.
-     *
-     * @return bool.
-     */
-    bool IsConnected() const override;
 
     /**
      * Reads data from channel to array.
@@ -101,10 +95,10 @@ private:
     mbedtls_ssl_context                                    mSSL {};
     mbedtls_svc_key_id_t                                   mKeyID {};
     aos::SharedPtr<aos::crypto::PrivateKeyItf>             mPrivKey {};
-    CommChannelItf*                                        mChannel {};
     aos::iam::certhandler::CertHandlerItf*                 mCertHandler {};
     aos::cryptoutils::CertLoaderItf*                       mCertLoader {};
     aos::StaticString<aos::iam::certhandler::cCertTypeLen> mCertType;
+    aos::Mutex                                             mMutex;
 };
 
 #endif /* TLSCHANNEL_HPP_ */

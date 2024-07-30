@@ -28,13 +28,12 @@ TLSChannel::~TLSChannel()
 }
 
 aos::Error TLSChannel::Init(aos::iam::certhandler::CertHandlerItf& certHandler,
-    aos::cryptoutils::CertLoaderItf& certLoader, CommChannelItf& vChannel)
+    aos::cryptoutils::CertLoaderItf& certLoader, CommunicationItf& communication, int port)
 {
-    mChannel     = &vChannel;
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
 
-    return aos::ErrorEnum::eNone;
+    return Channel::Init(communication, port);
 }
 
 aos::Error TLSChannel::SetTLSConfig(const aos::String& certType)
@@ -43,31 +42,28 @@ aos::Error TLSChannel::SetTLSConfig(const aos::String& certType)
         return aos::ErrorEnum::eNone;
     }
 
-    mCertType = certType;
-
-    if (certType != "") {
-        auto err = SetupSSLConfig(certType);
-        if (!err.IsNone()) {
-            Cleanup();
-
-            return err;
-        }
-
-        return aos::ErrorEnum::eNone;
+    if (certType.IsEmpty()) {
+        return aos::ErrorEnum::eInvalidArgument;
     }
 
-    Cleanup();
+    mCertType = certType;
 
-    return aos::ErrorEnum::eNone;
+    auto err = SetupSSLConfig(certType);
+    if (!err.IsNone()) {
+        Cleanup();
+    }
+
+    return err;
 }
 
 aos::Error TLSChannel::Connect()
 {
-    if (mCertType.IsEmpty()) {
-        return mChannel->Connect();
+    auto err = Channel::Connect();
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    auto err = TLSConnect();
+    err = TLSConnect();
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -77,29 +73,16 @@ aos::Error TLSChannel::Connect()
 
 aos::Error TLSChannel::Close()
 {
-    return mChannel->Close();
-}
-
-bool TLSChannel::IsConnected() const
-{
-    return mChannel->IsConnected();
+    return Channel::Close();
 }
 
 int TLSChannel::Read(void* data, size_t size)
 {
-    if (mCertType.IsEmpty()) {
-        return mChannel->Read(data, size);
-    }
-
     return mbedtls_ssl_read(&mSSL, static_cast<unsigned char*>(data), size);
 }
 
 int TLSChannel::Write(const void* data, size_t size)
 {
-    if (mCertType.IsEmpty()) {
-        return mChannel->Write(data, size);
-    }
-
     return mbedtls_ssl_write(&mSSL, static_cast<const unsigned char*>(data), size);
 }
 
@@ -127,11 +110,6 @@ aos::RetWithError<mbedtls_svc_key_id_t> TLSChannel::SetupOpaqueKey(mbedtls_pk_co
 aos::Error TLSChannel::TLSConnect()
 {
     mbedtls_ssl_session_reset(&mSSL);
-
-    auto err = mChannel->Connect();
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
 
     return mbedtls_ssl_handshake(&mSSL);
 }
@@ -242,12 +220,12 @@ int TLSChannel::TLSWrite(void* ctx, const unsigned char* buf, size_t len)
 {
     auto channel = static_cast<TLSChannel*>(ctx);
 
-    return channel->mChannel->Write(buf, len);
+    return channel->Channel::Write(buf, len);
 }
 
 int TLSChannel::TLSRead(void* ctx, unsigned char* buf, size_t len)
 {
     auto channel = static_cast<TLSChannel*>(ctx);
 
-    return channel->mChannel->Read(buf, len);
+    return channel->Channel::Read(buf, len);
 }
