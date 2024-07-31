@@ -25,7 +25,9 @@ find_package(Nanopb REQUIRED)
 # ######################################################################################################################
 
 # Aos core sources
-set(AOS_PROTO_SRC proto/servicemanager/v3/servicemanager.proto proto/iamanager/v4/iamanager.proto)
+set(AOS_PROTO_SRC proto/common/v1/common.proto proto/servicemanager/v4/servicemanager.proto
+                  proto/iamanager/v5/iamanager.proto
+)
 
 # Protobuf sources
 set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto google/protobuf/empty.proto)
@@ -37,6 +39,7 @@ set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto google/protobuf/empty.proto
 # ######################################################################################################################
 function(CORE_API_GENERATE CORE_API_DIR SCRIPTS_DIR)
     set(NANOPB_GENERATE_CPP_STANDALONE OFF)
+    set(NANOPB_IMPORT_DIRS ${CORE_API_DIR}/proto)
 
     get_filename_component(CORE_API_DIR ${CORE_API_DIR} ABSOLUTE)
 
@@ -96,7 +99,8 @@ function(CORE_API_GENERATE CORE_API_DIR SCRIPTS_DIR)
     nanopb_generate_cpp(proto_sources proto_headers RELPATH ${PROTO_INCLUDE} ${SYSTEM_PROTO_SRC})
     target_sources(app PRIVATE ${proto_sources} ${proto_headers})
 
-    # Copy wchan API header
+    # Copy aos protocol header
 
-    file(COPY ${CORE_API_DIR}/vchanapi/vchanapi.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+    file(COPY ${CORE_API_DIR}/aosprotocol/aosprotocol.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 endfunction()
