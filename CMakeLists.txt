@@ -23,7 +23,7 @@ set(AOS_CORE_CONFIG aoscoreconfig.hpp)
 # Includes
 # ######################################################################################################################
 
-zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/proto src)
 zephyr_include_directories_ifdef(CONFIG_NATIVE_APPLICATION mocks/include)
 
 # ######################################################################################################################
