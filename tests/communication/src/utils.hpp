@@ -19,7 +19,7 @@ constexpr auto cWaitTimeout = std::chrono::seconds {5};
  * Public
  **********************************************************************************************************************/
 
-void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message);
+void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message);
 
 aos::Error SendMessageToChannel(CommChannelStub& channel, uint32_t source, const std::string& methodName,
     uint64_t requestID, const std::vector<uint8_t>& data, aos::Error messageError = aos::ErrorEnum::eNone);

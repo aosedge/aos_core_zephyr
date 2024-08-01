@@ -16,27 +16,12 @@
 class Logger {
 public:
     /**
-     * Local log modules.
-     */
-    enum class Module {
-        eApp = static_cast<int>(aos::LogModuleEnum::eNumModules),
-        eClockSync,
-        eCommunication,
-        eDownloader,
-        eOCISpec,
-        eProvisioning,
-        eResourceManager,
-        eRunner,
-        eStorage,
-    };
-
-    /**
      * Inits logging system.
      */
     static void Init();
 
 private:
-    static void LogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message);
+    static void LogCallback(const char* module, aos::LogLevel level, const aos::String& message);
 };
 
 #endif

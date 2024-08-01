@@ -33,7 +33,7 @@ struct clocksync_fixture {
  * Setup
  **********************************************************************************************************************/
 
-void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
+void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
 {
     static std::mutex mutex;
     static auto       startTime = std::chrono::steady_clock::now();

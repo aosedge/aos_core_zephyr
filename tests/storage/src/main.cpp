@@ -20,7 +20,7 @@ static const aos::Array<uint8_t> StringToDN(const char* str)
 
 ZTEST_SUITE(storage, NULL, NULL, NULL, NULL, NULL);
 
-void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
+void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
 {
     printk("[storage] %s \n", message.CStr());
 }
