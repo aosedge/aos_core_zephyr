@@ -28,11 +28,14 @@ aos::Error ResourceUsageProvider::Init()
         return AOS_ERROR_WRAP(ret);
     }
 
+    if (auto err = mNodeInfo.mCPUs.Resize(xstat.num_cpus); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     mNodeInfo.mNodeID   = cNodeID;
-    mNodeInfo.mNumCPUs  = xstat.num_cpus;
     mNodeInfo.mTotalRAM = xstat.tot_mem;
 
-    aos::monitoring::PartitionInfo partitionInfo;
+    aos::PartitionInfo partitionInfo;
     partitionInfo.mName = cDiskPartitionName;
     partitionInfo.mPath = cDiskPartitionPoint;
     partitionInfo.mTypes.EmplaceBack("services");
@@ -40,7 +43,7 @@ aos::Error ResourceUsageProvider::Init()
 
     mNodeInfo.mPartitions.PushBack(partitionInfo);
 
-    LOG_DBG() << "Number of CPUs: " << mNodeInfo.mNumCPUs << ", total RAM(K): " << (mNodeInfo.mTotalRAM / 1024);
+    LOG_DBG() << "Number of CPUs: " << mNodeInfo.mCPUs.Size() << ", total RAM(K): " << (mNodeInfo.mTotalRAM / 1024);
 
     for (size_t i = 0; i < mNodeInfo.mPartitions.Size(); ++i) {
         struct fs_statvfs sbuf;
@@ -59,7 +62,7 @@ aos::Error ResourceUsageProvider::Init()
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error ResourceUsageProvider::GetNodeInfo(aos::monitoring::NodeInfo& nodeInfo) const
+aos::Error ResourceUsageProvider::GetNodeInfo(aos::NodeInfo& nodeInfo) const
 {
     LOG_DBG() << "Get node info";
 

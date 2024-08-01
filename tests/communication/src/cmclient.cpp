@@ -150,7 +150,7 @@ ZTEST_F(cmclient, test_NodeConfiguration)
 
     fixture->mCommunication.Subscribes(subscriber);
 
-    aos::monitoring::NodeInfo sendNodeInfo {CONFIG_AOS_NODE_ID, 2, 1024, {}};
+    aos::NodeInfo sendNodeInfo {CONFIG_AOS_NODE_ID, 2, 1024, {}};
 
     sendNodeInfo.mPartitions.EmplaceBack(aos::monitoring::PartitionInfo {"var", "", {}, 2048, 0});
     sendNodeInfo.mPartitions.end()->mTypes.EmplaceBack("data");
@@ -177,8 +177,8 @@ ZTEST_F(cmclient, test_NodeConfiguration)
     err = ReceiveCMOutgoingMessage(fixture->mSecureChannel, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", err.Message());
 
-    aos::monitoring::NodeInfo receiveNodeInfo {};
-    const auto&               pbNodeConfiguration = outgoingMessage.SMOutgoingMessage.node_configuration;
+    aos::NodeInfo receiveNodeInfo {};
+    const auto&   pbNodeConfiguration = outgoingMessage.SMOutgoingMessage.node_configuration;
 
     PBToString(pbNodeConfiguration.node_id, receiveNodeInfo.mNodeID);
     receiveNodeInfo.mNumCPUs  = pbNodeConfiguration.num_cpus;

@@ -177,7 +177,7 @@ aos::Error CMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringDat
 
 aos::Error CMClient::SendNodeConfiguration()
 {
-    auto  nodeInfo            = aos::MakeUnique<aos::monitoring::NodeInfo>(&mAllocator);
+    auto  nodeInfo            = aos::MakeUnique<aos::NodeInfo>(&mAllocator);
     auto  outgoingMessage     = aos::MakeUnique<servicemanager_v3_SMOutgoingMessages>(&mAllocator);
     auto& pbNodeConfiguration = outgoingMessage->SMOutgoingMessage.node_configuration;
 
