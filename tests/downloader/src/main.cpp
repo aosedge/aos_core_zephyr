@@ -83,7 +83,7 @@ private:
     bool mSkipSendRequest;
 };
 
-void TestLogCallback(LogModule module, LogLevel level, const aos::String& message)
+void TestLogCallback(const char* module, LogLevel level, const aos::String& message)
 {
     printk("[downloader] %s \n", message.CStr());
 }

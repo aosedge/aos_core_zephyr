@@ -15,7 +15,7 @@
 
 static constexpr auto cTestNodeConfigJSON = R"({"nodeType":"mainType","priority":1,"vendorVersion":"1.0"})";
 
-static void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
+static void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
 {
     printk("[resourcemanager] %s \n", message.CStr());
 }
