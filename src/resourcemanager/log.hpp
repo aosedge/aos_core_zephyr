@@ -8,11 +8,8 @@
 #ifndef LOG_HPP_
 #define LOG_HPP_
 
-#include "logger/logger.hpp"
+#define LOG_MODULE "resourcemanager"
 
-#define LOG_DBG() LOG_MODULE_DBG(aos::LogModuleEnum::eSMResourceManager)
-#define LOG_INF() LOG_MODULE_INF(aos::LogModuleEnum::eSMResourceManager)
-#define LOG_WRN() LOG_MODULE_WRN(aos::LogModuleEnum::eSMResourceManager)
-#define LOG_ERR() LOG_MODULE_ERR(aos::LogModuleEnum::eSMResourceManager)
+#include <aos/common/tools/logger.hpp>
 
 #endif
