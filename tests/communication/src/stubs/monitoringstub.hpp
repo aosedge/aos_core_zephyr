@@ -12,7 +12,7 @@
 
 class ResourceMonitorStub : public aos::monitoring::ResourceMonitorItf {
 public:
-    aos::Error GetNodeInfo(aos::monitoring::NodeInfo& nodeInfo) const override
+    aos::Error GetNodeInfo(aos::NodeInfo& nodeInfo) const override
     {
         nodeInfo = mNodeInfo;
         return aos::ErrorEnum::eNone;
@@ -26,12 +26,12 @@ public:
 
     aos::Error StopInstanceMonitoring(const aos::String& instanceID) { return aos::ErrorEnum::eNone; }
 
-    void SetNodeInfo(const aos::monitoring::NodeInfo& nodeInfo) { mNodeInfo = nodeInfo; }
+    void SetNodeInfo(const aos::NodeInfo& nodeInfo) { mNodeInfo = nodeInfo; }
 
-    void Clear() { mNodeInfo = aos::monitoring::NodeInfo(); }
+    void Clear() { mNodeInfo = aos::NodeInfo(); }
 
 private:
-    aos::monitoring::NodeInfo mNodeInfo;
+    aos::NodeInfo mNodeInfo;
 };
 
 #endif

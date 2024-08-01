@@ -26,7 +26,7 @@ public:
      * @param systemInfo system info
      * @return Error
      */
-    aos::Error GetNodeInfo(aos::monitoring::NodeInfo& systemInfo) const override;
+    aos::Error GetNodeInfo(aos::NodeInfo& systemInfo) const override;
 
     /**
      * Returns node monitoring data
@@ -72,7 +72,7 @@ private:
     timeval                                                  mPrevTime {};
     aos::StaticArray<InstanceCPUData, aos::cMaxNumInstances> mPrevInstanceCPUTime {};
     aos::Mutex                                               mMutex {};
-    aos::monitoring::NodeInfo                                mNodeInfo {};
+    aos::NodeInfo                                            mNodeInfo {};
 };
 
 #endif

@@ -123,7 +123,7 @@ private:
             + aos::Max(sizeof(aos::ServiceInfoStaticArray) + sizeof(aos::LayerInfoStaticArray)
                     + sizeof(aos::InstanceInfoStaticArray),
                 sizeof(ImageContentInfo) + sizeof(FileChunk)),
-        sizeof(aos::monitoring::NodeInfo)>
+        sizeof(aos::NodeInfo)>
         mAllocator;
 
     PBService<cMethodCount> mSMService;
