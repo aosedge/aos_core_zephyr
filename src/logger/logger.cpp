@@ -10,6 +10,27 @@
 #include "logger.hpp"
 
 /***********************************************************************************************************************
+ * Consts
+ **********************************************************************************************************************/
+
+static const aos::String cLogModuleApp             = "app";
+static const aos::String cLogModuleCommunication   = "communication";
+static const aos::String cLogModuleClockSync       = "clocksync";
+static const aos::String cLogModuleDownloader      = "downloader";
+static const aos::String cLogModuleOCISpec         = "ocispec";
+static const aos::String cLogModuleProvisioning    = "provisioning";
+static const aos::String cLogModuleResourceManager = "resourcemanager";
+static const aos::String cLogModuleRunner          = "runner";
+static const aos::String cLogModuleStorage         = "storage";
+
+static const aos::String cLogModuleCerthandler    = "certhandler";
+static const aos::String cLogModuleCrypto         = "crypto";
+static const aos::String cLogModuleLauncher       = "launcher";
+static const aos::String cLogModuleMonitoring     = "monitoring";
+static const aos::String cLogModuleServiceManager = "servicemanager";
+static const aos::String cLogModulePKCS11         = "pkcs11";
+
+/***********************************************************************************************************************
  * Log module callbacks
  **********************************************************************************************************************/
 
@@ -50,7 +71,6 @@
     }
 
 // internal logs
-
 LOG_CALLBACK(app);
 LOG_CALLBACK(clocksync);
 LOG_CALLBACK(communication);
@@ -62,7 +82,6 @@ LOG_CALLBACK(runner);
 LOG_CALLBACK(storage);
 
 // Aos lib logs
-
 LOG_CALLBACK(certhandler);
 LOG_CALLBACK(crypto);
 LOG_CALLBACK(launcher);
@@ -83,91 +102,42 @@ void Logger::Init()
  * Public
  **********************************************************************************************************************/
 
-void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
+void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::String& message)
 {
-    switch (static_cast<int>(module.GetValue())) {
-        // internal logs
+    aos::String logModule(module);
 
-    case static_cast<int>(Module::eApp):
+    if (logModule == cLogModuleApp) {
         log_app::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eCommunication):
+    } else if (logModule == cLogModuleCommunication) {
         log_communication::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eClockSync):
+    } else if (logModule == cLogModuleClockSync) {
         log_clocksync::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eDownloader):
+    } else if (logModule == cLogModuleDownloader) {
         log_downloader::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eOCISpec):
+    } else if (logModule == cLogModuleOCISpec) {
         log_ocispec::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eProvisioning):
+    } else if (logModule == cLogModuleProvisioning) {
         log_provisioning::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eResourceManager):
+    } else if (logModule == cLogModuleResourceManager) {
         log_resourcemanager::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eRunner):
+    } else if (logModule == cLogModuleRunner) {
         log_runner::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eStorage):
+    } else if (logModule == cLogModuleStorage) {
         log_storage::LogCallback(level, message);
-
-        break;
-
-        // Aos lib logs
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonPKCS11):
-        log_pkcs11::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonCrypto):
-        log_crypto::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eIAMCertHandler):
+    } else if (logModule == cLogModuleCerthandler) {
         log_certhandler::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
+    } else if (logModule == cLogModuleCrypto) {
+        log_crypto::LogCallback(level, message);
+    } else if (logModule == cLogModuleLauncher) {
         log_launcher::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonMonitoring):
+    } else if (logModule == cLogModuleMonitoring) {
         log_monitoring::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eSMServiceManager):
+    } else if (logModule == cLogModuleServiceManager) {
         log_servicemanager::LogCallback(level, message);
-
-        break;
-
-    default:
-        LOG_MODULE_WRN(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
-            << "Log from unknown module received: module = " << module << ", level = " << level
-            << ", message = " << message;
+    } else if (logModule == cLogModulePKCS11) {
+        log_pkcs11::LogCallback(level, message);
+    } else {
+        LOG_MODULE_WRN(cLogModuleCommunication.CStr())
+            << "Log from unknown module received: module=" << module << ", level=" << level << ", message=" << message;
     }
 }
