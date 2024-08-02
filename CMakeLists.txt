@@ -75,11 +75,8 @@ target_sources(
     PRIVATE src/main.cpp
             src/app/app.cpp
             src/clocksync/clocksync.cpp
-            src/communication/cmclient.cpp
-            src/communication/communication.cpp
-            src/communication/iamserver.cpp
             src/communication/tlschannel.cpp
-            src/communication/vchannel.cpp
+            src/communication/xenvchan.cpp
             src/downloader/downloader.cpp
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
