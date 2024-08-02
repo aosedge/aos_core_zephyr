@@ -84,6 +84,7 @@ target_sources(
             src/provisioning/provisioning.cpp
             src/resourcemanager/resourcemanager.cpp
             src/runner/runner.cpp
+            src/smclient/smclient.cpp
             src/storage/storage.cpp
             src/utils/checksum.cpp
 )
