@@ -80,6 +80,7 @@ target_sources(
             src/downloader/downloader.cpp
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
+            src/nodeinfoprovider/nodeinfoprovider.cpp
             src/ocispec/ocispec.cpp
             src/provisioning/provisioning.cpp
             src/resourcemanager/resourcemanager.cpp

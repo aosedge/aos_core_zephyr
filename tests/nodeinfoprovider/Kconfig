@@ -1,0 +1,24 @@
+# Copyright (C) 2024 Renesas Electronics Corporation.
+# Copyright (C) 2024 EPAM Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Aos zephyr application"
+
+config AOS_NODE_TYPE
+	string "Node type"
+	default "NODE_TYPE1"
+
+config AOS_MAX_CPU_DMIPS
+	int "Maximum CPU DMIPS"
+	default 10000
+
+config AOS_DISK_MOUNT_POINT
+	string "Disk mount point"
+	default "/aos"
+
+config AOS_PROVISION_STATE_FILE
+	string "Path to provisioning state file."
+	default ".provisionstate"
+
+source "Kconfig"
