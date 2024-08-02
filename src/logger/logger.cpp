@@ -13,15 +13,16 @@
  * Consts
  **********************************************************************************************************************/
 
-static const aos::String cLogModuleApp             = "app";
-static const aos::String cLogModuleCommunication   = "communication";
-static const aos::String cLogModuleClockSync       = "clocksync";
-static const aos::String cLogModuleDownloader      = "downloader";
-static const aos::String cLogModuleOCISpec         = "ocispec";
-static const aos::String cLogModuleProvisioning    = "provisioning";
-static const aos::String cLogModuleResourceManager = "resourcemanager";
-static const aos::String cLogModuleRunner          = "runner";
-static const aos::String cLogModuleStorage         = "storage";
+static const aos::String cLogModuleApp              = "app";
+static const aos::String cLogModuleCommunication    = "communication";
+static const aos::String cLogModuleClockSync        = "clocksync";
+static const aos::String cLogModuleDownloader       = "downloader";
+static const aos::String cLogModuleOCISpec          = "ocispec";
+static const aos::String cLogModuleProvisioning     = "provisioning";
+static const aos::String cLogModuleResourceManager  = "resourcemanager";
+static const aos::String cLogModuleRunner           = "runner";
+static const aos::String cLogModuleStorage          = "storage";
+static const aos::String cLogModuleNodeInfoProvider = "nodeinfoprovider";
 
 static const aos::String cLogModuleCerthandler    = "certhandler";
 static const aos::String cLogModuleCrypto         = "crypto";
@@ -80,6 +81,7 @@ LOG_CALLBACK(provisioning);
 LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(storage);
+LOG_CALLBACK(nodeinfoprovider);
 
 // Aos lib logs
 LOG_CALLBACK(certhandler);
@@ -124,6 +126,8 @@ void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::Str
         log_runner::LogCallback(level, message);
     } else if (logModule == cLogModuleStorage) {
         log_storage::LogCallback(level, message);
+    } else if (logModule == cLogModuleNodeInfoProvider) {
+        log_nodeinfoprovider::LogCallback(level, message);
     } else if (logModule == cLogModuleCerthandler) {
         log_certhandler::LogCallback(level, message);
     } else if (logModule == cLogModuleCrypto) {
