@@ -12,14 +12,14 @@
 
 #include <vch.h>
 
-#include "commchannel.hpp"
+#include "transport.hpp"
 
-class VChannel : public CommChannelItf {
+namespace aos::zephyr::communication {
+
+class XenVChan : public TransportItf {
 public:
-    static constexpr auto cXSOpenReadPath   = CONFIG_AOS_VCHAN_OPEN_TX_PATH;
-    static constexpr auto cXSOpenWritePath  = CONFIG_AOS_VCHAN_OPEN_RX_PATH;
-    static constexpr auto cXSCloseReadPath  = CONFIG_AOS_VCHAN_SECURE_TX_PATH;
-    static constexpr auto cXSCloseWritePath = CONFIG_AOS_VCHAN_SECURE_RX_PATH;
+    static constexpr auto cXSReadPath  = CONFIG_AOS_VCHAN_TX_PATH;
+    static constexpr auto cXSWritePath = CONFIG_AOS_VCHAN_RX_PATH;
 
     /**
      * Initializes vchan.
@@ -28,34 +28,26 @@ public:
      * @param xsWritePath Xen store write vchan path.
      * @return aos::Error.
      */
-    aos::Error Init(const aos::String& name, const aos::String& xsReadPath, const aos::String& xsWritePath);
+    aos::Error Init(const aos::String& xsReadPath, const aos::String& xsWritePath);
 
     /**
-     * Set TLS config.
-     *
-     * @param certType certificate type.
-     * @return aos::Error
-     */
-    aos::Error SetTLSConfig(const aos::String& certType) override;
-
-    /**
-     * Connects to communication channel.
+     * Opens vchan.
      *
      * @return aos::Error.
      */
-    aos::Error Connect() override;
+    aos::Error Open() override;
 
     /**
-     * Closes current connection.
+     * Closes vchan.
      */
     aos::Error Close() override;
 
     /**
-     * Returns if channel is connected.
+     * Returns if vchan is opened.
      *
      * @return bool.
      */
-    bool IsConnected() const override { return mConnected; };
+    bool IsOpened() const override { return mOpened; };
 
     /**
      * Reads data from channel to array.
@@ -76,9 +68,8 @@ public:
     int Write(const void* data, size_t size) override;
 
 private:
-    static constexpr auto cXSPathLen      = 128;
-    static constexpr auto cDomdID         = CONFIG_AOS_DOMD_ID;
-    static constexpr auto cChannelNameLen = 32;
+    static constexpr auto cXSPathLen = 128;
+    static constexpr auto cDomdID    = CONFIG_AOS_DOMD_ID;
 
     aos::StaticString<cXSPathLen> mXSReadPath;
     aos::StaticString<cXSPathLen> mXSWritePath;
@@ -86,9 +77,9 @@ private:
     vch_handle mReadHandle;
     vch_handle mWriteHandle;
 
-    bool mConnected = false;
-
-    aos::StaticString<cChannelNameLen> mName;
+    bool mOpened = false;
 };
+
+} // namespace aos::zephyr::communication
 
 #endif

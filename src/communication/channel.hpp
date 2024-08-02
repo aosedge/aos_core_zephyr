@@ -5,24 +5,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef COMMCHANNEL_HPP_
-#define COMMCHANNEL_HPP_
+#ifndef CHANNEL_HPP_
+#define CHANNEL_HPP_
 
-#include <aos/common/tools/array.hpp>
+namespace aos::zephyr::communication {
+
+#include <aos/common/tools/error.hpp>
 
 /**
- * CommChannel interface.
+ * Channel interface.
  */
-class CommChannelItf {
+class ChannelItf {
 public:
-    /**
-     * Set TLS config.
-     *
-     * @param certType certificate type.
-     * @return aos::Error.
-     */
-    virtual aos::Error SetTLSConfig(const aos::String& certType) = 0;
-
     /**
      * Connects to communication channel.
      *
@@ -63,7 +57,9 @@ public:
     /**
      * Destructor.
      */
-    virtual ~CommChannelItf() { }
+    virtual ~ChannelItf() = default;
 };
+
+} // namespace aos::zephyr::communication
 
 #endif
