@@ -17,9 +17,11 @@
 #include <aos/common/tools/string.hpp>
 #include <aos/iam/certhandler.hpp>
 
-#include "commchannel.hpp"
+#include "channel.hpp"
 
-class TLSChannel : public CommChannelItf {
+namespace aos::zephyr::communication {
+
+class TLSChannel : public ChannelItf {
 public:
     /**
      * Destructor.
@@ -31,10 +33,10 @@ public:
      *
      * @param certHandler certificate handler.
      * @param certLoader certificate loader.
-     * @param vChannel virtual channel.
+     * @param channel virtual channel.
      */
     aos::Error Init(aos::iam::certhandler::CertHandlerItf& certHandler, aos::cryptoutils::CertLoaderItf& certLoader,
-        CommChannelItf& vChannel);
+        ChannelItf& channel);
 
     /**
      * Set TLS config.
@@ -42,7 +44,7 @@ public:
      * @param certType certificate type.
      * @return aos::Error
      */
-    aos::Error SetTLSConfig(const aos::String& certType) override;
+    aos::Error SetTLSConfig(const aos::String& certType);
 
     /**
      * Connects to communication channel.
@@ -101,10 +103,12 @@ private:
     mbedtls_ssl_context                                    mSSL {};
     mbedtls_svc_key_id_t                                   mKeyID {};
     aos::SharedPtr<aos::crypto::PrivateKeyItf>             mPrivKey {};
-    CommChannelItf*                                        mChannel {};
+    ChannelItf*                                            mChannel {};
     aos::iam::certhandler::CertHandlerItf*                 mCertHandler {};
     aos::cryptoutils::CertLoaderItf*                       mCertLoader {};
     aos::StaticString<aos::iam::certhandler::cCertTypeLen> mCertType;
 };
+
+} // namespace aos::zephyr::communication
 
 #endif /* TLSCHANNEL_HPP_ */

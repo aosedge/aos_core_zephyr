@@ -18,6 +18,11 @@ extern "C" {
 
 #include "tlschannel.hpp"
 
+extern unsigned char __aos_root_ca_start[];
+extern unsigned char __aos_root_ca_end[];
+
+namespace aos::zephyr::communication {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
@@ -28,9 +33,9 @@ TLSChannel::~TLSChannel()
 }
 
 aos::Error TLSChannel::Init(aos::iam::certhandler::CertHandlerItf& certHandler,
-    aos::cryptoutils::CertLoaderItf& certLoader, CommChannelItf& vChannel)
+    aos::cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel)
 {
-    mChannel     = &vChannel;
+    mChannel     = &channel;
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
 
@@ -182,9 +187,6 @@ aos::Error TLSChannel::SetupSSLConfig(const aos::String& certType)
         }
     }
 
-    extern unsigned char __aos_root_ca_start[];
-    extern unsigned char __aos_root_ca_end[];
-
     // cppcheck-suppress comparePointers
     auto ret = mbedtls_x509_crt_parse(&mCACert, __aos_root_ca_start, __aos_root_ca_end - __aos_root_ca_start);
     if (ret != 0) {
@@ -252,3 +254,5 @@ int TLSChannel::TLSRead(void* ctx, unsigned char* buf, size_t len)
 
     return channel->mChannel->Read(buf, len);
 }
+
+} // namespace aos::zephyr::communication

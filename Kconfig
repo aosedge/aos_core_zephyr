@@ -9,21 +9,14 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_VCHAN_OPEN_TX_PATH
-	string "Path to open TX vchan"
-	default "/local/domain/1/tmp/vchan/aos/open/tx"
+config AOS_VCHAN_TX_PATH
+	string "Path to TX vchan"
+	default "/local/domain/1/tmp/vchan/aos/tx"
 
-config AOS_VCHAN_OPEN_RX_PATH
-	string "Path to open RX vchan"
-	default "/local/domain/1/tmp/vchan/aos/open/rx"
+config AOS_VCHAN_RX_PATH
+	string "Path to RX vchan"
+	default "/local/domain/1/tmp/vchan/aos/rx"
 
-config AOS_VCHAN_SECURE_TX_PATH
-	string "Path to secure TX vchan"
-	default "/local/domain/1/tmp/vchan/aos/secure/tx"
-
-config AOS_VCHAN_SECURE_RX_PATH
-	string "Path to secure RX vchan"
-	default "/local/domain/1/tmp/vchan/aos/secure/rx"
 
 config AOS_REBOOT_XEN_STORE_PATH
 	string "Path to user reboot request"
