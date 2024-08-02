@@ -81,10 +81,18 @@ config AOS_CLOCK_SYNC_MAX_DIFF_MSEC
 	int "Maximum allowed difference between source and current time."
 	default 10000
 
+config AOS_MAX_CPU_DMIPS
+	int "Maximum CPU DMIPS"
+	default 10000
+
 config AOS_PROVISIONING_FILE
 	string "Path to provisioning file."
 	default "/aos/.provisioned"
-	
+
+config AOS_PROVISION_STATE_FILE
+	string "Path to provisioning state file."
+	default "/aos/.provisionstate"
+
 config AOS_PKCS11_MODULE_PIN_FILE
 	string "Path to PKCS11 module PIN file."
 	default "/aos/.pkcs11pin"
