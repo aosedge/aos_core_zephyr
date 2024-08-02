@@ -13,20 +13,24 @@
 #include <aos/common/monitoring.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
+#include <aos/iam/certhandler.hpp>
 #include <aos/iam/certmodules/pkcs11/pkcs11.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
 #include "clocksync/clocksync.hpp"
-#include "communication/communication.hpp"
-#include "communication/tlschannel.hpp"
-#include "communication/vchannel.hpp"
+#include "communication/channelmanager.hpp"
+#include "communication/xenvchan.hpp"
+#include "downloader/downloader.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "ocispec/ocispec.hpp"
 #include "provisioning/provisioning.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 #include "runner/runner.hpp"
+#include "smclient/smclient.hpp"
 #include "storage/storage.hpp"
+
+namespace aos::zephyr::app {
 
 /**
  * Aos zephyr application.
@@ -69,10 +73,6 @@ private:
     aos::cryptoutils::CertLoader              mCertLoader;
     aos::pkcs11::PKCS11Manager                mPKCS11Manager;
     ClockSync                                 mClockSync;
-    Communication                             mCommunication;
-    VChannel                                  mOpenVChannel;
-    VChannel                                  mSecureVChannel;
-    TLSChannel                                mSecureTLSChannel;
     Downloader                                mDownloader;
     OCISpec                                   mJsonOciSpec;
     ResourceManagerJSONProvider               mResourceManagerJSONProvider;
@@ -83,6 +83,11 @@ private:
     Runner                                    mRunner;
     Storage                                   mStorage;
     Provisioning                              mProvisioning;
+    smclient::SMClient                        mSMClient;
+    communication::ChannelManager             mChannelManager;
+    communication::XenVChan                   mTransport;
 };
+
+} // namespace aos::zephyr::app
 
 #endif
