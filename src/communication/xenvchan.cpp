@@ -5,32 +5,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "vchannel.hpp"
+#include "xenvchan.hpp"
 #include "log.hpp"
+
+namespace aos::zephyr::communication {
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error VChannel::Init(const aos::String& name, const aos::String& xsReadPath, const aos::String& xsWritePath)
+aos::Error XenVChan::Init(const aos::String& xsReadPath, const aos::String& xsWritePath)
 {
     mXSReadPath  = xsReadPath;
     mXSWritePath = xsWritePath;
-    mName        = name;
 
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error VChannel::SetTLSConfig(const aos::String& certType)
-{
-    if (certType != "") {
-        return aos::ErrorEnum::eNotSupported;
-    }
-
-    return aos::ErrorEnum::eNone;
-}
-
-aos::Error VChannel::Connect()
+aos::Error XenVChan::Open()
 {
     auto ret = vch_connect(cDomdID, mXSReadPath.CStr(), &mReadHandle);
     if (ret != 0) {
@@ -47,39 +39,33 @@ aos::Error VChannel::Connect()
     mReadHandle.blocking  = true;
     mWriteHandle.blocking = true;
 
-    mConnected = true;
+    mOpened = true;
 
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error VChannel::Close()
+aos::Error XenVChan::Close()
 {
     vch_close(&mReadHandle);
     vch_close(&mWriteHandle);
 
-    mConnected = false;
+    mOpened = false;
 
     return aos::ErrorEnum::eNone;
 }
 
-int VChannel::Read(void* data, size_t size)
+int XenVChan::Read(void* data, size_t size)
 {
-    LOG_DBG() << "Channel wants read: channel = " << mName << ", size = " << size;
-
     auto ret = vch_read(&mReadHandle, data, size);
 
-    LOG_DBG() << "Channel read: channel = " << mName << ", size = " << ret;
-
     return ret;
 }
 
-int VChannel::Write(const void* data, size_t size)
+int XenVChan::Write(const void* data, size_t size)
 {
-    LOG_DBG() << "Channel wants write: channel = " << mName << ", size = " << size;
-
     auto ret = vch_write(&mWriteHandle, data, size);
 
-    LOG_DBG() << "Channel wrote: channel = " << mName << ", size = " << size;
-
     return ret;
 }
+
+} // namespace aos::zephyr::communication
