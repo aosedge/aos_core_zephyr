@@ -29,7 +29,7 @@ int main(void)
 {
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
-    printk("*** Aos core size: %lu ***\n", sizeof(App));
+    printk("*** Aos core size: %lu ***\n", sizeof(aos::zephyr::app::App));
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
     auto ret = littlefs_mount();
@@ -46,7 +46,7 @@ int main(void)
 
     Logger::Init();
 
-    auto& app = App::Get();
+    auto& app = aos::zephyr::app::App::Get();
 
     auto err = app.Init();
     __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
