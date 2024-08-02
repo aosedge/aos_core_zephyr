@@ -1,0 +1,6 @@
+tests:
+  aoszephyrapp.nodeinfoprovider:
+    build_only: false
+    tags: nodeinfoprovider
+    timeout: 500
+    platform_allow: native_posix_64 native_posix
