@@ -8,6 +8,8 @@
 #include "app.hpp"
 #include "log.hpp"
 
+namespace aos::zephyr::app {
+
 /***********************************************************************************************************************
  * Variables
  **********************************************************************************************************************/
@@ -32,10 +34,6 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mDownloader.Init(mCommunication)).IsNone()) {
-        return err;
-    }
-
     if (!(err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage)).IsNone()) {
         return err;
     }
@@ -44,17 +42,17 @@ aos::Error App::Init()
         return err;
     }
 
-    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCommunication, mCommunication)).IsNone()) {
+    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mSMClient, mSMClient)).IsNone()) {
         return err;
     }
 
-    if (!(err = mLauncher.Init(
-              mServiceManager, mRunner, mJsonOciSpec, mCommunication, mStorage, mResourceMonitor, mCommunication))
+    if (!(err
+            = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mSMClient, mStorage, mResourceMonitor, mSMClient))
              .IsNone()) {
         return err;
     }
 
-    if (!(err = mClockSync.Init(mCommunication)).IsNone()) {
+    if (!(err = mClockSync.Init(mSMClient)).IsNone()) {
         return err;
     }
 
@@ -67,6 +65,12 @@ aos::Error App::Init()
     }
 
     if (!(err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager)).IsNone()) {
+        return err;
+    }
+
+    if (!(err = mResourceManager.Init(
+              mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cUnitConfigFile))
+             .IsNone()) {
         return err;
     }
 
@@ -137,29 +141,16 @@ aos::Error App::InitCommunication()
 {
     aos::Error err;
 
-    if (!(err = mOpenVChannel.Init("open", VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath)).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mSecureVChannel.Init("secure", VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath)).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mSecureTLSChannel.Init(mCertHandler, mCertLoader, mSecureVChannel)).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mResourceManager.Init(
-              mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cUnitConfigFile))
+    if (!(err = mTransport.Init(communication::XenVChan::cXSReadPath, communication::XenVChan::cXSWritePath))
              .IsNone()) {
         return err;
     }
 
-    if (!(err = mCommunication.Init(mOpenVChannel, mSecureTLSChannel, mLauncher, mCertHandler, mResourceManager,
-              mResourceMonitor, mDownloader, mClockSync, mProvisioning))
-             .IsNone()) {
+    if (!(err = mChannelManager.Init(mTransport)).IsNone()) {
         return err;
     }
 
     return aos::ErrorEnum::eNone;
 }
+
+} // namespace aos::zephyr::app
