@@ -12,7 +12,12 @@
 
 #include "clocksync/clocksync.hpp"
 
-#include "mocks/sendermock.hpp"
+#include "stubs/senderstub.hpp"
+#include "stubs/subscriberstub.hpp"
+#include "utils/log.hpp"
+#include "utils/utils.hpp"
+
+using namespace aos::zephyr::clocksync;
 
 /***********************************************************************************************************************
  * Consts
@@ -25,49 +30,14 @@ static constexpr auto cWaitTimeout = std::chrono::seconds {5};
  **********************************************************************************************************************/
 
 struct clocksync_fixture {
-    SenderMock mSender;
-    ClockSync  mClockSync;
+    SenderStub     mSender;
+    SubscriberStub mSubscriber;
+    ClockSync      mClockSync;
 };
 
 /***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
-
-void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
-{
-    static std::mutex mutex;
-    static auto       startTime = std::chrono::steady_clock::now();
-
-    std::lock_guard<std::mutex> lock(mutex);
-
-    auto now = std::chrono::duration<float>(std::chrono::steady_clock::now() - startTime).count();
-
-    const char* levelStr = "unknown";
-
-    switch (level.GetValue()) {
-    case aos::LogLevelEnum::eDebug:
-        levelStr = "dbg";
-        break;
-
-    case aos::LogLevelEnum::eInfo:
-        levelStr = "inf";
-        break;
-
-    case aos::LogLevelEnum::eWarning:
-        levelStr = "wrn";
-        break;
-
-    case aos::LogLevelEnum::eError:
-        levelStr = "err";
-        break;
-
-    default:
-        levelStr = "n/d";
-        break;
-    }
-
-    printk("%0.3f [%s] %s\n", now, levelStr, message.CStr());
-}
 
 ZTEST_SUITE(
     clocksync, nullptr,
@@ -77,7 +47,10 @@ ZTEST_SUITE(
         auto fixture = new clocksync_fixture;
 
         auto err = fixture->mClockSync.Init(fixture->mSender);
-        zassert_true(err.IsNone(), "Can't initialize clock sync: %s", err.Message());
+        zassert_true(err.IsNone(), "Can't initialize clock sync: %s", AosErrorToStr(err));
+
+        err = fixture->mClockSync.Subscribe(fixture->mSubscriber);
+        zassert_true(err.IsNone(), "Can't subscribe for clock sync: %s", AosErrorToStr(err));
 
         return fixture;
     },
@@ -95,31 +68,31 @@ ZTEST_SUITE(
 ZTEST_F(clocksync, test_Synced)
 {
     auto err = fixture->mClockSync.Start();
-    zassert_true(err.IsNone(), "Error starting clock sync: %s", err.Message());
+    zassert_true(err.IsNone(), "Error starting clock sync: %s", AosErrorToStr(err));
 
     err = fixture->mSender.WaitEvent(cWaitTimeout);
-    zassert_true(err.IsNone(), "Error waiting sync request: %s", err.Message());
+    zassert_true(err.IsNone(), "Error waiting sync request: %s", AosErrorToStr(err));
 
     zassert_true(fixture->mSender.IsSyncRequest());
 
     err = fixture->mClockSync.Sync(aos::Time::Now());
-    zassert_true(err.IsNone(), "Error sync clock: %s", err.Message());
+    zassert_true(err.IsNone(), "Error sync clock: %s", AosErrorToStr(err));
 
-    err = fixture->mSender.WaitEvent(cWaitTimeout);
-    zassert_true(err.IsNone(), "Error waiting clock synced: %s", err.Message());
+    err = fixture->mSubscriber.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting clock synced: %s", AosErrorToStr(err));
 
-    zassert_true(fixture->mSender.IsSynced());
+    zassert_true(fixture->mSubscriber.IsSynced());
 }
 
 ZTEST_F(clocksync, test_Unsynced)
 {
-    auto err = fixture->mSender.WaitEvent(cWaitTimeout);
-    zassert_true(err.IsNone(), "Error waiting clock unsynced: %s", err.Message());
+    auto err = fixture->mSubscriber.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting clock unsynced: %s", AosErrorToStr(err));
 
-    zassert_true(fixture->mSender.IsSynced());
+    zassert_false(fixture->mSubscriber.IsSynced());
 
     err = fixture->mSender.WaitEvent(cWaitTimeout);
-    zassert_true(err.IsNone(), "Error waiting sync request: %s", err.Message());
+    zassert_true(err.IsNone(), "Error waiting sync request: %s", AosErrorToStr(err));
 
     zassert_true(fixture->mSender.IsSyncRequest());
 }

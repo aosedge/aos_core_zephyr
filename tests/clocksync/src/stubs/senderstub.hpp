@@ -5,19 +5,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef SENDERMOCK_HPP_
-#define SENDERMOCK_HPP_
+#ifndef SENDERSTUB_HPP_
+#define SENDERSTUB_HPP_
 
 #include <condition_variable>
 #include <mutex>
 
 #include "clocksync/clocksync.hpp"
 
-class SenderMock : public ClockSyncSenderItf {
+class SenderStub : public aos::zephyr::clocksync::ClockSyncSenderItf {
 public:
     aos::Error SendClockSyncRequest() override
     {
-        std::lock_guard<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock {mMutex};
 
         mSyncRequest   = true;
         mEventReceived = true;
@@ -27,29 +27,9 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
-    void ClockSynced() override
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-
-        mSynced        = true;
-        mEventReceived = true;
-
-        mCV.notify_one();
-    }
-
-    void ClockUnsynced() override
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-
-        mSynced        = false;
-        mEventReceived = true;
-
-        mCV.notify_one();
-    }
-
     aos::Error WaitEvent(const std::chrono::duration<double> timeout)
     {
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::unique_lock<std::mutex> lock {mMutex};
 
         if (!mCV.wait_for(lock, timeout, [&] { return mEventReceived; })) {
             return aos::ErrorEnum::eTimeout;
@@ -62,19 +42,13 @@ public:
 
     bool IsSyncRequest() const
     {
-        std::lock_guard<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock {mMutex};
         return mSyncRequest;
-    }
-
-    bool IsSynced() const
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        return mSynced;
     }
 
     void Clear()
     {
-        std::lock_guard<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock {mMutex};
 
         mEventReceived = false;
         mSyncRequest   = false;
@@ -85,7 +59,6 @@ private:
     mutable std::mutex      mMutex;
     bool                    mEventReceived = false;
     bool                    mSyncRequest   = false;
-    bool                    mSynced        = false;
 };
 
 #endif
