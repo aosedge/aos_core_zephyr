@@ -72,7 +72,7 @@ private:
     aos::crypto::MbedTLSCryptoProvider              mCryptoProvider;
     aos::cryptoutils::CertLoader                    mCertLoader;
     aos::pkcs11::PKCS11Manager                      mPKCS11Manager;
-    ClockSync                                       mClockSync;
+    clocksync::ClockSync                            mClockSync;
     Downloader                                      mDownloader;
     OCISpec                                         mJsonOciSpec;
     aos::zephyr::resourcemanager::JSONProvider      mResourceManagerJSONProvider;
