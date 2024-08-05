@@ -10,6 +10,8 @@
 
 #include <aos/common/tools/thread.hpp>
 
+namespace aos::zephyr::clocksync {
+
 /**
  * Clock sync sender interface.
  */
@@ -26,16 +28,24 @@ public:
      * @return aos::Error.
      */
     virtual aos::Error SendClockSyncRequest() = 0;
+};
+
+class ClockSyncSubscriberItf {
+public:
+    /**
+     * Destructor.
+     */
+    virtual ~ClockSyncSubscriberItf() = default;
 
     /**
-     * Notifies sender that clock is synced.
+     * Notifies subscriber clock is synced.
      */
-    virtual void ClockSynced() = 0;
+    virtual void OnClockSynced() = 0;
 
     /**
-     * Notifies sender that clock is unsynced.
+     * Notifies subscriber clock is unsynced.
      */
-    virtual void ClockUnsynced() = 0;
+    virtual void OnClockUnsynced() = 0;
 };
 
 /**
@@ -53,7 +63,7 @@ public:
      *
      * @return aos::Error.
      */
-    virtual aos::Error Start() = 0;
+    virtual Error Start() = 0;
 
     /**
      * Synchronizes system clock.
@@ -61,7 +71,21 @@ public:
      * @param time current time to set.
      * @return aos::Error
      */
-    virtual aos::Error Sync(const aos::Time& time) = 0;
+    virtual Error Sync(const aos::Time& time) = 0;
+
+    /**
+     * Subscribes for clock sync notifications.
+     *
+     * @param subscriber clock sync notification subscriber.
+     */
+    virtual Error Subscribe(ClockSyncSubscriberItf& subscriber) = 0;
+
+    /**
+     * Unsubscribes from clock sync notifications.
+     *
+     * @param subscriber clock sync notification subscriber.
+     */
+    virtual void Unsubscribe(ClockSyncSubscriberItf& subscriber) = 0;
 };
 
 /**
@@ -76,43 +100,66 @@ public:
 
     /**
      * Initializes clock sync instance.
+     *
      * @param sender sender.
-     * @return aos::Error.
+     * @return Error.
      */
-    aos::Error Init(ClockSyncSenderItf& sender);
+    Error Init(ClockSyncSenderItf& sender);
 
     /**
      * Starts clock sync.
      *
-     * @return aos::Error.
+     * @return Error.
      */
-    aos::Error Start() override;
+    Error Start() override;
 
     /**
      * Synchronizes system clock.
      *
      * @param time current time to set.
-     * @return aos::Error
+     * @return Error
      */
-    aos::Error Sync(const aos::Time& time) override;
+    Error Sync(const Time& time) override;
+
+    /**
+     * Subscribes for clock sync notifications.
+     *
+     * @param subscriber clock sync notification subscriber.
+     * @return Error.
+     */
+    Error Subscribe(ClockSyncSubscriberItf& subscriber) override;
+
+    /**
+     * Unsubscribes from clock sync notifications.
+     *
+     * @param subscriber clock sync notification subscriber.
+     */
+    void Unsubscribe(ClockSyncSubscriberItf& subscriber) override;
 
 private:
-    static constexpr auto cSendPeriod  = CONFIG_AOS_CLOCK_SYNC_SEND_PERIOD_SEC * aos::Time::cSeconds;
-    static constexpr auto cSyncTimeout = CONFIG_AOS_CLOCK_SYNC_TIMEOUT_SEC * aos::Time::cSeconds;
-    static constexpr auto cMaxTimeDiff = CONFIG_AOS_CLOCK_SYNC_MAX_DIFF_MSEC * aos::Time::cMilliseconds;
+    static constexpr auto cSendPeriod     = CONFIG_AOS_CLOCK_SYNC_SEND_PERIOD_SEC * Time::cSeconds;
+    static constexpr auto cSyncTimeout    = CONFIG_AOS_CLOCK_SYNC_TIMEOUT_SEC * Time::cSeconds;
+    static constexpr auto cMaxTimeDiff    = CONFIG_AOS_CLOCK_SYNC_MAX_DIFF_MSEC * Time::cMilliseconds;
+    static constexpr auto cMaxSubscribers = 2;
+
+    void ClockSyncNotification();
 
     ClockSyncSenderItf* mSender {};
 
-    aos::Thread<>            mThread;
-    aos::Mutex               mMutex;
-    aos::ConditionalVariable mCondVar;
+    Thread<>            mThread;
+    Mutex               mMutex;
+    ConditionalVariable mCondVar;
 
-    aos::Time mSyncTime;
-    bool      mSync    = false;
-    bool      mSynced  = false;
-    bool      mStart   = false;
-    bool      mStarted = false;
-    bool      mClose   = false;
+    Time mSyncTime;
+    bool mSync    = false;
+    bool mSynced  = false;
+    bool mStart   = false;
+    bool mStarted = false;
+    bool mClose   = false;
+
+    StaticArray<ClockSyncSubscriberItf*, cMaxSubscribers> mConnectionSubscribers;
 };
+
+} // namespace aos::zephyr::clocksync
 
 #endif
