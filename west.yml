@@ -24,7 +24,7 @@ manifest:
   projects:
     - name: zephyr
       remote: xen-troops
-      revision: "zephyr/v3.6.0/xt-v2.0.0"
+      revision: "7e955b05a6c0f0d26032cb025de9e17649f90b12"
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
@@ -37,11 +37,11 @@ manifest:
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: "v2.1.1"
+      revision: "86191241ec6b3ee92d96c3c110c520f25a8a6251"
 
     - name: zephyr-optee-client
       remote: xen-troops
-      revision: "v0.0.1"
+      revision: "master"
 
     - name: nanopb
       remote: zephyrproject-rtos
@@ -57,4 +57,4 @@ manifest:
 
     - name: fatfs
       remote: zephyrproject-rtos
-      revision: master
+      revision: 427159bf95ea49b7680facffaa29ad506b42709b
