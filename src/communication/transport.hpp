@@ -22,12 +22,12 @@ public:
      *
      * @return aos::Error.
      */
-    virtual aos::Error Open() = 0;
+    virtual Error Open() = 0;
 
     /**
      * Closes transport.
      */
-    virtual aos::Error Close() = 0;
+    virtual Error Close() = 0;
 
     /**
      * Returns if transport is opened.
