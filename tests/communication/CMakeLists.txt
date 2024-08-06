@@ -35,7 +35,12 @@ add_definitions(-DCONFIG_AOS_ROOT_CA_PATH="${cert_dir}/ca.pem")
 # Includes
 # ######################################################################################################################
 
+file(COPY ${APPLICATION_SOURCE_DIR}/../../../aos_core_api/aosprotocol/aosprotocol.h
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 zephyr_include_directories(${aoscore_source_dir}/include)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/..)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/../../src)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -104,4 +109,14 @@ target_sources(mbedTLSX509 PRIVATE ${mbedtls_source_dir}/library/x509write.c)
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE ../../src/communication/tlschannel.cpp ../../src/rootca/rootca.S src/tlschannel.cpp)
+target_sources(
+    app
+    PRIVATE ../../src/communication/tlschannel.cpp
+            ../../src/rootca/rootca.S
+            ../../src/communication/channel.cpp
+            ../../src/communication/channelmanager.cpp
+            ../../src/utils/checksum.cpp
+            ../utils/log.cpp
+            src/channelmanager.cpp
+            src/tlschannel.cpp
+)
