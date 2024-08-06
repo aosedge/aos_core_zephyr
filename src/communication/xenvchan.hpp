@@ -18,8 +18,8 @@ namespace aos::zephyr::communication {
 
 class XenVChan : public TransportItf {
 public:
-    static constexpr auto cXSReadPath  = CONFIG_AOS_VCHAN_TX_PATH;
-    static constexpr auto cXSWritePath = CONFIG_AOS_VCHAN_RX_PATH;
+    static constexpr auto cReadPath  = CONFIG_AOS_CHAN_TX_PATH;
+    static constexpr auto cWritePath = CONFIG_AOS_CHAN_RX_PATH;
 
     /**
      * Initializes vchan.
