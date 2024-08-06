@@ -77,6 +77,8 @@ target_sources(
             src/clocksync/clocksync.cpp
             src/communication/tlschannel.cpp
             src/communication/xenvchan.cpp
+            src/communication/channel.cpp
+            src/communication/channelmanager.cpp
             src/downloader/downloader.cpp
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
