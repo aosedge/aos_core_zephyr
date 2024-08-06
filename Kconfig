@@ -9,12 +9,14 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_VCHAN_TX_PATH
-	string "Path to TX vchan"
+config AOS_CHAN_TX_PATH
+	string "Path to TX channel"
+	depends on !NATIVE_APPLICATION
 	default "/local/domain/1/tmp/vchan/aos/tx"
 
-config AOS_VCHAN_RX_PATH
-	string "Path to RX vchan"
+config AOS_CHAN_RX_PATH
+	string "Path to RX channel"
+	depends on !NATIVE_APPLICATION
 	default "/local/domain/1/tmp/vchan/aos/rx"
 
 config AOS_REBOOT_XEN_STORE_PATH
@@ -96,6 +98,16 @@ config AOS_SM_OPEN_PORT
 config AOS_SM_SECURE_PORT
 	int "Aos SM secure port"
 	default 4
+
+config AOS_SOCKET_SERVER_ADDRESS
+	string "Aos socket server address"
+	depends on NATIVE_APPLICATION
+	default "10.0.0.100"
+
+config AOS_SOCKET_SERVER_PORT
+	int "Aos socket server port"
+	depends on NATIVE_APPLICATION
+	default 30001
 
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"

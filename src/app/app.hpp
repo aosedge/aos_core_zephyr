@@ -21,7 +21,11 @@
 
 #include "clocksync/clocksync.hpp"
 #include "communication/channelmanager.hpp"
+#ifdef CONFIG_NATIVE_APPLICATION
+#include "communication/socket.hpp"
+#else
 #include "communication/xenvchan.hpp"
+#endif
 #include "downloader/downloader.hpp"
 #include "iamclient/iamclient.hpp"
 #include "monitoring/resourceusageprovider.hpp"
@@ -88,9 +92,13 @@ private:
     sm::resourcemanager::ResourceManager mResourceManager;
     sm::servicemanager::ServiceManager   mServiceManager;
 
-    clocksync::ClockSync                       mClockSync;
-    communication::ChannelManager              mChannelManager;
-    communication::XenVChan                    mTransport;
+    clocksync::ClockSync          mClockSync;
+    communication::ChannelManager mChannelManager;
+#ifdef CONFIG_NATIVE_APPLICATION
+    communication::Socket mTransport;
+#else
+    communication::XenVChan mTransport;
+#endif
     downloader::Downloader                     mDownloader;
     iamclient::IAMClient                       mIAMClient;
     monitoring::ResourceUsageProvider          mResourceUsageProvider;

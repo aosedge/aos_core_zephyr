@@ -181,10 +181,6 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mSMClient.Init(mClockSync, mChannelManager); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
     if (auto err = mStorage.Init(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -193,15 +189,26 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
+    if (auto err = mSMClient.Init(mClockSync, mChannelManager); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     return ErrorEnum::eNone;
 }
 
 Error App::InitCommunication()
 {
-    if (auto err = mTransport.Init(communication::XenVChan::cXSReadPath, communication::XenVChan::cXSWritePath);
+#ifdef CONFIG_NATIVE_APPLICATION
+    if (auto err = mTransport.Init(communication::Socket::cServerAddress, communication::Socket::cServerPort);
         !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
+        return err;
     }
+#else
+    if (auto err = mTransport.Init(communication::XenVChan::cReadPath, communication::XenVChan::cWritePath);
+        !err.IsNone()) {
+        return err;
+    }
+#endif
 
     if (auto err = mChannelManager.Init(mTransport); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);

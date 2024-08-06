@@ -56,16 +56,12 @@ aos::Error XenVChan::Close()
 
 int XenVChan::Read(void* data, size_t size)
 {
-    auto ret = vch_read(&mReadHandle, data, size);
-
-    return ret;
+    return vch_read(&mReadHandle, data, size);
 }
 
 int XenVChan::Write(const void* data, size_t size)
 {
-    auto ret = vch_write(&mWriteHandle, data, size);
-
-    return ret;
+    return vch_write(&mWriteHandle, data, size);
 }
 
 } // namespace aos::zephyr::communication
