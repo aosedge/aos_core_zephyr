@@ -78,6 +78,8 @@ target_sources(
             src/communication/channelmanager.cpp
             src/communication/tlschannel.cpp
             src/communication/xenvchan.cpp
+            src/communication/channel.cpp
+            src/communication/channelmanager.cpp
             src/downloader/downloader.cpp
             src/iamclient/iamclient.cpp
             src/logger/logger.cpp
