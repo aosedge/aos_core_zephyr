@@ -77,7 +77,6 @@ target_sources(
             src/clocksync/clocksync.cpp
             src/communication/channelmanager.cpp
             src/communication/tlschannel.cpp
-            src/communication/xenvchan.cpp
             src/communication/channel.cpp
             src/communication/channelmanager.cpp
             src/downloader/downloader.cpp
@@ -95,6 +94,12 @@ target_sources(
             src/utils/checksum.cpp
             src/utils/utils.cpp
 )
+
+# use pipe for native posix
+target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/socket.cpp)
+
+# use xenvchan for xen
+target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/xenvchan.cpp)
 
 # Enable vchannels and xrun mocks for native posix
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
