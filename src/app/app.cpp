@@ -141,8 +141,7 @@ aos::Error App::InitCommunication()
 {
     aos::Error err;
 
-    if (!(err = mTransport.Init(communication::XenVChan::cXSReadPath, communication::XenVChan::cXSWritePath))
-             .IsNone()) {
+    if (!(err = mTransport.Init(communication::Transport::cReadPath, communication::Transport::cWritePath)).IsNone()) {
         return err;
     }
 
