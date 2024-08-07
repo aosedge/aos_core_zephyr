@@ -9,6 +9,7 @@
 #include <zephyr/fs/littlefs.h>
 #include <zephyr/ztest.h>
 
+#include <aos/common/tools/fs.hpp>
 #include <aos/common/tools/log.hpp>
 #include <aos/common/tools/string.hpp>
 #include <aos/common/types.hpp>
@@ -19,6 +20,17 @@
 #define LVGL_PARTITION_ID FIXED_PARTITION_ID(LVGL_PARTITION)
 
 FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(cstorage);
+
+/***********************************************************************************************************************
+ * Consts
+ **********************************************************************************************************************/
+
+static constexpr auto cNodeStateFile = CONFIG_AOS_PROVISION_STATE_FILE;
+static constexpr auto cUnprovisioned = "unprovisioned";
+
+/***********************************************************************************************************************
+ * Static
+ **********************************************************************************************************************/
 
 static struct fs_mount_t sMnt = {
     .type        = FS_LITTLEFS,
@@ -72,13 +84,15 @@ void before_test(void* data)
 {
     printk("before_test\n");
 
-    auto fd = open(CONFIG_AOS_PROVISION_STATE_FILE, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-    if (fd < 0) {
-        printk("Failed to open provisioning status file: %d\n", fd);
+    auto err = aos::FS::WriteStringToFile(cNodeStateFile, cUnprovisioned, S_IRUSR | S_IWUSR);
+    if (!err.IsNone()) {
+        printk("Can't create provisioning state file: %s\n", err.Message());
     }
-
-    close(fd);
 }
+
+/***********************************************************************************************************************
+ * Setup
+ **********************************************************************************************************************/
 
 static void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
 {
@@ -86,6 +100,10 @@ static void TestLogCallback(const char* module, aos::LogLevel level, const aos::
 }
 
 ZTEST_SUITE(nodeinfoprovider, NULL, setup_fs, before_test, NULL, teardown_fs);
+
+/***********************************************************************************************************************
+ * Tests
+ **********************************************************************************************************************/
 
 ZTEST(nodeinfoprovider, test_node_info)
 {
