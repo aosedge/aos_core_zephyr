@@ -45,6 +45,7 @@ private:
     aos::Error StoreNodeStatus(const aos::NodeStatus& status) const;
     aos::Error ReadNodeStatus(aos::NodeStatus& status) const;
 
+    static constexpr auto cNodeStatusLen         = 16;
     static constexpr auto cDiskPartitionPoint    = CONFIG_AOS_DISK_MOUNT_POINT;
     static constexpr auto cMaxDMIPS              = CONFIG_AOS_MAX_CPU_DMIPS;
     static constexpr auto cNodeType              = CONFIG_AOS_NODE_TYPE;
