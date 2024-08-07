@@ -11,6 +11,8 @@
 
 #include <xstat.h>
 
+#include <aos/common/tools/fs.hpp>
+
 #include "log.hpp"
 #include "nodeinfoprovider.hpp"
 
@@ -37,11 +39,11 @@ aos::Error NodeInfoProvider::Init()
     mNodeInfo.mMaxDMIPS = cMaxDMIPS;
 
     if (auto err = InitAttributes(); !err.IsNone()) {
-        aos::Error(AOS_ERROR_WRAP(err), "failed to init node attributes");
+        return aos::Error(AOS_ERROR_WRAP(err), "failed to init node attributes");
     }
 
     if (auto err = InitPartitionInfo(); !err.IsNone()) {
-        aos::Error(AOS_ERROR_WRAP(err), "failed to init node partition info");
+        return aos::Error(AOS_ERROR_WRAP(err), "failed to init node partition info");
     }
 
     return aos::ErrorEnum::eNone;
@@ -51,10 +53,10 @@ aos::Error NodeInfoProvider::GetNodeInfo(aos::NodeInfo& nodeInfo) const
 {
     aos::NodeStatus status;
 
-    if (auto err = ReadNodeStatus(status); !err.IsNone() && !err.Is(aos::ErrorEnum::eNotFound)) {
+    if (auto err = ReadNodeStatus(status); !err.IsNone()) {
         LOG_ERR() << "Get node info failed: error=" << err;
 
-        aos::Error(AOS_ERROR_WRAP(err), "failed to read node status");
+        return AOS_ERROR_WRAP(err);
     }
 
     LOG_DBG() << "Get node info: status=" << status.ToString();
@@ -151,48 +153,25 @@ aos::Error NodeInfoProvider::StoreNodeStatus(const aos::NodeStatus& status) cons
 {
     auto statusStr = status.ToString();
 
-    auto fd = open(cProvisioningStateFile, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-    if (fd < 0) {
-        return aos::Error(errno, "failed to open provisioning state file");
+    if (auto err = aos::FS::WriteStringToFile(cProvisioningStateFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    aos::Error err = aos::ErrorEnum::eNone;
-
-    ssize_t nwrite = write(fd, statusStr.Get(), statusStr.Size());
-    if (nwrite != static_cast<ssize_t>(statusStr.Size())) {
-        err = nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
-    }
-
-    close(fd);
-
-    return err;
+    return aos::ErrorEnum::eNone;
 }
 
 aos::Error NodeInfoProvider::ReadNodeStatus(aos::NodeStatus& status) const
 {
-    auto fd = open(cProvisioningStateFile, O_RDONLY);
-    if (fd < 0) {
-        if (errno == ENOENT) {
-            return aos::ErrorEnum::eNotFound;
-        }
+    aos::StaticString<cNodeStatusLen> statusStr;
 
-        return AOS_ERROR_WRAP(errno);
+    auto err = aos::FS::ReadFileToString(cProvisioningStateFile, statusStr);
+    if (!err.IsNone()) {
+        return err;
     }
 
-    char buffer[64];
-
-    aos::Error err = aos::ErrorEnum::eNone;
-
-    ssize_t nread = read(fd, buffer, sizeof(buffer));
-    if (nread < 0) {
-        err = aos::Error(errno, "failed to read provisioning state file");
-    } else if (nread == 0) {
-        status = aos::NodeStatus();
-    } else {
-        err = status.FromString(aos::String(buffer, nread));
+    if (statusStr.IsEmpty()) {
+        return aos::ErrorEnum::eFailed;
     }
 
-    close(fd);
-
-    return err;
+    return status.FromString(statusStr);
 }
