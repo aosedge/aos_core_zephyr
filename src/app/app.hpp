@@ -20,7 +20,11 @@
 
 #include "clocksync/clocksync.hpp"
 #include "communication/channelmanager.hpp"
+#ifdef CONFIG_NATIVE_APPLICATION
 #include "communication/xenvchan.hpp"
+#else
+#include "communication/pipe.hpp"
+#endif
 #include "downloader/downloader.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "ocispec/ocispec.hpp"
@@ -85,7 +89,7 @@ private:
     Provisioning                              mProvisioning;
     smclient::SMClient                        mSMClient;
     communication::ChannelManager             mChannelManager;
-    communication::XenVChan                   mTransport;
+    communication::Transport                  mTransport;
 };
 
 } // namespace aos::zephyr::app

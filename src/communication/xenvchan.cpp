@@ -14,7 +14,7 @@ namespace aos::zephyr::communication {
  * Public
  **********************************************************************************************************************/
 
-aos::Error XenVChan::Init(const aos::String& xsReadPath, const aos::String& xsWritePath)
+aos::Error Transport::Init(const aos::String& xsReadPath, const aos::String& xsWritePath)
 {
     mXSReadPath  = xsReadPath;
     mXSWritePath = xsWritePath;
@@ -22,7 +22,7 @@ aos::Error XenVChan::Init(const aos::String& xsReadPath, const aos::String& xsWr
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error XenVChan::Open()
+aos::Error Transport::Open()
 {
     auto ret = vch_connect(cDomdID, mXSReadPath.CStr(), &mReadHandle);
     if (ret != 0) {
@@ -44,7 +44,7 @@ aos::Error XenVChan::Open()
     return aos::ErrorEnum::eNone;
 }
 
-aos::Error XenVChan::Close()
+aos::Error Transport::Close()
 {
     vch_close(&mReadHandle);
     vch_close(&mWriteHandle);
@@ -54,18 +54,14 @@ aos::Error XenVChan::Close()
     return aos::ErrorEnum::eNone;
 }
 
-int XenVChan::Read(void* data, size_t size)
+int Transport::Read(void* data, size_t size)
 {
-    auto ret = vch_read(&mReadHandle, data, size);
-
-    return ret;
+    return vch_read(&mReadHandle, data, size);
 }
 
-int XenVChan::Write(const void* data, size_t size)
+int Transport::Write(const void* data, size_t size)
 {
-    auto ret = vch_write(&mWriteHandle, data, size);
-
-    return ret;
+    return vch_write(&mWriteHandle, data, size);
 }
 
 } // namespace aos::zephyr::communication

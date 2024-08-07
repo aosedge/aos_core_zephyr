@@ -44,9 +44,14 @@ public:
         communication::ChannelManagerItf& channelManager);
 
     /**
+     * Constructor.
+     */
+    SMClient() = default;
+
+    /**
      * Destructor.
      */
-    ~SMClient();
+    ~SMClient() = default;
 
     /**
      * Sends instances run status.

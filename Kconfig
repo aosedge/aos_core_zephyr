@@ -9,12 +9,12 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_VCHAN_TX_PATH
-	string "Path to TX vchan"
+config AOS_CHAN_TX_PATH
+	string "Path to TX channel"
 	default "/local/domain/1/tmp/vchan/aos/tx"
 
-config AOS_VCHAN_RX_PATH
-	string "Path to RX vchan"
+config AOS_CHAN_RX_PATH
+	string "Path to RX channel"
 	default "/local/domain/1/tmp/vchan/aos/rx"
 
 
