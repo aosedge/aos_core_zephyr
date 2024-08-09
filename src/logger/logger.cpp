@@ -21,6 +21,7 @@ static const aos::String cLogModuleOCISpec          = "ocispec";
 static const aos::String cLogModuleProvisioning     = "provisioning";
 static const aos::String cLogModuleResourceManager  = "resourcemanager";
 static const aos::String cLogModuleRunner           = "runner";
+static const aos::String cLogModuleSMClient         = "smclient";
 static const aos::String cLogModuleStorage          = "storage";
 static const aos::String cLogModuleNodeInfoProvider = "nodeinfoprovider";
 
@@ -80,6 +81,7 @@ LOG_CALLBACK(ocispec);
 LOG_CALLBACK(provisioning);
 LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
+LOG_CALLBACK(smclient);
 LOG_CALLBACK(storage);
 LOG_CALLBACK(nodeinfoprovider);
 
@@ -124,6 +126,8 @@ void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::Str
         log_resourcemanager::LogCallback(level, message);
     } else if (logModule == cLogModuleRunner) {
         log_runner::LogCallback(level, message);
+    } else if (logModule == cLogModuleSMClient) {
+        log_smclient::LogCallback(level, message);
     } else if (logModule == cLogModuleStorage) {
         log_storage::LogCallback(level, message);
     } else if (logModule == cLogModuleNodeInfoProvider) {

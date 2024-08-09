@@ -6,6 +6,7 @@
  */
 
 #include "smclient.hpp"
+#include "log.hpp"
 
 namespace aos::zephyr::smclient {
 
@@ -13,53 +14,67 @@ namespace aos::zephyr::smclient {
  * Public
  **********************************************************************************************************************/
 
-aos::Error SMClient::Init(aos::sm::launcher::LauncherItf& launcher,
-    aos::sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
-    DownloadReceiverItf& downloader, communication::ChannelManagerItf& channelManager)
+Error SMClient::Init(clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager)
 {
-    return aos::ErrorEnum::eNone;
+    LOG_DBG() << "Initialize SM client";
+
+    auto [openChannel, err] = channelManager.CreateChannel(cOpenPort);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    err = mOpenHandler.Init(*openChannel, clockSync);
+    if (!err.IsNone()) {
+        return err;
+    }
+
+    if (!(err = clockSync.Subscribe(*this)).IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
 }
 
-aos::Error SMClient::InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances)
+Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
 {
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error SMClient::InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances)
+Error SMClient::InstancesUpdateStatus(const Array<InstanceStatus>& instances)
 {
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error SMClient::SendImageContentRequest(const ImageContentRequest& request)
+Error SMClient::SendImageContentRequest(const ImageContentRequest& request)
 {
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error SMClient::SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData)
+Error SMClient::SendMonitoringData(const monitoring::NodeMonitoringData& monitoringData)
 {
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error SMClient::Subscribes(aos::ConnectionSubscriberItf& subscriber)
+Error SMClient::Subscribes(ConnectionSubscriberItf& subscriber)
 {
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-void SMClient::Unsubscribes(aos::ConnectionSubscriberItf& subscriber)
-{
-}
-
-aos::Error SMClient::SendClockSyncRequest()
-{
-    return aos::ErrorEnum::eNone;
-}
-
-void SMClient::ClockSynced()
+void SMClient::Unsubscribes(ConnectionSubscriberItf& subscriber)
 {
 }
 
-void SMClient::ClockUnsynced()
+void SMClient::OnClockSynced()
 {
+}
+
+void SMClient::OnClockUnsynced()
+{
+}
+
+Error SMClient::SendClockSyncRequest()
+{
+    return mOpenHandler.SendClockSyncRequest();
 }
 
 } // namespace aos::zephyr::smclient

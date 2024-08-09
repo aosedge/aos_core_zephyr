@@ -17,36 +17,34 @@
 #include "communication/channelmanager.hpp"
 #include "downloader/downloader.hpp"
 
+#include "openhandler.hpp"
+
 namespace aos::zephyr::smclient {
 
 /**
  * SM client instance.
  */
-class SMClient : public aos::sm::launcher::InstanceStatusReceiverItf,
+class SMClient : public sm::launcher::InstanceStatusReceiverItf,
                  public DownloadRequesterItf,
-                 public aos::monitoring::SenderItf,
-                 public aos::ConnectionPublisherItf,
-                 public ClockSyncSenderItf,
-                 private aos::NonCopyable {
+                 public monitoring::SenderItf,
+                 public ConnectionPublisherItf,
+                 public clocksync::ClockSyncSenderItf,
+                 public clocksync::ClockSyncSubscriberItf,
+                 private NonCopyable {
 public:
     /**
      * Initializes SM client instance.
      *
-     * @param launcher launcher instance.
-     * @param resourceManager resource manager instance.
-     * @param resourceMonitor resource monitor instance.
-     * @param downloader downloader instance.
-     * @return aos::Error.
+     * @param clockSync clock sync instance.
+     * @param channelManager channel manager instance.
+     * @return Error.
      */
-    aos::Error Init(aos::sm::launcher::LauncherItf&   launcher,
-        aos::sm::resourcemanager::ResourceManagerItf& resourceManager,
-        aos::monitoring::ResourceMonitorItf& resourceMonitor, DownloadReceiverItf& downloader,
-        communication::ChannelManagerItf& channelManager);
+    Error Init(clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager);
 
     /**
      * Destructor.
      */
-    ~SMClient();
+    ~SMClient() = default;
 
     /**
      * Sends instances run status.
@@ -54,62 +52,69 @@ public:
      * @param instances instances status array.
      * @return Error.
      */
-    aos::Error InstancesRunStatus(const aos::Array<aos::InstanceStatus>& instances) override;
+    Error InstancesRunStatus(const Array<InstanceStatus>& instances) override;
 
     /**
      * Sends instances update status.
-     * @param instances instances status array.
      *
+     * @param instances instances status array.
      * @return Error.
      */
-    aos::Error InstancesUpdateStatus(const aos::Array<aos::InstanceStatus>& instances) override;
+    Error InstancesUpdateStatus(const Array<InstanceStatus>& instances) override;
 
     /**
-     * Send image content request
+     * Send image content request.
      *
-     * @param request image content request
-     * @return Error
+     * @param request image content request.
+     * @return Error.
      */
-    aos::Error SendImageContentRequest(const ImageContentRequest& request) override;
+    Error SendImageContentRequest(const ImageContentRequest& request) override;
 
     /**
-     * Sends monitoring data
+     * Sends monitoring data.
      *
-     * @param monitoringData monitoring data
-     * @return Error
+     * @param monitoringData monitoring data.
+     * @return Error.
      */
-    aos::Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData) override;
+    Error SendMonitoringData(const monitoring::NodeMonitoringData& monitoringData) override;
 
     /**
      * Subscribes the provided ConnectionSubscriberItf to this object.
      *
      * @param subscriber The ConnectionSubscriberItf that wants to subscribe.
+     * @return Error.
      */
-    aos::Error Subscribes(aos::ConnectionSubscriberItf& subscriber) override;
+    Error Subscribes(ConnectionSubscriberItf& subscriber) override;
 
     /**
      * Unsubscribes the provided ConnectionSubscriberItf from this object.
      *
      * @param subscriber The ConnectionSubscriberItf that wants to unsubscribe.
      */
-    void Unsubscribes(aos::ConnectionSubscriberItf& subscriber) override;
+    void Unsubscribes(ConnectionSubscriberItf& subscriber) override;
 
     /**
      * Sends clock sync request.
      *
-     * @return aos::Error.
+     * @return Error.
      */
-    aos::Error SendClockSyncRequest() override;
+    Error SendClockSyncRequest() override;
 
     /**
-     * Notifies sender that clock is synced.
+     * Notifies subscriber clock is synced.
      */
-    void ClockSynced() override;
+    void OnClockSynced() override;
 
     /**
-     * Notifies sender that clock is unsynced.
+     * Notifies subscriber clock is unsynced.
      */
-    void ClockUnsynced() override;
+    void OnClockUnsynced() override;
+
+private:
+    static constexpr auto cOpenPort   = CONFIG_AOS_SM_OPEN_PORT;
+    static constexpr auto cSecurePort = CONFIG_AOS_SM_SECURE_PORT;
+
+    OpenHandler mOpenHandler;
 };
 
 } // namespace aos::zephyr::smclient
