@@ -1,5 +1,6 @@
 tests:
-  aoszephyrapp.clocksync:
-    tags: clocksync
+  aoszephyrapp.communication:
+    build_only: false
+    tags: smclient
     timeout: 500
     platform_allow: native_posix_64 native_posix

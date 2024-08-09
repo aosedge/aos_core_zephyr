@@ -25,9 +25,11 @@ find_package(Nanopb REQUIRED)
 # ######################################################################################################################
 
 # Aos core sources
-set(AOS_PROTO_SRC proto/common/v1/common.proto proto/servicemanager/v4/servicemanager.proto
-                  proto/iamanager/v5/iamanager.proto
-)
+if(NOT DEFINED AOS_PROTO_SRC)
+    set(AOS_PROTO_SRC proto/common/v1/common.proto proto/servicemanager/v4/servicemanager.proto
+                      proto/iamanager/v5/iamanager.proto
+    )
+endif()
 
 # Protobuf sources
 set(SYSTEM_PROTO_SRC google/protobuf/timestamp.proto google/protobuf/empty.proto)
