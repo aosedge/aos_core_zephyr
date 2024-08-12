@@ -13,16 +13,12 @@
 #include <aos/common/tools/allocator.hpp>
 #include <aos/sm/resourcemanager.hpp>
 
-/**
- * Node config.
- */
-struct NodeConfig {
-    const char* vendorVersion = "";
-    const char* nodeType      = "";
-    uint32_t    priority      = 0;
-};
+namespace aos::zephyr::resourcemanager {
 
-class ResourceManagerJSONProvider : public aos::sm::resourcemanager::JSONProviderItf {
+/**
+ * JSON provider.
+ */
+class JSONProvider : public sm::resourcemanager::JSONProviderItf {
 public:
     /**
      * Dumps config object into string.
@@ -31,7 +27,7 @@ public:
      * @param[out] json json representation of config.
      * @return Error.
      */
-    aos::Error DumpNodeConfig(const aos::sm::resourcemanager::NodeConfig& config, aos::String& json) const override;
+    Error DumpNodeConfig(const sm::resourcemanager::NodeConfig& config, String& json) const override;
 
     /**
      * Parses config object from string.
@@ -40,22 +36,22 @@ public:
      * @param[out] config config.
      * @return Error.
      */
-    aos::Error ParseNodeConfig(const aos::String& json, aos::sm::resourcemanager::NodeConfig& config) const override;
+    Error ParseNodeConfig(const String& json, sm::resourcemanager::NodeConfig& config) const override;
 
 private:
     static constexpr size_t cJsonMaxContentLen = 1024;
     static constexpr size_t cAllocationSize    = 2048;
     static constexpr size_t cMaxNumAllocations = 32;
 
-    mutable aos::Mutex                                                mMutex;
-    mutable aos::StaticString<cJsonMaxContentLen>                     mJSONBuffer;
-    mutable aos::StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
+    mutable Mutex                                                mMutex;
+    mutable StaticString<cJsonMaxContentLen>                     mJSONBuffer;
+    mutable StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
 };
 
 /**
  * Host device manager.
  */
-class HostDeviceManager : public aos::sm::resourcemanager::HostDeviceManagerItf {
+class HostDeviceManager : public sm::resourcemanager::HostDeviceManagerItf {
 public:
     /**
      * Allocates device for instance.
@@ -64,7 +60,7 @@ public:
      * @param instanceID instance ID.
      * @return Error.
      */
-    aos::Error AllocateDevice(const aos::DeviceInfo& deviceInfo, const aos::String& instanceID) override;
+    Error AllocateDevice(const DeviceInfo& deviceInfo, const String& instanceID) override;
 
     /**
      * Removes instance from device.
@@ -73,7 +69,7 @@ public:
      * @param instanceID instance ID.
      * @return Error.
      */
-    aos::Error RemoveInstanceFromDevice(const aos::String& deviceName, const aos::String& instanceID) override;
+    Error RemoveInstanceFromDevice(const String& deviceName, const String& instanceID) override;
 
     /**
      * Removes instance from all devices.
@@ -81,7 +77,7 @@ public:
      * @param instanceID instance ID.
      * @return Error.
      */
-    aos::Error RemoveInstanceFromAllDevices(const aos::String& instanceID) override;
+    Error RemoveInstanceFromAllDevices(const String& instanceID) override;
 
     /**
      * Returns ID list of instances that allocate specific device.
@@ -90,8 +86,7 @@ public:
      * @param instances[out] param to store instance ID(s).
      * @return Error.
      */
-    aos::Error GetDeviceInstances(
-        const aos::String& deviceName, aos::Array<aos::StaticString<aos::cInstanceIDLen>>& instanceIDs) const override;
+    Error GetDeviceInstances(const String& deviceName, Array<StaticString<cInstanceIDLen>>& instanceIDs) const override;
 
     /**
      * Checks if device exists.
@@ -99,13 +94,13 @@ public:
      * @param device device name.
      * @return true if device exists, false otherwise.
      */
-    bool DeviceExists(const aos::String& device) const override;
+    bool DeviceExists(const String& device) const override;
 };
 
 /**
  * Host group manager.
  */
-class HostGroupManager : public aos::sm::resourcemanager::HostGroupManagerItf {
+class HostGroupManager : public sm::resourcemanager::HostGroupManagerItf {
 public:
     /**
      * Checks if group exists.
@@ -113,7 +108,9 @@ public:
      * @param group group name.
      * @return true if group exists, false otherwise.
      */
-    bool GroupExists(const aos::String& group) const override;
+    bool GroupExists(const String& group) const override;
 };
+
+} // namespace aos::zephyr::resourcemanager
 
 #endif
