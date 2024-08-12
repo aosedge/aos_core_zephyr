@@ -109,8 +109,8 @@ ZTEST(nodeinfoprovider, test_node_info)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    NodeInfoProvider provider;
-    auto             err = provider.Init();
+    aos::zephyr::nodeinfoprovider::NodeInfoProvider provider;
+    auto                                            err = provider.Init();
     zassert_true(err.IsNone(), "Failed to init node info provider: %s", err.Message());
 
     aos::NodeInfo nodeInfo;
@@ -146,8 +146,8 @@ ZTEST(nodeinfoprovider, test_set_get_node_info)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    NodeInfoProvider provider;
-    auto             err = provider.Init();
+    aos::zephyr::nodeinfoprovider::NodeInfoProvider provider;
+    auto                                            err = provider.Init();
     zassert_true(err.IsNone(), "Failed to init node info provider: %s", err.Message());
 
     aos::NodeInfo nodeInfo;
