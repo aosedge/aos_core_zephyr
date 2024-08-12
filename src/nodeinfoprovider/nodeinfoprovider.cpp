@@ -16,16 +16,18 @@
 #include "log.hpp"
 #include "nodeinfoprovider.hpp"
 
+namespace aos::zephyr::nodeinfoprovider {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error NodeInfoProvider::Init()
+Error NodeInfoProvider::Init()
 {
     LOG_DBG() << "Init node info provider";
 
-    if (auto err = InitNodeID(); !err.IsNone() && !err.Is(aos::ErrorEnum::eNotSupported)) {
-        return aos::Error(AOS_ERROR_WRAP(err), "failed to init node id");
+    if (auto err = InitNodeID(); !err.IsNone() && !err.Is(ErrorEnum::eNotSupported)) {
+        return Error(AOS_ERROR_WRAP(err), "failed to init node id");
     }
 
     xenstat xstat {};
@@ -39,19 +41,19 @@ aos::Error NodeInfoProvider::Init()
     mNodeInfo.mMaxDMIPS = cMaxDMIPS;
 
     if (auto err = InitAttributes(); !err.IsNone()) {
-        return aos::Error(AOS_ERROR_WRAP(err), "failed to init node attributes");
+        return Error(AOS_ERROR_WRAP(err), "failed to init node attributes");
     }
 
     if (auto err = InitPartitionInfo(); !err.IsNone()) {
-        return aos::Error(AOS_ERROR_WRAP(err), "failed to init node partition info");
+        return Error(AOS_ERROR_WRAP(err), "failed to init node partition info");
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error NodeInfoProvider::GetNodeInfo(aos::NodeInfo& nodeInfo) const
+Error NodeInfoProvider::GetNodeInfo(NodeInfo& nodeInfo) const
 {
-    aos::NodeStatus status;
+    NodeStatus status;
 
     if (auto err = ReadNodeStatus(status); !err.IsNone()) {
         LOG_ERR() << "Get node info failed: error=" << err;
@@ -64,29 +66,29 @@ aos::Error NodeInfoProvider::GetNodeInfo(aos::NodeInfo& nodeInfo) const
     nodeInfo         = mNodeInfo;
     nodeInfo.mStatus = status;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error NodeInfoProvider::SetNodeStatus(const aos::NodeStatus& status)
+Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
 {
     LOG_DBG() << "Set node status: status=" << status.ToString();
 
     if (auto err = StoreNodeStatus(status); !err.IsNone()) {
-        aos::Error(AOS_ERROR_WRAP(err), "failed to store node status");
+        Error(AOS_ERROR_WRAP(err), "failed to store node status");
     }
 
     LOG_DBG() << "Node status updated: status=" << status.ToString();
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-aos::Error NodeInfoProvider::InitNodeID()
+Error NodeInfoProvider::InitNodeID()
 {
-    uint8_t buffer[aos::cNodeIDLen];
+    uint8_t buffer[cNodeIDLen];
     memset(buffer, 0, sizeof(buffer));
 
     auto ret = hwinfo_get_device_id(buffer, sizeof(buffer) - 1);
@@ -94,36 +96,35 @@ aos::Error NodeInfoProvider::InitNodeID()
     if (ret == -ENOSYS) {
         LOG_WRN() << "hwinfo_get_device_id is not supported";
 
-        return aos::ErrorEnum::eNotSupported;
+        return ErrorEnum::eNotSupported;
     } else if (ret < 0) {
         return AOS_ERROR_WRAP(ret);
     }
 
-    mNodeInfo.mNodeID = aos::String(reinterpret_cast<char*>(buffer), ret);
+    mNodeInfo.mNodeID = String(reinterpret_cast<char*>(buffer), ret);
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error NodeInfoProvider::InitAttributes()
+Error NodeInfoProvider::InitAttributes()
 {
-    if (auto err = mNodeInfo.mAttrs.PushBack({aos::iam::nodeinfoprovider::cAttrAosComponents, cAosComponents});
+    if (auto err = mNodeInfo.mAttrs.PushBack({iam::nodeinfoprovider::cAttrAosComponents, cAosComponents});
         !err.IsNone()) {
         return err;
     }
 
-    if (auto err = mNodeInfo.mAttrs.PushBack({aos::iam::nodeinfoprovider::cAttrNodeRunners, cNodeRunner});
-        !err.IsNone()) {
+    if (auto err = mNodeInfo.mAttrs.PushBack({iam::nodeinfoprovider::cAttrNodeRunners, cNodeRunner}); !err.IsNone()) {
         return err;
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error NodeInfoProvider::InitPartitionInfo()
+Error NodeInfoProvider::InitPartitionInfo()
 {
     LOG_DBG() << "Init partition info";
 
-    aos::PartitionInfo partitionInfo;
+    PartitionInfo partitionInfo;
 
     partitionInfo.mName = cDiskPartitionName;
     partitionInfo.mPath = cDiskPartitionPoint;
@@ -146,32 +147,34 @@ aos::Error NodeInfoProvider::InitPartitionInfo()
         LOG_DBG() << "Init partition info: name=" << partition.mName << ", size=" << partition.mTotalSize;
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error NodeInfoProvider::StoreNodeStatus(const aos::NodeStatus& status) const
+Error NodeInfoProvider::StoreNodeStatus(const NodeStatus& status) const
 {
     auto statusStr = status.ToString();
 
-    if (auto err = aos::FS::WriteStringToFile(cProvisioningStateFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
+    if (auto err = FS::WriteStringToFile(cProvisioningStateFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error NodeInfoProvider::ReadNodeStatus(aos::NodeStatus& status) const
+Error NodeInfoProvider::ReadNodeStatus(NodeStatus& status) const
 {
-    aos::StaticString<cNodeStatusLen> statusStr;
+    StaticString<cNodeStatusLen> statusStr;
 
-    auto err = aos::FS::ReadFileToString(cProvisioningStateFile, statusStr);
+    auto err = FS::ReadFileToString(cProvisioningStateFile, statusStr);
     if (!err.IsNone()) {
         return err;
     }
 
     if (statusStr.IsEmpty()) {
-        return aos::ErrorEnum::eFailed;
+        return ErrorEnum::eFailed;
     }
 
     return status.FromString(statusStr);
 }
+
+} // namespace aos::zephyr::nodeinfoprovider
