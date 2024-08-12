@@ -26,8 +26,8 @@ ZTEST(resourcemanager, test_JSONProviderParse)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    ResourceManagerJSONProvider          provider;
-    aos::sm::resourcemanager::NodeConfig nodeConfig;
+    aos::zephyr::resourcemanager::JSONProvider provider;
+    aos::sm::resourcemanager::NodeConfig       nodeConfig;
 
     aos::String jsonStr(cTestNodeConfigJSON);
     auto        err = provider.ParseNodeConfig(jsonStr, nodeConfig);
@@ -45,8 +45,8 @@ ZTEST(resourcemanager, test_DumpNodeConfig)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    ResourceManagerJSONProvider          provider;
-    aos::sm::resourcemanager::NodeConfig nodeConfig;
+    aos::zephyr::resourcemanager::JSONProvider provider;
+    aos::sm::resourcemanager::NodeConfig       nodeConfig;
     nodeConfig.mNodeConfig.mPriority = 1;
     nodeConfig.mVendorVersion        = "1.0";
     nodeConfig.mNodeConfig.mNodeType = "mainType";
