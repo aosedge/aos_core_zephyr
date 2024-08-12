@@ -10,17 +10,19 @@
 
 #include <aos/iam/nodeinfoprovider.hpp>
 
+namespace aos::zephyr::nodeinfoprovider {
+
 /**
  * Node info provider.
  */
-class NodeInfoProvider : public aos::iam::nodeinfoprovider::NodeInfoProviderItf {
+class NodeInfoProvider : public iam::nodeinfoprovider::NodeInfoProviderItf {
 public:
     /**
      * Initializes the node info provider.
      *
      * @return Error
      */
-    aos::Error Init();
+    Error Init();
 
     /**
      * Gets the node info object.
@@ -28,7 +30,7 @@ public:
      * @param[out] nodeInfo node info
      * @return Error
      */
-    aos::Error GetNodeInfo(aos::NodeInfo& nodeInfo) const override;
+    Error GetNodeInfo(NodeInfo& nodeInfo) const override;
 
     /**
      * Sets the node status.
@@ -36,14 +38,14 @@ public:
      * @param status node status
      * @return Error
      */
-    aos::Error SetNodeStatus(const aos::NodeStatus& status) override;
+    Error SetNodeStatus(const NodeStatus& status) override;
 
 private:
-    aos::Error InitNodeID();
-    aos::Error InitAttributes();
-    aos::Error InitPartitionInfo();
-    aos::Error StoreNodeStatus(const aos::NodeStatus& status) const;
-    aos::Error ReadNodeStatus(aos::NodeStatus& status) const;
+    Error InitNodeID();
+    Error InitAttributes();
+    Error InitPartitionInfo();
+    Error StoreNodeStatus(const NodeStatus& status) const;
+    Error ReadNodeStatus(NodeStatus& status) const;
 
     static constexpr auto cNodeStatusLen         = 16;
     static constexpr auto cDiskPartitionPoint    = CONFIG_AOS_DISK_MOUNT_POINT;
@@ -54,7 +56,9 @@ private:
     static constexpr auto cNodeRunner            = "xrun";
     static constexpr auto cAosComponents         = "iam,sm";
 
-    aos::NodeInfo mNodeInfo;
+    NodeInfo mNodeInfo;
 };
+
+} // namespace aos::zephyr::nodeinfoprovider
 
 #endif
