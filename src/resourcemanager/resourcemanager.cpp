@@ -10,9 +10,20 @@
 #include "log.hpp"
 #include "resourcemanager.hpp"
 
+namespace aos::zephyr::resourcemanager {
+
 /***********************************************************************************************************************
  * Static
  **********************************************************************************************************************/
+
+/**
+ * Node config.
+ */
+struct NodeConfig {
+    const char* vendorVersion = "";
+    const char* nodeType      = "";
+    uint32_t    priority      = 0;
+};
 
 static const struct json_obj_descr cNodeConfigDescr[] = {
     JSON_OBJ_DESCR_PRIM(NodeConfig, vendorVersion, JSON_TOK_STRING),
@@ -21,21 +32,20 @@ static const struct json_obj_descr cNodeConfigDescr[] = {
 };
 
 /***********************************************************************************************************************
- * ResourceManagerJSONProvider
+ * JSONProvider
  **********************************************************************************************************************/
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
 // cppcheck-suppress unusedFunction
-aos::Error ResourceManagerJSONProvider::DumpNodeConfig(
-    const aos::sm::resourcemanager::NodeConfig& config, aos::String& json) const
+Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config, String& json) const
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     mAllocator.Clear();
 
-    auto jsonNodeConfig = aos::MakeUnique<NodeConfig>(&mAllocator);
+    auto jsonNodeConfig = MakeUnique<NodeConfig>(&mAllocator);
 
     jsonNodeConfig->vendorVersion = config.mVendorVersion.CStr();
     jsonNodeConfig->nodeType      = config.mNodeConfig.mNodeType.CStr();
@@ -52,21 +62,20 @@ aos::Error ResourceManagerJSONProvider::DumpNodeConfig(
         return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error ResourceManagerJSONProvider::ParseNodeConfig(
-    const aos::String& json, aos::sm::resourcemanager::NodeConfig& config) const
+Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::NodeConfig& config) const
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     mAllocator.Clear();
 
     // json_object_parse mutates the input string, so we need to copy it
     mJSONBuffer = json;
 
-    auto parsedNodeConfig = aos::MakeUnique<NodeConfig>(&mAllocator);
+    auto parsedNodeConfig = MakeUnique<NodeConfig>(&mAllocator);
 
     auto ret = json_obj_parse(
         mJSONBuffer.Get(), mJSONBuffer.Size(), cNodeConfigDescr, ARRAY_SIZE(cNodeConfigDescr), parsedNodeConfig.Get());
@@ -78,7 +87,7 @@ aos::Error ResourceManagerJSONProvider::ParseNodeConfig(
     config.mNodeConfig.mNodeType = parsedNodeConfig->nodeType;
     config.mNodeConfig.mPriority = parsedNodeConfig->priority;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
@@ -89,43 +98,43 @@ aos::Error ResourceManagerJSONProvider::ParseNodeConfig(
  **********************************************************************************************************************/
 
 // cppcheck-suppress unusedFunction
-aos::Error HostDeviceManager::AllocateDevice(const aos::DeviceInfo& deviceInfo, const aos::String& instanceID)
+Error HostDeviceManager::AllocateDevice(const DeviceInfo& deviceInfo, const String& instanceID)
 {
     (void)deviceInfo;
     (void)instanceID;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error HostDeviceManager::RemoveInstanceFromDevice(const aos::String& deviceName, const aos::String& instanceID)
+Error HostDeviceManager::RemoveInstanceFromDevice(const String& deviceName, const String& instanceID)
 {
     (void)deviceName;
     (void)instanceID;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error HostDeviceManager::RemoveInstanceFromAllDevices(const aos::String& instanceID)
+Error HostDeviceManager::RemoveInstanceFromAllDevices(const String& instanceID)
 {
     (void)instanceID;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error HostDeviceManager::GetDeviceInstances(
-    const aos::String& deviceName, aos::Array<aos::StaticString<aos::cInstanceIDLen>>& instanceIDs) const
+Error HostDeviceManager::GetDeviceInstances(
+    const String& deviceName, Array<StaticString<cInstanceIDLen>>& instanceIDs) const
 {
     (void)deviceName;
     (void)instanceIDs;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-bool HostDeviceManager::DeviceExists(const aos::String& device) const
+bool HostDeviceManager::DeviceExists(const String& device) const
 {
     (void)device;
 
@@ -140,9 +149,11 @@ bool HostDeviceManager::DeviceExists(const aos::String& device) const
  **********************************************************************************************************************/
 
 // cppcheck-suppress unusedFunction
-bool HostGroupManager::GroupExists(const aos::String& group) const
+bool HostGroupManager::GroupExists(const String& group) const
 {
     (void)group;
 
     return false;
 }
+
+} // namespace aos::zephyr::resourcemanager
