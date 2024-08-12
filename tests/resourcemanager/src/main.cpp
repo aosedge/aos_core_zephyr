@@ -27,42 +27,41 @@ ZTEST(resourcemanager, test_JSONProviderParse)
     aos::Log::SetCallback(TestLogCallback);
 
     ResourceManagerJSONProvider          provider;
-    aos::sm::resourcemanager::UnitConfig unitConfig;
+    aos::sm::resourcemanager::NodeConfig nodeConfig;
 
     aos::String jsonStr(cTestNodeConfigJSON);
-    auto        err = provider.ParseNodeUnitConfig(jsonStr, unitConfig);
+    auto        err = provider.ParseNodeConfig(jsonStr, nodeConfig);
 
-    zassert_true(err.IsNone(), "Failed to parse node unit config: %s", err.Message());
-    zassert_equal(1, unitConfig.mNodeUnitConfig.mPriority, "Priority mismatch");
-    zassert_true(strncmp("1.0", unitConfig.mVendorVersion.CStr(), unitConfig.mVendorVersion.Size()) == 0,
+    zassert_true(err.IsNone(), "Failed to parse node config: %s", err.Message());
+    zassert_equal(1, nodeConfig.mNodeConfig.mPriority, "Priority mismatch");
+    zassert_true(strncmp("1.0", nodeConfig.mVendorVersion.CStr(), nodeConfig.mVendorVersion.Size()) == 0,
         "File content mismatch");
     zassert_true(
-        strncmp("mainType", unitConfig.mNodeUnitConfig.mNodeType.CStr(), unitConfig.mNodeUnitConfig.mNodeType.Size())
-            == 0,
+        strncmp("mainType", nodeConfig.mNodeConfig.mNodeType.CStr(), nodeConfig.mNodeConfig.mNodeType.Size()) == 0,
         "Node type mismatch");
 }
 
-ZTEST(resourcemanager, test_DumpUnitConfig)
+ZTEST(resourcemanager, test_DumpNodeConfig)
 {
     aos::Log::SetCallback(TestLogCallback);
 
     ResourceManagerJSONProvider          provider;
-    aos::sm::resourcemanager::UnitConfig unitConfig;
-    unitConfig.mNodeUnitConfig.mPriority = 1;
-    unitConfig.mVendorVersion            = "1.0";
-    unitConfig.mNodeUnitConfig.mNodeType = "mainType";
+    aos::sm::resourcemanager::NodeConfig nodeConfig;
+    nodeConfig.mNodeConfig.mPriority = 1;
+    nodeConfig.mVendorVersion        = "1.0";
+    nodeConfig.mNodeConfig.mNodeType = "mainType";
 
     aos::StaticString<1024> jsonStr;
-    auto                    err = provider.DumpUnitConfig(unitConfig, jsonStr);
+    auto                    err = provider.DumpNodeConfig(nodeConfig, jsonStr);
 
-    zassert_true(err.IsNone(), "Failed to dump node unit config: %s", err.Message());
+    zassert_true(err.IsNone(), "Failed to dump node config: %s", err.Message());
     zassert_false(jsonStr.IsEmpty(), "Empty json string");
 
-    aos::sm::resourcemanager::UnitConfig parsedUnitConfig;
-    err = provider.ParseNodeUnitConfig(jsonStr, parsedUnitConfig);
+    aos::sm::resourcemanager::NodeConfig parsednodeConfig;
+    err = provider.ParseNodeConfig(jsonStr, parsednodeConfig);
 
-    zassert_true(err.IsNone(), "Failed to parse node unit config: %s", err.Message());
-    zassert_true(unitConfig.mNodeUnitConfig == parsedUnitConfig.mNodeUnitConfig, "Parsed node unit config mismatch");
+    zassert_true(err.IsNone(), "Failed to parse node config: %s", err.Message());
+    zassert_true(nodeConfig.mNodeConfig == parsednodeConfig.mNodeConfig, "Parsed node config mismatch");
     zassert_true(
-        unitConfig.mVendorVersion == parsedUnitConfig.mVendorVersion, "Parsed unit config vendor version mismatch");
+        nodeConfig.mVendorVersion == parsednodeConfig.mVendorVersion, "Parsed unit config vendor version mismatch");
 }
