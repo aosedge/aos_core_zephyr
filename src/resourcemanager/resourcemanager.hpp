@@ -14,9 +14,9 @@
 #include <aos/sm/resourcemanager.hpp>
 
 /**
- * Node unit config.
+ * Node config.
  */
-struct UnitConfig {
+struct NodeConfig {
     const char* vendorVersion = "";
     const char* nodeType      = "";
     uint32_t    priority      = 0;
@@ -25,24 +25,22 @@ struct UnitConfig {
 class ResourceManagerJSONProvider : public aos::sm::resourcemanager::JSONProviderItf {
 public:
     /**
-     * Dumps node unit config object from json string.
+     * Dumps config object into string.
      *
-     * @param nodeUnitConfig node unit config object.
-     * @param[out] json json representation of node unit config.
+     * @param config config object.
+     * @param[out] json json representation of config.
      * @return Error.
      */
-    aos::Error DumpUnitConfig(
-        const aos::sm::resourcemanager::UnitConfig& nodeUnitConfig, aos::String& json) const override;
+    aos::Error DumpNodeConfig(const aos::sm::resourcemanager::NodeConfig& config, aos::String& json) const override;
 
     /**
-     * Parses node unit config json string from object.
+     * Parses config object from string.
      *
-     * @param json json representation of node unit config.
-     * @param[out] nodeUnitConfig node unit config.
+     * @param json json representation of config.
+     * @param[out] config config.
      * @return Error.
      */
-    aos::Error ParseNodeUnitConfig(
-        const aos::String& json, aos::sm::resourcemanager::UnitConfig& nodeUnitConfig) const override;
+    aos::Error ParseNodeConfig(const aos::String& json, aos::sm::resourcemanager::NodeConfig& config) const override;
 
 private:
     static constexpr size_t cJsonMaxContentLen = 1024;
