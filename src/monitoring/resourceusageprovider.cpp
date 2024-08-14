@@ -13,67 +13,27 @@
 #include "log.hpp"
 #include "resourceusageprovider.hpp"
 
+namespace aos::zephyr::monitoring {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error ResourceUsageProvider::Init()
+Error ResourceUsageProvider::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider)
 {
     LOG_DBG() << "Init resource usage provider";
 
-    xenstat xstat {};
-
-    int ret = xstat_getstat(&xstat);
-    if (ret != 0) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    if (auto err = mNodeInfo.mCPUs.Resize(xstat.num_cpus); !err.IsNone()) {
+    auto err = nodeInfoProvider.GetNodeInfo(mNodeInfo);
+    if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    mNodeInfo.mNodeID   = cNodeID;
-    mNodeInfo.mTotalRAM = xstat.tot_mem;
-
-    aos::PartitionInfo partitionInfo;
-    partitionInfo.mName = cDiskPartitionName;
-    partitionInfo.mPath = cDiskPartitionPoint;
-    partitionInfo.mTypes.EmplaceBack("services");
-    partitionInfo.mTypes.EmplaceBack("layers");
-
-    mNodeInfo.mPartitions.PushBack(partitionInfo);
-
-    LOG_DBG() << "Number of CPUs: " << mNodeInfo.mCPUs.Size() << ", total RAM(K): " << (mNodeInfo.mTotalRAM / 1024);
-
-    for (size_t i = 0; i < mNodeInfo.mPartitions.Size(); ++i) {
-        struct fs_statvfs sbuf;
-
-        ret = fs_statvfs(mNodeInfo.mPartitions[i].mPath.CStr(), &sbuf);
-        if (ret != 0) {
-            return AOS_ERROR_WRAP(ret);
-        }
-
-        mNodeInfo.mPartitions[i].mTotalSize = sbuf.f_bsize * sbuf.f_blocks;
-
-        LOG_DBG() << "Partition: " << mNodeInfo.mPartitions[i].mName
-                  << ", total size(K): " << (mNodeInfo.mPartitions[i].mTotalSize / 1024);
-    }
-
-    return aos::ErrorEnum::eNone;
-}
-
-aos::Error ResourceUsageProvider::GetNodeInfo(aos::NodeInfo& nodeInfo) const
-{
-    LOG_DBG() << "Get node info";
-
-    nodeInfo = mNodeInfo;
-
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error ResourceUsageProvider::GetNodeMonitoringData(
-    const aos::String& nodeID, aos::monitoring::MonitoringData& monitoringData)
+Error ResourceUsageProvider::GetNodeMonitoringData(
+    const String& nodeID, aos::monitoring::MonitoringData& monitoringData)
 {
     xenstat_domain domain;
 
@@ -94,7 +54,7 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
 
         auto us_elapsed = (curTime.tv_sec - mPrevTime.tv_sec) * 1000000.0 + (curTime.tv_usec - mPrevTime.tv_usec);
 
-        monitoringData.mCPU = ((cpuTimeDiff_ns / 10.0) / us_elapsed);
+        monitoringData.mCPU = (cpuTimeDiff_ns * mNodeInfo.mMaxDMIPS / 1000.0 / us_elapsed);
     }
 
     LOG_DBG() << "Get node monitoring data: RAM(K): " << (monitoringData.mRAM / 1024)
@@ -117,12 +77,12 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
                   << ", used size(K): " << (monitoringData.mDisk[i].mUsedSize / 1024);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
-    const aos::String& instanceID, aos::monitoring::MonitoringData& monitoringData)
+Error ResourceUsageProvider::GetInstanceMonitoringData(
+    const String& instanceID, aos::monitoring::MonitoringData& monitoringData)
 {
     LOG_DBG() << "Get monitoring data for instance: " << instanceID;
 
@@ -179,5 +139,7 @@ aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
 
     LOG_DBG() << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
+
+} // namespace aos::zephyr::monitoring
