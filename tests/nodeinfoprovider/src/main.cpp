@@ -91,6 +91,35 @@ void before_test(void* data)
 }
 
 /***********************************************************************************************************************
+ * Types
+ **********************************************************************************************************************/
+
+class TestNodeStatusObserver : public aos::iam::nodeinfoprovider::NodeStatusObserverItf {
+public:
+    aos::Error OnNodeStatusChanged(const aos::String& nodeID, const aos::NodeStatus& status) override
+    {
+        printk("Node status changed: %s\n", status.ToString().CStr());
+
+        mNodeID     = nodeID;
+        mNodeStatus = status;
+        mNotified   = true;
+
+        return aos::ErrorEnum::eNone;
+    }
+
+    void Reset()
+    {
+        mNotified = false;
+        mNodeID.Clear();
+        mNodeStatus = aos::NodeStatus();
+    }
+
+    aos::StaticString<aos::cNodeIDLen> mNodeID;
+    aos::NodeStatus                    mNodeStatus;
+    bool                               mNotified = false;
+};
+
+/***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
 
@@ -171,4 +200,75 @@ ZTEST(nodeinfoprovider, test_set_get_node_info)
     zassert_true(err.IsNone(), "Get node status failed: %s", err.Message());
 
     zassert_equal(nodeInfo.mStatus.GetValue(), aos::NodeStatusEnum::ePaused, "Node status mismatch");
+}
+
+ZTEST(nodeinfoprovider, test_node_status_changed_observer)
+{
+    aos::Log::SetCallback(TestLogCallback);
+
+    aos::zephyr::nodeinfoprovider::NodeInfoProvider provider;
+    auto                                            err = provider.Init();
+    zassert_true(err.IsNone(), "Failed to init node info provider: %s", err.Message());
+
+    aos::NodeInfo nodeInfo;
+    err = provider.GetNodeInfo(nodeInfo);
+
+    zassert_true(err.IsNone(), "Failed to get node info: %s", err.Message());
+    zassert_equal(nodeInfo.mStatus.GetValue(), aos::NodeStatusEnum::eUnprovisioned, "Node status mismatch");
+
+    TestNodeStatusObserver observer1, observer2;
+
+    err = provider.SubscribeNodeStatusChanged(observer1);
+    zassert_true(err.IsNone(), "Failed to subscribe on node status changed: %s", err.Message());
+
+    err = provider.SubscribeNodeStatusChanged(observer2);
+    zassert_true(err.IsNone(), "Failed to subscribe on node status changed: %s", err.Message());
+
+    err = provider.SetNodeStatus(aos::NodeStatus(aos::NodeStatusEnum::eProvisioned));
+    zassert_true(err.IsNone(), "Set node status failed: %s", err.Message());
+
+    zassert_equal(observer1.mNodeStatus.GetValue(), aos::NodeStatusEnum::eProvisioned, "Node status mismatch");
+    zassert_equal(observer1.mNodeID, nodeInfo.mNodeID, "Node id mismatch");
+
+    zassert_equal(observer2.mNodeStatus.GetValue(), aos::NodeStatusEnum::eProvisioned, "Node status mismatch");
+    zassert_equal(observer2.mNodeID, nodeInfo.mNodeID, "Node id mismatch");
+
+    observer1.Reset();
+    observer2.Reset();
+
+    err = provider.SetNodeStatus(aos::NodeStatus(aos::NodeStatusEnum::ePaused));
+    zassert_true(err.IsNone(), "Set node status failed: %s", err.Message());
+
+    zassert_equal(observer1.mNodeStatus.GetValue(), aos::NodeStatusEnum::ePaused, "Node status mismatch");
+    zassert_equal(observer1.mNodeID, nodeInfo.mNodeID, "Node id mismatch");
+
+    zassert_equal(observer2.mNodeStatus.GetValue(), aos::NodeStatusEnum::ePaused, "Node status mismatch");
+    zassert_equal(observer2.mNodeID, nodeInfo.mNodeID, "Node id mismatch");
+
+    observer1.Reset();
+    observer2.Reset();
+
+    // same node status change should not trigger the observer
+    err = provider.SetNodeStatus(aos::NodeStatus(aos::NodeStatusEnum::ePaused));
+    zassert_true(err.IsNone(), "Set node status failed: %s", err.Message());
+
+    zassert_false(observer1.mNotified, "Observer should not be notified");
+    zassert_false(observer2.mNotified, "Observer should not be notified");
+
+    observer1.Reset();
+    observer2.Reset();
+
+    // unsubscribe observer1
+    err = provider.UnsubscribeNodeStatusChanged(observer1);
+    zassert_true(err.IsNone(), "Failed to unsubscribe from node status changed event: %s", err.Message());
+
+    err = provider.SetNodeStatus(aos::NodeStatus(aos::NodeStatusEnum::eProvisioned));
+    zassert_true(err.IsNone(), "Set node status failed: %s", err.Message());
+
+    // observer1 should not receive the event
+    zassert_false(observer1.mNotified, "Observer should not be notified");
+
+    // observer2 should receive the event
+    zassert_true(observer2.mNotified, "Observer should be notified");
+    zassert_equal(observer2.mNodeStatus.GetValue(), aos::NodeStatusEnum::eProvisioned, "Node status mismatch");
 }
