@@ -21,8 +21,10 @@
 
 #include "utils/checksum.hpp"
 
+namespace aos::zephyr::storage {
+
 template <typename T>
-class FileStorage : public aos::NonCopyable {
+class FileStorage : public NonCopyable {
 public:
     /**
      * Default constructor.
@@ -45,7 +47,7 @@ public:
      * @param path Path to database file.
      * @return Error.
      */
-    aos::Error Init(const aos::String& path)
+    Error Init(const String& path)
     {
         mFileName = path;
 
@@ -60,17 +62,17 @@ public:
         }
 
         if (fileSize == 0) {
-            aos::UniquePtr<Header> header = aos::MakeUnique<Header>(&mAllocator);
+            UniquePtr<Header> header = MakeUnique<Header>(&mAllocator);
 
-            auto checksum = CalculateSha256(
-                aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header.Get()), sizeof(Header) - aos::cSHA256Size));
+            auto checksum = utils::CalculateSha256(
+                Array<uint8_t>(reinterpret_cast<uint8_t*>(header.Get()), sizeof(Header) - cSHA256Size));
             if (!checksum.mError.IsNone()) {
                 return AOS_ERROR_WRAP(checksum.mError);
             }
 
             ssize_t nwrite = write(mFd, header.Get(), sizeof(Header));
             if (nwrite != sizeof(Header)) {
-                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : ErrorEnum::eRuntime;
             }
         }
 
@@ -79,7 +81,7 @@ public:
             return err;
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
     /**
@@ -90,20 +92,20 @@ public:
      * @return Error
      */
     template <typename F>
-    aos::Error Add(const T& data, F filter)
+    Error Add(const T& data, F filter)
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
             return AOS_ERROR_WRAP(errno);
         }
 
-        aos::UniquePtr<Record> record = aos::MakeUnique<Record>(&mAllocator);
-        ssize_t                nread {};
-        off_t                  deletedRecordOffset {-1};
+        UniquePtr<Record> record = MakeUnique<Record>(&mAllocator);
+        ssize_t           nread {};
+        off_t             deletedRecordOffset {-1};
 
         while ((nread = read(mFd, record.Get(), sizeof(Record))) == sizeof(Record)) {
             if (!record->mDeleted && filter(record->mData, data)) {
-                return aos::ErrorEnum::eAlreadyExist;
+                return ErrorEnum::eAlreadyExist;
             }
 
             if (deletedRecordOffset == -1 && record->mDeleted) {
@@ -121,13 +123,13 @@ public:
         record->mData    = data;
         record->mDeleted = 0;
 
-        auto checksum = CalculateSha256(
-            aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(record.Get()), sizeof(Record) - aos::cSHA256Size));
+        auto checksum = utils::CalculateSha256(
+            Array<uint8_t>(reinterpret_cast<uint8_t*>(record.Get()), sizeof(Record) - cSHA256Size));
         if (!checksum.mError.IsNone()) {
             return checksum.mError;
         }
 
-        aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(record->mChecksum), aos::cSHA256Size) = checksum.mValue;
+        Array<uint8_t>(reinterpret_cast<uint8_t*>(record->mChecksum), cSHA256Size) = checksum.mValue;
 
         if (deletedRecordOffset >= 0) {
             ret = lseek(mFd, deletedRecordOffset, SEEK_SET);
@@ -138,7 +140,7 @@ public:
 
         ssize_t nwrite = write(mFd, record.Get(), sizeof(Record));
         if (nwrite != sizeof(Record)) {
-            return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+            return nwrite < 0 ? AOS_ERROR_WRAP(errno) : ErrorEnum::eRuntime;
         }
 
         auto err = Sync();
@@ -146,7 +148,7 @@ public:
             return err;
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
     /**
@@ -158,15 +160,15 @@ public:
      * @return Error
      */
     template <typename F>
-    aos::Error Update(const T& data, F filter)
+    Error Update(const T& data, F filter)
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
             return AOS_ERROR_WRAP(errno);
         }
 
-        aos::UniquePtr<Record> record = aos::MakeUnique<Record>(&mAllocator);
-        ssize_t                nread {};
+        UniquePtr<Record> record = MakeUnique<Record>(&mAllocator);
+        ssize_t           nread {};
 
         while ((nread = read(mFd, record.Get(), sizeof(Record))) == sizeof(Record)) {
             if (record->mDeleted) {
@@ -186,20 +188,20 @@ public:
 
             record->mData = data;
 
-            auto checksum = CalculateSha256(
-                aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(record.Get()), sizeof(Record) - aos::cSHA256Size));
+            auto checksum = utils::CalculateSha256(
+                Array<uint8_t>(reinterpret_cast<uint8_t*>(record.Get()), sizeof(Record) - cSHA256Size));
             if (!checksum.mError.IsNone()) {
                 return checksum.mError;
             }
 
-            aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(record->mChecksum), aos::cSHA256Size) = checksum.mValue;
+            Array<uint8_t>(reinterpret_cast<uint8_t*>(record->mChecksum), cSHA256Size) = checksum.mValue;
 
             ssize_t nwrite = write(mFd, record.Get(), sizeof(Record));
             if (nwrite != sizeof(Record)) {
-                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : ErrorEnum::eRuntime;
             }
 
-            return aos::ErrorEnum::eNone;
+            return ErrorEnum::eNone;
         }
 
         if (nread < 0) {
@@ -211,7 +213,7 @@ public:
             return err;
         }
 
-        return aos::ErrorEnum::eNotFound;
+        return ErrorEnum::eNotFound;
     }
 
     /**
@@ -222,15 +224,15 @@ public:
      * @return Error
      */
     template <typename F>
-    aos::Error Remove(F filter)
+    Error Remove(F filter)
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
             return AOS_ERROR_WRAP(errno);
         }
 
-        aos::UniquePtr<Record> record = aos::MakeUnique<Record>(&mAllocator);
-        ssize_t                nread {};
+        UniquePtr<Record> record = MakeUnique<Record>(&mAllocator);
+        ssize_t           nread {};
 
         while ((nread = read(mFd, record.Get(), sizeof(Record))) == sizeof(Record)) {
             if (record->mDeleted) {
@@ -252,7 +254,7 @@ public:
 
             ssize_t nwrite = write(mFd, record.Get(), sizeof(Record));
             if (nwrite != sizeof(Record)) {
-                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : aos::ErrorEnum::eRuntime;
+                return nwrite < 0 ? AOS_ERROR_WRAP(errno) : ErrorEnum::eRuntime;
             }
 
             auto err = Sync();
@@ -260,14 +262,14 @@ public:
                 return err;
             }
 
-            return aos::ErrorEnum::eNone;
+            return ErrorEnum::eNone;
         }
 
         if (nread < 0) {
             return AOS_ERROR_WRAP(errno);
         }
 
-        return aos::ErrorEnum::eNotFound;
+        return ErrorEnum::eNotFound;
     }
 
     /**
@@ -278,15 +280,15 @@ public:
      * @return Error
      */
     template <typename F>
-    aos::Error ReadRecords(F append)
+    Error ReadRecords(F append)
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
             return AOS_ERROR_WRAP(errno);
         }
 
-        aos::UniquePtr<Record> record = aos::MakeUnique<Record>(&mAllocator);
-        ssize_t                nread {};
+        UniquePtr<Record> record = MakeUnique<Record>(&mAllocator);
+        ssize_t           nread {};
 
         while ((nread = read(mFd, record.Get(), sizeof(Record))) == sizeof(Record)) {
             if (record->mDeleted) {
@@ -303,7 +305,7 @@ public:
             return AOS_ERROR_WRAP(errno);
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
     /**
@@ -315,15 +317,15 @@ public:
      * @return Error
      */
     template <typename F>
-    aos::Error ReadRecordByFilter(T& data, F filter)
+    Error ReadRecordByFilter(T& data, F filter)
     {
         auto ret = lseek(mFd, sizeof(Header), SEEK_SET);
         if (ret < 0) {
             return AOS_ERROR_WRAP(errno);
         }
 
-        aos::UniquePtr<Record> record = aos::MakeUnique<Record>(&mAllocator);
-        ssize_t                nread {};
+        UniquePtr<Record> record = MakeUnique<Record>(&mAllocator);
+        ssize_t           nread {};
 
         while ((nread = read(mFd, record.Get(), sizeof(Record))) == sizeof(Record)) {
             if (record->mDeleted) {
@@ -333,7 +335,7 @@ public:
             if (filter(record->mData)) {
                 data = record->mData;
 
-                return aos::ErrorEnum::eNone;
+                return ErrorEnum::eNone;
             }
         }
 
@@ -341,13 +343,13 @@ public:
             return AOS_ERROR_WRAP(errno);
         }
 
-        return aos::ErrorEnum::eNotFound;
+        return ErrorEnum::eNotFound;
     }
 
 private:
     // Currently, zephyr doesn't provide Posix API (fsync) to flush the file correctly. We have to
     // rewrite this class using zephyr FS API. As workaround, we just reopen the file.
-    aos::Error Sync()
+    Error Sync()
     {
         if (mFd >= 0) {
             auto ret = close(mFd);
@@ -361,24 +363,26 @@ private:
             return AOS_ERROR_WRAP(errno);
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
     struct Header {
         uint64_t mVersion;
         uint8_t  mReserved[256];
-        uint8_t  mChecksum[aos::cSHA256Size];
+        uint8_t  mChecksum[cSHA256Size];
     };
 
     struct Record {
         T       mData;
         uint8_t mDeleted;
-        uint8_t mChecksum[aos::cSHA256Size];
+        uint8_t mChecksum[cSHA256Size];
     };
 
-    aos::StaticString<aos::cFilePathLen>                           mFileName;
-    aos::StaticAllocator<aos::Max(sizeof(Header), sizeof(Record))> mAllocator;
-    int                                                            mFd {-1};
+    StaticString<cFilePathLen>                           mFileName;
+    StaticAllocator<Max(sizeof(Header), sizeof(Record))> mAllocator;
+    int                                                  mFd {-1};
 };
+
+} // namespace aos::zephyr::storage
 
 #endif

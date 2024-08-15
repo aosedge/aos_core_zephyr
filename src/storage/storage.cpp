@@ -10,97 +10,97 @@
 #include "log.hpp"
 #include "storage.hpp"
 
+namespace aos::zephyr::storage {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error Storage::Init()
+Error Storage::Init()
 {
     LOG_DBG() << "Initialize storage: " << cStoragePath;
 
-    aos::Error err;
-
-    if (!(err = aos::FS::MakeDirAll(cStoragePath)).IsNone()) {
+    if (auto err = FS::MakeDirAll(cStoragePath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    auto instancePath = aos::FS::JoinPath(cStoragePath, "instance.db");
+    auto instancePath = FS::JoinPath(cStoragePath, "instance.db");
 
-    if (!(err = mInstanceDatabase.Init(instancePath)).IsNone()) {
+    if (auto err = mInstanceDatabase.Init(instancePath); !err.IsNone()) {
         return err;
     }
 
-    auto servicePath = aos::FS::JoinPath(cStoragePath, "service.db");
+    auto servicePath = FS::JoinPath(cStoragePath, "service.db");
 
-    if (!(err = mServiceDatabase.Init(servicePath)).IsNone()) {
+    if (auto err = mServiceDatabase.Init(servicePath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    auto certPath = aos::FS::JoinPath(cStoragePath, "cert.db");
-    if (!(err = mCertDatabase.Init(certPath)).IsNone()) {
+    auto certPath = FS::JoinPath(cStoragePath, "cert.db");
+    if (auto err = mCertDatabase.Init(certPath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::AddInstance(const aos::InstanceInfo& instance)
+Error Storage::AddInstance(const aos::InstanceInfo& instance)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Add instance: " << instance.mInstanceIdent;
 
     auto storageInstance = ConvertInstanceInfo(instance);
 
     return mInstanceDatabase.Add(
-        *storageInstance, [](const InstanceInfo& storedInstance, const InstanceInfo& addedInstance) {
+        *storageInstance, [](const Storage::InstanceInfo& storedInstance, const Storage::InstanceInfo& addedInstance) {
             return storedInstance.mInstanceIdent == addedInstance.mInstanceIdent;
         });
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
+Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Update instance: " << instance.mInstanceIdent;
 
     auto storageInstance = ConvertInstanceInfo(instance);
 
-    return mInstanceDatabase.Update(*storageInstance, [&instance](const InstanceInfo& data) {
+    return mInstanceDatabase.Update(*storageInstance, [&instance](const Storage::InstanceInfo& data) {
         return data.mInstanceIdent.mInstance == instance.mInstanceIdent.mInstance
             && data.mInstanceIdent.mSubjectID == instance.mInstanceIdent.mSubjectID
             && data.mInstanceIdent.mServiceID == instance.mInstanceIdent.mServiceID;
     });
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
+Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Remove instance: " << instanceIdent;
 
-    return mInstanceDatabase.Remove([&instanceIdent](const InstanceInfo& data) {
+    return mInstanceDatabase.Remove([&instanceIdent](const Storage::InstanceInfo& data) {
         return data.mInstanceIdent.mInstance == instanceIdent.mInstance
             && data.mInstanceIdent.mSubjectID == instanceIdent.mSubjectID
             && data.mInstanceIdent.mServiceID == instanceIdent.mServiceID;
     });
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
+Error Storage::GetAllInstances(Array<aos::InstanceInfo>& instances)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Get all instances";
 
-    auto err = mInstanceDatabase.ReadRecords([&instances, this](const InstanceInfo& instanceInfo) -> aos::Error {
+    auto err = mInstanceDatabase.ReadRecords([&instances, this](const Storage::InstanceInfo& instanceInfo) -> Error {
         auto instance = ConvertInstanceInfo(instanceInfo);
 
         auto err = instances.PushBack(*instance);
@@ -108,59 +108,60 @@ aos::Error Storage::GetAllInstances(aos::Array<aos::InstanceInfo>& instances)
             return AOS_ERROR_WRAP(err);
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     });
 
     return err;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::AddService(const aos::sm::servicemanager::ServiceData& service)
+Error Storage::AddService(const sm::servicemanager::ServiceData& service)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
-    LOG_DBG() << "Add service: " << service.mServiceID;
+    LOG_DBG() << "Add service: id=" << service.mServiceID << ", version=" << service.mVersion;
 
     auto storageService = ConvertServiceData(service);
 
-    return mServiceDatabase.Add(*storageService, [](const ServiceData& storedService, const ServiceData& addedService) {
-        return strcmp(storedService.mServiceID, addedService.mServiceID) == 0
-            && storedService.mVersionInfo.mAosVersion == addedService.mVersionInfo.mAosVersion;
-    });
+    return mServiceDatabase.Add(
+        *storageService, [](const Storage::ServiceData& storedService, const Storage::ServiceData& addedService) {
+            return strcmp(storedService.mServiceID, addedService.mServiceID) == 0
+                && strcmp(storedService.mVersion, addedService.mVersion) == 0;
+        });
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::UpdateService(const aos::sm::servicemanager::ServiceData& service)
+Error Storage::UpdateService(const sm::servicemanager::ServiceData& service)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Update service: " << service.mServiceID;
 
     auto storageService = ConvertServiceData(service);
 
-    return mServiceDatabase.Update(
-        *storageService, [&service](const ServiceData& data) { return data.mServiceID == service.mServiceID; });
+    return mServiceDatabase.Update(*storageService,
+        [&service](const Storage::ServiceData& data) { return data.mServiceID == service.mServiceID; });
 }
 
-aos::Error Storage::RemoveService(const aos::String& serviceID, uint64_t aosVersion)
+Error Storage::RemoveService(const String& serviceID, const String& version)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
-    LOG_DBG() << "Remove service: " << serviceID;
+    LOG_DBG() << "Remove service: id=" << serviceID << ", version=" << version;
 
-    return mServiceDatabase.Remove([&serviceID, aosVersion](const ServiceData& data) {
-        return data.mServiceID == serviceID && data.mVersionInfo.mAosVersion == aosVersion;
+    return mServiceDatabase.Remove([&serviceID, &version](const Storage::ServiceData& data) {
+        return data.mServiceID == serviceID && data.mVersion == version;
     });
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceData>& services)
+Error Storage::GetAllServices(Array<sm::servicemanager::ServiceData>& services)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Get all services";
 
-    auto err = mServiceDatabase.ReadRecords([&services, this](const ServiceData& serviceData) -> aos::Error {
+    auto err = mServiceDatabase.ReadRecords([&services, this](const Storage::ServiceData& serviceData) -> Error {
         auto service = ConvertServiceData(serviceData);
 
         auto err = services.PushBack(*service);
@@ -168,44 +169,44 @@ aos::Error Storage::GetAllServices(aos::Array<aos::sm::servicemanager::ServiceDa
             return AOS_ERROR_WRAP(err);
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     });
 
     return err;
 }
 
 // cppcheck-suppress unusedFunction
-aos::RetWithError<aos::sm::servicemanager::ServiceData> Storage::GetService(const aos::String& serviceID)
+RetWithError<sm::servicemanager::ServiceData> Storage::GetService(const String& serviceID)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Get service: " << serviceID;
 
-    aos::UniquePtr<ServiceData> serviceData = aos::MakeUnique<ServiceData>(&mAllocator);
+    UniquePtr<Storage::ServiceData> serviceData = MakeUnique<Storage::ServiceData>(&mAllocator);
 
     auto err = mServiceDatabase.ReadRecordByFilter(
-        *serviceData, [&serviceID](const ServiceData& data) { return data.mServiceID == serviceID; });
+        *serviceData, [&serviceID](const Storage::ServiceData data) { return data.mServiceID == serviceID; });
 
     if (!err.IsNone()) {
-        return aos::RetWithError<aos::sm::servicemanager::ServiceData>(aos::sm::servicemanager::ServiceData {}, err);
+        return RetWithError<sm::servicemanager::ServiceData>(sm::servicemanager::ServiceData {}, err);
     }
 
     auto retServiceData = ConvertServiceData(*serviceData);
 
-    return aos::RetWithError<aos::sm::servicemanager::ServiceData>(*retServiceData);
+    return RetWithError<sm::servicemanager::ServiceData>(*retServiceData);
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::AddCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo)
+Error Storage::AddCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Add cert info: " << certType;
 
     auto storageCertInfo = ConvertCertInfo(certType, certInfo);
 
-    return mCertDatabase.Add(
-        *storageCertInfo, [&storageCertInfo](const CertInfo& storedCertInfo, const CertInfo& addedCertInfo) {
+    return mCertDatabase.Add(*storageCertInfo,
+        [&storageCertInfo](const Storage::CertInfo& storedCertInfo, const Storage::CertInfo& addedCertInfo) {
             return strcmp(storedCertInfo.mCertType, addedCertInfo.mCertType) == 0
                 && storedCertInfo.mIssuerSize == addedCertInfo.mIssuerSize
                 && storedCertInfo.mSerialSize == addedCertInfo.mSerialSize
@@ -215,39 +216,40 @@ aos::Error Storage::AddCertInfo(const aos::String& certType, const aos::iam::cer
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::RemoveCertInfo(const aos::String& certType, const aos::String& certURL)
+Error Storage::RemoveCertInfo(const String& certType, const String& certURL)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Remove cert info: " << certType;
 
-    return mCertDatabase.Remove(
-        [&certType, &certURL](const CertInfo& data) { return data.mCertType == certType && data.mCertURL == certURL; });
+    return mCertDatabase.Remove([&certType, &certURL](const Storage::CertInfo& data) {
+        return data.mCertType == certType && data.mCertURL == certURL;
+    });
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::RemoveAllCertsInfo(const aos::String& certType)
+Error Storage::RemoveAllCertsInfo(const String& certType)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Remove all cert info: " << certType;
 
-    auto err = mCertDatabase.Remove([&certType](const CertInfo& data) { return data.mCertType == certType; });
-    if (!err.IsNone() && !err.Is(aos::ErrorEnum::eNotFound)) {
+    auto err = mCertDatabase.Remove([&certType](const Storage::CertInfo& data) { return data.mCertType == certType; });
+    if (!err.IsNone() && !err.Is(ErrorEnum::eNotFound)) {
         return err;
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo)
+Error Storage::GetCertsInfo(const String& certType, Array<iam::certhandler::CertInfo>& certsInfo)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Get cert info: " << certType;
 
-    auto err = mCertDatabase.ReadRecords([&certsInfo, &certType, this](const CertInfo& certInfo) -> aos::Error {
+    auto err = mCertDatabase.ReadRecords([&certsInfo, &certType, this](const Storage::CertInfo& certInfo) -> Error {
         if (certInfo.mCertType == certType) {
             auto cert = ConvertCertInfo(certInfo);
 
@@ -257,25 +259,24 @@ aos::Error Storage::GetCertsInfo(const aos::String& certType, aos::Array<aos::ia
             }
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     });
 
     return err;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Storage::GetCertInfo(
-    const aos::Array<uint8_t>& issuer, const aos::Array<uint8_t>& serial, aos::iam::certhandler::CertInfo& cert)
+Error Storage::GetCertInfo(const Array<uint8_t>& issuer, const Array<uint8_t>& serial, iam::certhandler::CertInfo& cert)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Get cert info by issuer and serial";
 
-    aos::UniquePtr<CertInfo> certInfo = aos::MakeUnique<CertInfo>(&mAllocator);
+    UniquePtr<Storage::CertInfo> certInfo = MakeUnique<Storage::CertInfo>(&mAllocator);
 
-    auto err = mCertDatabase.ReadRecordByFilter(*certInfo, [&issuer, &serial](const CertInfo& data) {
-        aos::Array<uint8_t> issuerArray(data.mIssuer, data.mIssuerSize);
-        aos::Array<uint8_t> serialArray(data.mSerial, data.mSerialSize);
+    auto err = mCertDatabase.ReadRecordByFilter(*certInfo, [&issuer, &serial](const Storage::CertInfo& data) {
+        Array<uint8_t> issuerArray(data.mIssuer, data.mIssuerSize);
+        Array<uint8_t> serialArray(data.mSerial, data.mSerialSize);
 
         return issuerArray == issuer && serialArray == serial;
     });
@@ -288,16 +289,16 @@ aos::Error Storage::GetCertInfo(
 
     cert = *retCertInfo;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-aos::UniquePtr<Storage::InstanceInfo> Storage::ConvertInstanceInfo(const aos::InstanceInfo& instance)
+UniquePtr<Storage::InstanceInfo> Storage::ConvertInstanceInfo(const aos::InstanceInfo& instance)
 {
-    aos::UniquePtr<InstanceInfo> instanceInfo = aos::MakeUnique<InstanceInfo>(&mAllocator);
+    UniquePtr<Storage::InstanceInfo> instanceInfo = MakeUnique<Storage::InstanceInfo>(&mAllocator);
 
     instanceInfo->mInstanceIdent.mInstance = instance.mInstanceIdent.mInstance;
     strcpy(instanceInfo->mInstanceIdent.mSubjectID, instance.mInstanceIdent.mSubjectID.CStr());
@@ -310,9 +311,9 @@ aos::UniquePtr<Storage::InstanceInfo> Storage::ConvertInstanceInfo(const aos::In
     return instanceInfo;
 }
 
-aos::UniquePtr<aos::InstanceInfo> Storage::ConvertInstanceInfo(const InstanceInfo& instance)
+UniquePtr<aos::InstanceInfo> Storage::ConvertInstanceInfo(const Storage::InstanceInfo& instance)
 {
-    aos::UniquePtr<aos::InstanceInfo> instanceInfo = aos::MakeUnique<aos::InstanceInfo>(&mAllocator);
+    UniquePtr<aos::InstanceInfo> instanceInfo = MakeUnique<aos::InstanceInfo>(&mAllocator);
 
     instanceInfo->mInstanceIdent.mInstance  = instance.mInstanceIdent.mInstance;
     instanceInfo->mInstanceIdent.mSubjectID = instance.mInstanceIdent.mSubjectID;
@@ -325,39 +326,34 @@ aos::UniquePtr<aos::InstanceInfo> Storage::ConvertInstanceInfo(const InstanceInf
     return instanceInfo;
 }
 
-aos::UniquePtr<Storage::ServiceData> Storage::ConvertServiceData(const aos::sm::servicemanager::ServiceData& service)
+UniquePtr<Storage::ServiceData> Storage::ConvertServiceData(const sm::servicemanager::ServiceData& service)
 {
-    aos::UniquePtr<ServiceData> serviceData = aos::MakeUnique<ServiceData>(&mAllocator);
+    UniquePtr<ServiceData> serviceData = MakeUnique<ServiceData>(&mAllocator);
 
-    serviceData->mVersionInfo.mAosVersion = service.mVersionInfo.mAosVersion;
-    strcpy(serviceData->mVersionInfo.mVendorVersion, service.mVersionInfo.mVendorVersion.CStr());
-    strcpy(serviceData->mVersionInfo.mDescription, service.mVersionInfo.mDescription.CStr());
     strcpy(serviceData->mServiceID, service.mServiceID.CStr());
     strcpy(serviceData->mProviderID, service.mProviderID.CStr());
+    strcpy(serviceData->mVersion, service.mVersion.CStr());
     strcpy(serviceData->mImagePath, service.mImagePath.CStr());
 
     return serviceData;
 }
 
-aos::UniquePtr<aos::sm::servicemanager::ServiceData> Storage::ConvertServiceData(const Storage::ServiceData& service)
+UniquePtr<sm::servicemanager::ServiceData> Storage::ConvertServiceData(const Storage::ServiceData& service)
 {
-    aos::UniquePtr<aos::sm::servicemanager::ServiceData> serviceData
-        = aos::MakeUnique<aos::sm::servicemanager::ServiceData>(&mAllocator);
+    UniquePtr<sm::servicemanager::ServiceData> serviceData = MakeUnique<sm::servicemanager::ServiceData>(&mAllocator);
 
-    serviceData->mVersionInfo.mAosVersion    = service.mVersionInfo.mAosVersion;
-    serviceData->mVersionInfo.mVendorVersion = service.mVersionInfo.mVendorVersion;
-    serviceData->mVersionInfo.mDescription   = service.mVersionInfo.mDescription;
-    serviceData->mServiceID                  = service.mServiceID;
-    serviceData->mProviderID                 = service.mProviderID;
-    serviceData->mImagePath                  = service.mImagePath;
+    serviceData->mServiceID  = service.mServiceID;
+    serviceData->mProviderID = service.mProviderID;
+    serviceData->mVersion    = service.mVersion;
+    serviceData->mImagePath  = service.mImagePath;
 
     return serviceData;
 }
 
-aos::UniquePtr<Storage::CertInfo> Storage::ConvertCertInfo(
-    const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo)
+UniquePtr<Storage::CertInfo> Storage::ConvertCertInfo(
+    const String& certType, const iam::certhandler::CertInfo& certInfo)
 {
-    aos::UniquePtr<CertInfo> cert = aos::MakeUnique<CertInfo>(&mAllocator);
+    UniquePtr<Storage::CertInfo> cert = MakeUnique<Storage::CertInfo>(&mAllocator);
 
     memcpy(cert->mIssuer, certInfo.mIssuer.Get(), certInfo.mIssuer.Size());
     memcpy(cert->mSerial, certInfo.mSerial.Get(), certInfo.mSerial.Size());
@@ -371,16 +367,17 @@ aos::UniquePtr<Storage::CertInfo> Storage::ConvertCertInfo(
     return cert;
 }
 
-aos::UniquePtr<aos::iam::certhandler::CertInfo> Storage::ConvertCertInfo(const Storage::CertInfo& certInfo)
+UniquePtr<iam::certhandler::CertInfo> Storage::ConvertCertInfo(const Storage::CertInfo& certInfo)
 {
-    aos::UniquePtr<aos::iam::certhandler::CertInfo> cert
-        = aos::MakeUnique<aos::iam::certhandler::CertInfo>(&mAllocator);
+    UniquePtr<iam::certhandler::CertInfo> cert = MakeUnique<iam::certhandler::CertInfo>(&mAllocator);
 
-    cert->mIssuer   = aos::Array<uint8_t>(certInfo.mIssuer, certInfo.mIssuerSize);
-    cert->mSerial   = aos::Array<uint8_t>(certInfo.mSerial, certInfo.mSerialSize);
+    cert->mIssuer   = Array<uint8_t>(certInfo.mIssuer, certInfo.mIssuerSize);
+    cert->mSerial   = Array<uint8_t>(certInfo.mSerial, certInfo.mSerialSize);
     cert->mCertURL  = certInfo.mCertURL;
     cert->mKeyURL   = certInfo.mKeyURL;
-    cert->mNotAfter = aos::Time::Unix(certInfo.mNotAfter.tv_sec, certInfo.mNotAfter.tv_nsec);
+    cert->mNotAfter = Time::Unix(certInfo.mNotAfter.tv_sec, certInfo.mNotAfter.tv_nsec);
 
     return cert;
 }
+
+} // namespace aos::zephyr::storage
