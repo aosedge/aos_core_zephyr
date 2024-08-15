@@ -74,10 +74,50 @@ Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
     LOG_DBG() << "Set node status: status=" << status.ToString();
 
     if (auto err = StoreNodeStatus(status); !err.IsNone()) {
-        Error(AOS_ERROR_WRAP(err), "failed to store node status");
+        return AOS_ERROR_WRAP(Error(err, "failed to store node status"));
     }
 
-    LOG_DBG() << "Node status updated: status=" << status.ToString();
+    if (status == mNodeInfo.mStatus) {
+        return ErrorEnum::eNone;
+    }
+
+    {
+        LockGuard lock {mMutex};
+
+        mNodeInfo.mStatus = status;
+    }
+
+    LOG_DBG() << "Node status updated: status=" << mNodeInfo.mStatus.ToString();
+
+    if (auto err = NotifyNodeStatusChanged(status); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "failed to notify node status observers"));
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error NodeInfoProvider::SubscribeNodeStatusChanged(iam::nodeinfoprovider::NodeStatusObserverItf& observer)
+{
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Subscribe on node status changed event";
+
+    if (auto err = mStatusChangedSubscribers.Set(&observer, true); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error NodeInfoProvider::UnsubscribeNodeStatusChanged(iam::nodeinfoprovider::NodeStatusObserverItf& observer)
+{
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Unsubscribe from node status changed event";
+
+    if (auto err = mStatusChangedSubscribers.Remove(&observer); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
 
     return ErrorEnum::eNone;
 }
@@ -175,6 +215,19 @@ Error NodeInfoProvider::ReadNodeStatus(NodeStatus& status) const
     }
 
     return status.FromString(statusStr);
+}
+
+Error NodeInfoProvider::NotifyNodeStatusChanged(const NodeStatus& status)
+{
+    LockGuard lock {mMutex};
+
+    for (auto& [observer, _] : mStatusChangedSubscribers) {
+        if (auto err = observer->OnNodeStatusChanged(mNodeInfo.mNodeID, status); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+    }
+
+    return ErrorEnum::eNone;
 }
 
 } // namespace aos::zephyr::nodeinfoprovider
