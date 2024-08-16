@@ -79,6 +79,7 @@ target_sources(
             src/communication/tlschannel.cpp
             src/communication/xenvchan.cpp
             src/downloader/downloader.cpp
+            src/iamclient/iamclient.cpp
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
             src/nodeinfoprovider/nodeinfoprovider.cpp
