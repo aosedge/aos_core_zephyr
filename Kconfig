@@ -81,13 +81,21 @@ config AOS_ROOT_CA_PATH
 	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
 	default "prebuilt/rootca.pem"
 
+config AOS_IAM_OPEN_PORT
+	int "Aos IAM open port"
+	default 1
+
+config AOS_IAM_SECURE_PORT
+	int "Aos IAM secure port"
+	default 2
+
 config AOS_SM_OPEN_PORT
 	int "Aos SM open port"
-	default 1
+	default 3
 
 config AOS_SM_SECURE_PORT
 	int "Aos SM secure port"
-	default 2
+	default 4
 
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"

@@ -30,6 +30,7 @@
 #include "resourcemanager/resourcemanager.hpp"
 #include "runner/runner.hpp"
 #include "smclient/smclient.hpp"
+#include "iamclient/iamclient.hpp"
 #include "storage/storage.hpp"
 
 namespace aos::zephyr::app {
@@ -91,6 +92,7 @@ private:
     communication::ChannelManager              mChannelManager;
     communication::XenVChan                    mTransport;
     downloader::Downloader                     mDownloader;
+    iamclient::IAMClient                       mIAMClient;
     monitoring::ResourceUsageProvider          mResourceUsageProvider;
     nodeinfoprovider::NodeInfoProvider         mNodeInfoProvider;
     ocispec::OCISpec                           mJsonOciSpec;
