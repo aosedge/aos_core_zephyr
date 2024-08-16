@@ -226,7 +226,7 @@ Error ChannelManager::ReadFromTransport(AosProtocolHeader& header)
         return {ErrorEnum::eRuntime, "not enough memory in read buffer"};
     }
 
-    LOG_DBG() << "Read channel CM: port=" << header.mPort << " size=" << header.mDataSize;
+    LOG_DBG() << "Read channel: port=" << header.mPort << " size=" << header.mDataSize;
 
     size_t totalRead = 0;
 
@@ -247,7 +247,7 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
 {
     UniqueLock lock {mMutex};
 
-    LOG_DBG() << "Read channel CM: port=" << header.mPort << " size=" << header.mDataSize;
+    LOG_DBG() << "Read channel: port=" << header.mPort << " size=" << header.mDataSize;
 
     auto [channel, err] = mChannels.At(header.mPort);
     if (!err.IsNone()) {

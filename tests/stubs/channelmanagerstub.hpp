@@ -60,6 +60,15 @@ public:
         return mChannels[port].get();
     }
 
+    aos::Error Close() override
+    {
+        for (auto& [port, channel] : mChannels) {
+            channel->Close();
+        }
+
+        return aos::ErrorEnum::eNone;
+    }
+
 private:
     std::unordered_map<uint32_t, std::unique_ptr<ChannelStub>> mChannels;
     std::mutex                                                 mMutex;
