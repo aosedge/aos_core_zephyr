@@ -1,0 +1,6 @@
+tests:
+  aoszephyrapp.iamclient:
+    build_only: false
+    tags: iamclient
+    timeout: 500
+    platform_allow: native_posix_64 native_posix
