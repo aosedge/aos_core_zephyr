@@ -53,6 +53,8 @@ Error NodeInfoProvider::Init()
 
 Error NodeInfoProvider::GetNodeInfo(NodeInfo& nodeInfo) const
 {
+    LockGuard lock {mMutex};
+
     NodeStatus status;
 
     if (auto err = ReadNodeStatus(status); !err.IsNone()) {
@@ -72,6 +74,8 @@ Error NodeInfoProvider::GetNodeInfo(NodeInfo& nodeInfo) const
 // cppcheck-suppress unusedFunction
 Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
 {
+    LockGuard lock {mMutex};
+
     LOG_DBG() << "Set node status: status=" << status.ToString();
 
     if (auto err = StoreNodeStatus(status); !err.IsNone()) {
@@ -82,11 +86,7 @@ Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
         return ErrorEnum::eNone;
     }
 
-    {
-        LockGuard lock {mMutex};
-
-        mNodeInfo.mStatus = status;
-    }
+    mNodeInfo.mStatus = status;
 
     LOG_DBG() << "Node status updated: status=" << mNodeInfo.mStatus.ToString();
 
@@ -222,8 +222,6 @@ Error NodeInfoProvider::ReadNodeStatus(NodeStatus& status) const
 
 Error NodeInfoProvider::NotifyNodeStatusChanged(const NodeStatus& status)
 {
-    LockGuard lock {mMutex};
-
     for (auto& [observer, _] : mStatusChangedSubscribers) {
         if (auto err = observer->OnNodeStatusChanged(mNodeInfo.mNodeID, status); !err.IsNone()) {
             return AOS_ERROR_WRAP(err);
