@@ -31,4 +31,4 @@ zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp ../utils/log.cpp ../utils/utils.cpp ../../src/clocksync/clocksync.cpp)
+target_sources(app PRIVATE src/main.cpp ../utils/log.cpp ../../src/utils/utils.cpp ../../src/clocksync/clocksync.cpp)
