@@ -9,7 +9,7 @@
 #define SMCLIENT_HPP_
 
 #include <aos/common/connectionsubsc.hpp>
-#include <aos/common/monitoring.hpp>
+#include <aos/common/monitoring/monitoring.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/resourcemanager.hpp>
 
@@ -25,8 +25,8 @@ namespace aos::zephyr::smclient {
  * SM client instance.
  */
 class SMClient : public sm::launcher::InstanceStatusReceiverItf,
-                 public DownloadRequesterItf,
-                 public monitoring::SenderItf,
+                 public downloader::DownloadRequesterItf,
+                 public aos::monitoring::SenderItf,
                  public ConnectionPublisherItf,
                  public clocksync::ClockSyncSenderItf,
                  public clocksync::ClockSyncSubscriberItf,
@@ -68,7 +68,7 @@ public:
      * @param request image content request.
      * @return Error.
      */
-    Error SendImageContentRequest(const ImageContentRequest& request) override;
+    Error SendImageContentRequest(const downloader::ImageContentRequest& request) override;
 
     /**
      * Sends monitoring data.
@@ -76,7 +76,7 @@ public:
      * @param monitoringData monitoring data.
      * @return Error.
      */
-    Error SendMonitoringData(const monitoring::NodeMonitoringData& monitoringData) override;
+    Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData) override;
 
     /**
      * Subscribes the provided ConnectionSubscriberItf to this object.
