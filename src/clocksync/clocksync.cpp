@@ -24,13 +24,7 @@ Error ClockSync::Init(ClockSyncSenderItf& sender)
         while (true) {
             UniqueLock lock {mMutex};
 
-#ifdef CONFIG_NATIVE_APPLICATION
-            auto now = aos::Time::Now();
-#else
-            auto now = aos::Time::Now(CLOCK_MONOTONIC);
-#endif
-
-            mCondVar.Wait(lock, now.Add(cSendPeriod), [this] { return mStart || mClose || mSync; });
+            mCondVar.Wait(lock, cSendPeriod, [this] { return mStart || mClose || mSync; });
 
             if (mClose) {
                 return;
