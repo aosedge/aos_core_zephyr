@@ -9,29 +9,30 @@ project(nodeinfoprovider_test)
 # Config
 # ######################################################################################################################
 
-set(AOS_CORE_CONFIG aoscoreconfig.hpp)
+set(aoscore_config aoscoreconfig.hpp)
+set(aoscore_source_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_lib_cpp")
 
 # ######################################################################################################################
 # Definitions
 # ######################################################################################################################
 
 # Aos core configuration
-add_definitions(-include ${AOS_CORE_CONFIG})
+add_definitions(-include ${aoscore_config})
 
 # ######################################################################################################################
 # Includes
 # ######################################################################################################################
 
-target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/../../src)
-target_include_directories(app PRIVATE ${APPLICATION_SOURCE_DIR}/../../../aos_core_lib_cpp/include)
-target_include_directories(app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-
+zephyr_include_directories(${aoscore_source_dir}/include)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/..)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/../../src)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
 zephyr_include_directories_ifdef(CONFIG_NATIVE_APPLICATION ${APPLICATION_SOURCE_DIR}/../../mocks/include)
 
 # ######################################################################################################################
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp ../../src/nodeinfoprovider/nodeinfoprovider.cpp)
+target_sources(app PRIVATE ../../src/nodeinfoprovider/nodeinfoprovider.cpp ../utils/log.cpp src/main.cpp)
 
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE ${APPLICATION_SOURCE_DIR}/../../mocks/xstat/xstat.cpp)
