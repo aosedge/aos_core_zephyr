@@ -59,9 +59,9 @@ target_sources(
     app
     PRIVATE ../../src/communication/pbhandler.cpp
             ../../src/smclient/openhandler.cpp
+            ../../src/utils/utils.cpp
             ../../src/smclient/smclient.cpp
             ../utils/log.cpp
             ../utils/pbmessages.cpp
-            ../utils/utils.cpp
             src/main.cpp
 )

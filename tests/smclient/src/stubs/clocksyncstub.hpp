@@ -37,9 +37,12 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
-    aos::Error Subscribe(aos::zephyr::clocksync::ClockSyncSubscriberItf& subscriber) { return aos::ErrorEnum::eNone; }
+    aos::Error Subscribe(aos::zephyr::clocksync::ClockSyncSubscriberItf& subscriber) override
+    {
+        return aos::ErrorEnum::eNone;
+    }
 
-    void Unsubscribe(aos::zephyr::clocksync::ClockSyncSubscriberItf& subscriber) { }
+    void Unsubscribe(aos::zephyr::clocksync::ClockSyncSubscriberItf& subscriber) override { }
 
     bool GetStarted() const
     {

@@ -20,12 +20,11 @@ namespace aos::zephyr::smclient {
 
 Error OpenHandler::Init(communication::ChannelItf& channel, clocksync::ClockSyncItf& clockSync)
 {
-    auto err = PBHandler::Init("SM open", channel);
-    if (!err.IsNone()) {
+    if (auto err = PBHandler::Init("SM open", channel); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = Start()).IsNone()) {
+    if (auto err = Start(); err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -40,7 +39,7 @@ Error OpenHandler::SendClockSyncRequest()
         = servicemanager_v4_ClockSyncRequest servicemanager_v4_ClockSyncRequest_init_default;
     mOutgoingMessages.which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_clock_sync_request_tag;
 
-    LOG_DBG() << "Send SM message: message=ClockSyncRequest";
+    LOG_INF() << "Send SM clock sync request";
 
     return SendMessage(&mOutgoingMessages, &servicemanager_v4_SMOutgoingMessages_msg);
 }
@@ -51,7 +50,7 @@ OpenHandler::~OpenHandler()
 }
 
 /***********************************************************************************************************************
- * Protected
+ * Private
  **********************************************************************************************************************/
 
 void OpenHandler::OnConnect()
@@ -70,8 +69,7 @@ Error OpenHandler::ReceiveMessage(const Array<uint8_t>& data)
 {
     auto stream = pb_istream_from_buffer(data.Get(), data.Size());
 
-    auto status = pb_decode(&stream, &servicemanager_v4_SMIncomingMessages_msg, &mIncomingMessages);
-    if (!status) {
+    if (auto status = pb_decode(&stream, &servicemanager_v4_SMIncomingMessages_msg, &mIncomingMessages); !status) {
         return AOS_ERROR_WRAP(Error(ErrorEnum::eRuntime, "failed to decode message"));
     }
 
@@ -79,10 +77,7 @@ Error OpenHandler::ReceiveMessage(const Array<uint8_t>& data)
 
     switch (mIncomingMessages.which_SMIncomingMessage) {
     case servicemanager_v4_SMIncomingMessages_clock_sync_tag:
-        if (!(err = ProcessClockSync(mIncomingMessages.SMIncomingMessage.clock_sync)).IsNone()) {
-            return err;
-        }
-
+        err = ProcessClockSync(mIncomingMessages.SMIncomingMessage.clock_sync);
         break;
 
     default:
@@ -90,16 +85,12 @@ Error OpenHandler::ReceiveMessage(const Array<uint8_t>& data)
         break;
     }
 
-    return ErrorEnum::eNone;
+    return err;
 }
-
-/***********************************************************************************************************************
- * Private
- **********************************************************************************************************************/
 
 Error OpenHandler::ProcessClockSync(const servicemanager_v4_ClockSync& pbClockSync)
 {
-    LOG_DBG() << "Receive SM message: message=ClockSync";
+    LOG_INF() << "Process clock sync";
 
     if (!pbClockSync.has_current_time) {
         return AOS_ERROR_WRAP(Error(ErrorEnum::eInvalidArgument, "ClockSync message has no current time"));

@@ -23,12 +23,11 @@ Error SMClient::Init(clocksync::ClockSyncItf& clockSync, communication::ChannelM
         return AOS_ERROR_WRAP(err);
     }
 
-    err = mOpenHandler.Init(*openChannel, clockSync);
-    if (!err.IsNone()) {
+    if (auto err = mOpenHandler.Init(*openChannel, clockSync); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = clockSync.Subscribe(*this)).IsNone()) {
+    if (auto err = clockSync.Subscribe(*this); err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -45,7 +44,7 @@ Error SMClient::InstancesUpdateStatus(const Array<InstanceStatus>& instances)
     return ErrorEnum::eNone;
 }
 
-Error SMClient::SendImageContentRequest(const ImageContentRequest& request)
+Error SMClient::SendImageContentRequest(const downloader::ImageContentRequest& request)
 {
     return ErrorEnum::eNone;
 }
