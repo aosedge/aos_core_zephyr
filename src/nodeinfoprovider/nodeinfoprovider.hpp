@@ -78,7 +78,7 @@ private:
 
     NodeInfo                                                                                  mNodeInfo;
     StaticMap<iam::nodeinfoprovider::NodeStatusObserverItf*, bool, cMaxNodeStatusSubscribers> mStatusChangedSubscribers;
-    Mutex                                                                                     mMutex;
+    mutable Mutex                                                                             mMutex;
 };
 
 } // namespace aos::zephyr::nodeinfoprovider
