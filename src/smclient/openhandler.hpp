@@ -43,12 +43,10 @@ public:
      */
     ~OpenHandler();
 
-protected:
+private:
     void  OnConnect() override;
     void  OnDisconnect() override;
     Error ReceiveMessage(const Array<uint8_t>& data) override;
-
-private:
     Error ProcessClockSync(const servicemanager_v4_ClockSync& pbClockSync);
 
     clocksync::ClockSyncItf*             mClockSync {};
