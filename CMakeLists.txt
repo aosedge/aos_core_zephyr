@@ -89,6 +89,7 @@ target_sources(
             src/smclient/smclient.cpp
             src/storage/storage.cpp
             src/utils/checksum.cpp
+            src/utils/utils.cpp
 )
 
 # Enable vchannels and xrun mocks for native posix
