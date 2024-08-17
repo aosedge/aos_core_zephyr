@@ -10,37 +10,11 @@
 
 #include <aos/common/types.hpp>
 
-#include <proto/servicemanager/v3/servicemanager.pb.h>
+#include <proto/common/v1/common.pb.h>
 
-/**
- * Converts Aos string to PB string.
- *
- * @tparam cSize max PB string size.
- * @param src Aos string to convert from.
- */
-template <size_t cSize>
-constexpr void StringToPB(const aos::String& src, char (&dst)[cSize])
-{
-    aos::String(dst, cSize - 1) = src;
-}
+#include "utils.hpp"
 
-/**
- * Converts PB string to Aos string.
- *
- * @tparam cSize max PB string size.
- * @param dst Aos string to convert to.
- */
-template <size_t cSize>
-constexpr void PBToString(const char (&src)[cSize], aos::String& dst)
-{
-    auto len = strlen(src);
-
-    if (len > cSize - 1) {
-        len = cSize - 1;
-    }
-
-    dst = aos::String(src, len);
-}
+namespace aos::zephyr::utils {
 
 /**
  * Converts PB string to Aos enum.
@@ -60,28 +34,29 @@ constexpr void PBToEnum(const char (&src)[cSize], T& dst)
         len = cSize - 1;
     }
 
-    auto err = dst.FromString(aos::String(src, len));
+    auto err = dst.FromString(String(src, len));
     assert(err.IsNone());
 }
 
 /**
- * Converts Aos error to PB string.
+ * Converts Aos error to PB error info.
  *
- * @tparam cSize max PB string size.
  * @param aosError Aos error to convert from.
+ * @param[out] errorInfo PB error info to convert to.
  */
-template <size_t cSize>
-constexpr void ErrorToPB(const aos::Error& aosError, char (&dst)[cSize])
+template <typename T>
+void ErrorToPB(const Error& aosError, T& errorInfo)
 {
-    aos::String str(dst, cSize - 1);
-
-    str.Clear();
-
     if (aosError.IsNone()) {
+        errorInfo.has_error = false;
         return;
     }
 
-    str.Convert(aosError);
+    errorInfo.has_error       = true;
+    errorInfo.error.aos_code  = int(aosError.Value());
+    errorInfo.error.exit_code = aosError.Errno();
+
+    StringFromCStr(errorInfo.error.message).Convert(aosError);
 }
 
 /**
@@ -92,10 +67,10 @@ constexpr void ErrorToPB(const aos::Error& aosError, char (&dst)[cSize])
  * @param dst PB array to covert to.
  */
 template <typename T>
-constexpr void ByteArrayToPB(const aos::Array<uint8_t>& src, T& dst)
+constexpr void ByteArrayToPB(const Array<uint8_t>& src, T& dst)
 {
-    aos::Array<uint8_t>(dst.bytes, sizeof(dst.bytes)) = src;
-    dst.size                                          = src.Size();
+    Array<uint8_t>(dst.bytes, sizeof(dst.bytes)) = src;
+    dst.size                                     = src.Size();
 }
 
 /**
@@ -106,7 +81,7 @@ constexpr void ByteArrayToPB(const aos::Array<uint8_t>& src, T& dst)
  * @param dst Aos array to covert to.
  */
 template <typename T>
-constexpr void PBToByteArray(const T& src, aos::Array<uint8_t>& dst)
+constexpr void PBToByteArray(const T& src, Array<uint8_t>& dst)
 {
     auto size = src.size;
 
@@ -114,33 +89,7 @@ constexpr void PBToByteArray(const T& src, aos::Array<uint8_t>& dst)
         size = sizeof(src.bytes);
     }
 
-    dst = aos::Array<uint8_t>(src.bytes, size);
-}
-
-/**
- * Converts PB version info to Aos version info.
- *
- * @param pbVersion PB version info.
- * @param aosVersion Aos version info.
- */
-constexpr void PBToVersionInfo(const servicemanager_v3_VersionInfo pbVersion, aos::VersionInfo& aosVersion)
-{
-    aosVersion.mAosVersion = pbVersion.aos_version;
-    PBToString(pbVersion.vendor_version, aosVersion.mVendorVersion);
-    PBToString(pbVersion.description, aosVersion.mDescription);
-}
-
-/**
- * Converts Aos version info PB version info.
- *
- * @param aosVersion Aos version info.
- * @param pbVersion PB version info.
- */
-constexpr void VersionInfoToPB(const aos::VersionInfo& aosVersion, servicemanager_v3_VersionInfo& pbVersion)
-{
-    pbVersion.aos_version = aosVersion.mAosVersion;
-    StringToPB(aosVersion.mVendorVersion, pbVersion.vendor_version);
-    StringToPB(aosVersion.mDescription, pbVersion.description);
+    dst = Array<uint8_t>(src.bytes, size);
 }
 
 /**
@@ -149,11 +98,11 @@ constexpr void VersionInfoToPB(const aos::VersionInfo& aosVersion, servicemanage
  * @param aosIdent Aos instance ident.
  * @param pbIdent PB instance ident.
  */
-constexpr void InstanceIdentToPB(const aos::InstanceIdent& aosIdent, servicemanager_v3_InstanceIdent& pbIdent)
+inline void InstanceIdentToPB(const InstanceIdent& aosIdent, common_v1_InstanceIdent& pbIdent)
 {
-    StringToPB(aosIdent.mServiceID, pbIdent.service_id);
-    StringToPB(aosIdent.mSubjectID, pbIdent.subject_id);
-    pbIdent.instance = aosIdent.mInstance;
+    StringFromCStr(pbIdent.service_id) = aosIdent.mServiceID;
+    StringFromCStr(pbIdent.subject_id) = aosIdent.mSubjectID;
+    pbIdent.instance                   = aosIdent.mInstance;
 }
 
 /**
@@ -162,11 +111,13 @@ constexpr void InstanceIdentToPB(const aos::InstanceIdent& aosIdent, servicemana
  * @param pbIdent PB instance ident.
  * @param aosIdent Aos instance ident.
  */
-constexpr void PBToInstanceIdent(const servicemanager_v3_InstanceIdent& pbIdent, aos::InstanceIdent& aosIdent)
+inline void PBToInstanceIdent(const common_v1_InstanceIdent& pbIdent, InstanceIdent& aosIdent)
 {
-    PBToString(pbIdent.service_id, aosIdent.mServiceID);
-    PBToString(pbIdent.subject_id, aosIdent.mSubjectID);
-    aosIdent.mInstance = pbIdent.instance;
+    aosIdent.mServiceID = StringFromCStr(pbIdent.service_id);
+    aosIdent.mSubjectID = StringFromCStr(pbIdent.subject_id);
+    aosIdent.mInstance  = pbIdent.instance;
 }
+
+} // namespace aos::zephyr::utils
 
 #endif

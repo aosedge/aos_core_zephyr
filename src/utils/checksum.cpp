@@ -9,16 +9,18 @@
 
 #include "checksum.hpp"
 
+namespace aos::zephyr::utils {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(const aos::Array<uint8_t>& data)
+RetWithError<StaticArray<uint8_t, cSHA256Size>> CalculateSha256(const Array<uint8_t>& data)
 {
-    mbedtls_sha256_context                      ctx;
-    aos::StaticArray<uint8_t, aos::cSHA256Size> digest;
+    mbedtls_sha256_context            ctx;
+    StaticArray<uint8_t, cSHA256Size> digest;
 
-    digest.Resize(aos::cSHA256Size);
+    digest.Resize(cSHA256Size);
 
     if (data.Size() == 0) {
         return digest;
@@ -51,3 +53,5 @@ aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(c
 
     return digest;
 }
+
+} // namespace aos::zephyr::utils
