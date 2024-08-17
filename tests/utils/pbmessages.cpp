@@ -17,7 +17,7 @@
 
 static aos::Error SendMessageToChannel(ChannelStub* channel, const std::vector<uint8_t>& data)
 {
-    auto header    = AosProtobufHeader {"", static_cast<uint32_t>(data.size())};
+    auto header    = AosProtobufHeader {static_cast<uint32_t>(data.size())};
     auto headerPtr = reinterpret_cast<uint8_t*>(&header);
 
     channel->SendRead(std::vector<uint8_t>(headerPtr, headerPtr + sizeof(AosProtobufHeader)));
@@ -83,7 +83,7 @@ aos::Error ReceivePBMessage(ChannelStub* channel, const std::chrono::duration<do
 
         auto status = pb_decode(&stream, fields, message);
         if (!status) {
-            return AOS_ERROR_WRAP(aos::ErrorEnum::eRuntime);
+            return aos::ErrorEnum::eRuntime;
         }
     }
 
