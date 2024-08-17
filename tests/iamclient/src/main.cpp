@@ -64,6 +64,8 @@ static void InitIAMClient(iamclient_fixture* fixture, const aos::NodeInfo& nodeI
     auto err = fixture->mIAMClient->Init(
         fixture->mClockSync, fixture->mNodeInfoProvider, fixture->mProvisionManager, fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize IAM client: %s", utils::ErrorToCStr(err));
+
+    fixture->mIAMClient->OnClockSynced();
 }
 
 static void ReceiveNodeInfo(ChannelStub* channel, const aos::NodeInfo& nodeInfo)
@@ -97,7 +99,8 @@ ZTEST_SUITE(
         return fixture;
     },
     [](void* fixture) { static_cast<iamclient_fixture*>(fixture)->mIAMClient.reset(new iamclient::IAMClient); },
-    nullptr, [](void* fixture) { delete static_cast<iamclient_fixture*>(fixture); });
+    [](void* fixture) { static_cast<iamclient_fixture*>(fixture)->mIAMClient.reset(); },
+    [](void* fixture) { delete static_cast<iamclient_fixture*>(fixture); });
 
 /***********************************************************************************************************************
  * Tests
@@ -109,8 +112,10 @@ ZTEST_F(iamclient, test_StartProvisioning)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     // Send start provisioning request
 
@@ -151,8 +156,10 @@ ZTEST_F(iamclient, test_FinishProvisioning)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     // Send finish provisioning request
 
@@ -185,6 +192,15 @@ ZTEST_F(iamclient, test_FinishProvisioning)
     zassert_false(pbFinishProvisioningResponse.has_error, "Unexpected error received");
 
     zassert_equal(fixture->mProvisionManager.GetPassword(), pbFinishProvisioningRequest.password, "Wrong password");
+
+    // Wait for node status changed
+
+    aos::Tie(channel, err) = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    nodeInfo.mStatus = aos::NodeStatusEnum::eProvisioned;
+
+    ReceiveNodeInfo(channel, nodeInfo);
 }
 
 ZTEST_F(iamclient, test_Deprovision)
@@ -193,8 +209,10 @@ ZTEST_F(iamclient, test_Deprovision)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     // Send deprovision request
 
@@ -226,6 +244,15 @@ ZTEST_F(iamclient, test_Deprovision)
     zassert_false(pbDeprovisionResponse.has_error, "Unexpected error received");
 
     zassert_equal(fixture->mProvisionManager.GetPassword(), pbDeprovisionRequest.password, "Wrong password");
+
+    // Wait for node status changed
+
+    aos::Tie(channel, err) = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    nodeInfo.mStatus = aos::NodeStatusEnum::eUnprovisioned;
+
+    ReceiveNodeInfo(channel, nodeInfo);
 }
 
 ZTEST_F(iamclient, test_GetCertTypes)
@@ -234,8 +261,10 @@ ZTEST_F(iamclient, test_GetCertTypes)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     aos::iam::provisionmanager::CertTypes certTypes;
 
@@ -282,8 +311,10 @@ ZTEST_F(iamclient, test_CreateKey)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     fixture->mProvisionManager.SetCSR("csr1");
 
@@ -330,8 +361,10 @@ ZTEST_F(iamclient, test_ApplyCert)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     aos::iam::certhandler::CertInfo certInfo {};
 
@@ -381,8 +414,10 @@ ZTEST_F(iamclient, test_PauseNode)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     // Send pause node request
 
@@ -424,8 +459,10 @@ ZTEST_F(iamclient, test_ResumeNode)
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT);
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    ReceiveNodeInfo(channel, nodeInfo);
 
     // Send resume node request
 
