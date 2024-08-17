@@ -77,10 +77,6 @@ config AOS_MAX_CPU_DMIPS
 	int "Maximum CPU DMIPS"
 	default 10000
 
-config AOS_PROVISIONING_FILE
-	string "Path to provisioning file."
-	default "/aos/.provisioned"
-
 config AOS_PROVISION_STATE_FILE
 	string "Path to provisioning state file."
 	default "/aos/.provisionstate"
