@@ -12,7 +12,12 @@
 
 class NodeInfoProviderStub : public aos::iam::nodeinfoprovider::NodeInfoProviderItf {
 public:
-    aos::Error GetNodeInfo(aos::NodeInfo& nodeInfo) const override { return aos::ErrorEnum::eNone; }
+    aos::Error GetNodeInfo(aos::NodeInfo& nodeInfo) const override
+    {
+        nodeInfo = mNodeInfo;
+
+        return aos::ErrorEnum::eNone;
+    }
 
     aos::Error SetNodeStatus(const aos::NodeStatus& status) override { return aos::ErrorEnum::eNone; }
 
@@ -25,6 +30,11 @@ public:
     {
         return aos::ErrorEnum::eNone;
     }
+
+    void SetNodeInfo(const aos::NodeInfo& nodeInfo) { mNodeInfo = nodeInfo; }
+
+private:
+    aos::NodeInfo mNodeInfo;
 };
 
 #endif
