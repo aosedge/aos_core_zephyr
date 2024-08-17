@@ -18,7 +18,7 @@ static const aos::String cLogModuleCommunication    = "communication";
 static const aos::String cLogModuleClockSync        = "clocksync";
 static const aos::String cLogModuleDownloader       = "downloader";
 static const aos::String cLogModuleOCISpec          = "ocispec";
-static const aos::String cLogModuleProvisioning     = "provisioning";
+static const aos::String cLogModuleProvisionManager = "provisionmanager";
 static const aos::String cLogModuleResourceManager  = "resourcemanager";
 static const aos::String cLogModuleRunner           = "runner";
 static const aos::String cLogModuleSMClient         = "smclient";
@@ -78,7 +78,7 @@ LOG_CALLBACK(clocksync);
 LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
 LOG_CALLBACK(ocispec);
-LOG_CALLBACK(provisioning);
+LOG_CALLBACK(provisionmanager);
 LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(smclient);
@@ -120,8 +120,8 @@ void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::Str
         log_downloader::LogCallback(level, message);
     } else if (logModule == cLogModuleOCISpec) {
         log_ocispec::LogCallback(level, message);
-    } else if (logModule == cLogModuleProvisioning) {
-        log_provisioning::LogCallback(level, message);
+    } else if (logModule == cLogModuleProvisionManager) {
+        log_provisionmanager::LogCallback(level, message);
     } else if (logModule == cLogModuleResourceManager) {
         log_resourcemanager::LogCallback(level, message);
     } else if (logModule == cLogModuleRunner) {
