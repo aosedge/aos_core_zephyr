@@ -82,7 +82,6 @@ target_sources(
             src/monitoring/resourceusageprovider.cpp
             src/nodeinfoprovider/nodeinfoprovider.cpp
             src/ocispec/ocispec.cpp
-            src/provisioning/provisioning.cpp
             src/resourcemanager/resourcemanager.cpp
             src/runner/runner.cpp
             src/smclient/openhandler.cpp
