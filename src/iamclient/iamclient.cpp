@@ -21,7 +21,12 @@ namespace aos::zephyr::iamclient {
  **********************************************************************************************************************/
 
 Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
-    iam::provisionmanager::ProvisionManagerItf& provisionManager, communication::ChannelManagerItf& channelManager)
+    iam::provisionmanager::ProvisionManagerItf& provisionManager, communication::ChannelManagerItf& channelManager
+#ifndef CONFIG_ZTEST
+    ,
+    iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader
+#endif
+)
 {
     LOG_DBG() << "Initialize IAM client";
 
@@ -29,6 +34,10 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
     mNodeInfoProvider = &nodeInfoProvider;
     mProvisionManager = &provisionManager;
     mChannelManager   = &channelManager;
+#ifndef CONFIG_ZTEST
+    mCertHandler = &certHandler;
+    mCertLoader  = &certLoader;
+#endif
 
     if (auto err = clockSync.Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
@@ -42,21 +51,13 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
         return AOS_ERROR_WRAP(err);
     }
 
+    auto err = mThread.Run([this](void*) { HandleChannels(); });
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned) {
         LOG_INF() << "Node is unprovisioned";
-    }
-
-    auto channel = channelManager.CreateChannel(cOpenPort);
-    if (!channel.mError.IsNone()) {
-        return AOS_ERROR_WRAP(channel.mError);
-    }
-
-    if (auto err = PBHandler::Init("IAM open", *channel.mValue); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    if (auto err = Start(); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
     }
 
     return ErrorEnum::eNone;
@@ -64,10 +65,22 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
 
 void IAMClient::OnClockSynced()
 {
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Clock synced";
+
+    mClockSynced = true;
+    mCondVar.NotifyOne();
 }
 
 void IAMClient::OnClockUnsynced()
 {
+    LockGuard lock {mMutex};
+
+    LOG_WRN() << "Clock unsynced";
+
+    mClockSynced = false;
+    mCondVar.NotifyOne();
 }
 
 Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& status)
@@ -85,7 +98,9 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
     auto sendNodeInfo = true;
 
     if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned || status == NodeStatusEnum::eUnprovisioned) {
-        sendNodeInfo = false;
+        sendNodeInfo   = false;
+        mSwitchChannel = true;
+        mCondVar.NotifyOne();
     }
 
     mNodeInfo.mStatus = status;
@@ -105,12 +120,17 @@ IAMClient::~IAMClient()
         LOG_ERR() << "Can't stop IAM handler: err=" << err;
     }
 
-    if (auto err = mChannelManager->DeleteChannel(cOpenPort); !err.IsNone()) {
-        LOG_ERR() << "Can't delete IAM open channel: err=" << err;
-    }
-
     mClockSync->Unsubscribe(*this);
     mNodeInfoProvider->UnsubscribeNodeStatusChanged(*this);
+
+    {
+        LockGuard lock {mMutex};
+
+        mClose = true;
+        mCondVar.NotifyOne();
+    }
+
+    mThread.Join();
 }
 
 /***********************************************************************************************************************
@@ -119,10 +139,157 @@ IAMClient::~IAMClient()
 
 void IAMClient::OnConnect()
 {
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Channel connected: port=" << mCurrentPort;
+
+    mConnected = true;
+    mCondVar.NotifyOne();
 }
 
 void IAMClient::OnDisconnect()
 {
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Channel disconnected: port=" << mCurrentPort;
+
+    mConnected = false;
+    mCondVar.NotifyOne();
+}
+
+Error IAMClient::ReleaseChannel()
+{
+    if (!mCurrentPort) {
+        return ErrorEnum::eNone;
+    }
+
+    Error err;
+
+    LOG_DBG() << "Release channel: port=" << mCurrentPort;
+
+    if (auto stopErr = Stop(); !stopErr.IsNone() && err.IsNone()) {
+        err = AOS_ERROR_WRAP(stopErr);
+    }
+
+    if (auto deleteErr = mChannelManager->DeleteChannel(mCurrentPort); !deleteErr.IsNone() && err.IsNone()) {
+        err = AOS_ERROR_WRAP(deleteErr);
+    }
+
+    return err;
+}
+
+Error IAMClient::SetupChannel()
+{
+    communication::ChannelItf* channel {};
+    Error                      err;
+
+    if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned) {
+        LOG_DBG() << "Setup open channel: port=" << cOpenPort;
+
+        if (Tie(channel, err) = mChannelManager->CreateChannel(cOpenPort); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+
+        mCurrentPort = cOpenPort;
+
+        if (err = PBHandler::Init("IAM open", *channel); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+    } else {
+        LOG_DBG() << "Setup secure channel: port=" << cSecurePort;
+
+        if (Tie(channel, err) = mChannelManager->CreateChannel(cSecurePort); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+
+        mCurrentPort = cSecurePort;
+
+#ifndef CONFIG_ZTEST
+        if (err = mTLSChannel.Init(*mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+
+        if (err = mTLSChannel.SetTLSConfig(cIAMCertType); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+#endif
+
+        if (err = PBHandler::Init("IAM secure", *channel); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+    }
+
+    if (err = Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+bool IAMClient::WaitChannelSwitch(UniqueLock& lock)
+{
+    mCondVar.Wait(lock, [this]() { return mSwitchChannel || mClose; });
+    mSwitchChannel = false;
+
+    return !mClose;
+}
+
+bool IAMClient::WaitClockSynced(UniqueLock& lock)
+{
+    if (mNodeInfo.mStatus != NodeStatusEnum::eUnprovisioned) {
+        mCondVar.Wait(lock, [this]() { return mClockSynced || mClose; });
+        mClockSynced = false;
+    }
+
+    return !mClose;
+}
+
+bool IAMClient::WaitChannelConnected(UniqueLock& lock)
+{
+    mCondVar.Wait(lock, [this]() { return mConnected || mClose; });
+
+    return !mClose;
+}
+
+void IAMClient::HandleChannels()
+{
+    while (true) {
+        if (auto err = ReleaseChannel(); !err.IsNone()) {
+            LOG_ERR() << "Can't release channel: err=" << err;
+        }
+
+        UniqueLock lock {mMutex};
+
+        if (mClose) {
+            return;
+        }
+
+        if (!WaitClockSynced(lock)) {
+            continue;
+        }
+
+        if (auto err = SetupChannel(); !err.IsNone()) {
+            LOG_ERR() << "Can't setup channel: err=" << err;
+
+            usleep(cReconnectInterval / 1000);
+
+            continue;
+        }
+
+        if (!WaitChannelConnected(lock)) {
+            continue;
+        }
+
+        if (auto err = SendNodeInfo(); !err.IsNone()) {
+            LOG_ERR() << "Can't send node info: err=" << err;
+
+            mSwitchChannel = true;
+        }
+
+        if (!WaitChannelSwitch(lock)) {
+            continue;
+        }
+    }
 }
 
 Error IAMClient::ReceiveMessage(const Array<uint8_t>& data)
