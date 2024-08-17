@@ -159,7 +159,7 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mIAMClient.Init(mClockSync, mNodeInfoProvider, mChannelManager); !err.IsNone()) {
+    if (auto err = mIAMClient.Init(mClockSync, mNodeInfoProvider, mProvisionManager, mChannelManager); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

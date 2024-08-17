@@ -9,6 +9,7 @@
 #define IAMCLIENT_HPP_
 
 #include <aos/iam/nodeinfoprovider.hpp>
+#include <aos/iam/provisionmanager.hpp>
 
 #include <proto/iamanager/v5/iamanager.pb.h>
 
@@ -32,16 +33,12 @@ public:
      *
      * @param clockSync clock sync instance.
      * @param nodeInfoProvider node info provider.
+     * @param provisionManager provision manager.
      * @param channelManager channel manager instance.
      * @return Error.
      */
     Error Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
-        communication::ChannelManagerItf& channelManager);
-
-    /**
-     * Destructor.
-     */
-    ~IAMClient() = default;
+        iam::provisionmanager::ProvisionManagerItf& provisionManager, communication::ChannelManagerItf& channelManager);
 
     /**
      * Notifies subscriber clock is synced.
@@ -62,6 +59,11 @@ public:
      */
     Error OnNodeStatusChanged(const String& nodeID, const NodeStatus& status) override;
 
+    /**
+     * Destructor.
+     */
+    ~IAMClient();
+
 private:
     static constexpr auto cOpenPort   = CONFIG_AOS_IAM_OPEN_PORT;
     static constexpr auto cSecurePort = CONFIG_AOS_IAM_SECURE_PORT;
@@ -69,6 +71,21 @@ private:
     void  OnConnect() override;
     void  OnDisconnect() override;
     Error ReceiveMessage(const Array<uint8_t>& data) override;
+
+    template <typename T>
+    Error SendError(const Error& err, T& pbMessage);
+    Error ProcessStartProvisioning(const iamanager_v5_StartProvisioningRequest& pbStartProvisioningRequest);
+    Error ProcessFinishProvisioning(const iamanager_v5_FinishProvisioningRequest& pbFinishProvisioningRequest);
+    Error ProcessDeprovision(const iamanager_v5_DeprovisionRequest& pbDeprovisionRequest);
+    Error ProcessGetCertTypes(const iamanager_v5_GetCertTypesRequest& pbGetCertTypesRequest);
+    Error ProcessCreateKey(const iamanager_v5_CreateKeyRequest& pbCreateKeyRequest);
+    Error ProcessApplyCert(const iamanager_v5_ApplyCertRequest& pbApplyCertRequest);
+
+    iam::provisionmanager::ProvisionManagerItf* mProvisionManager {};
+
+    StaticString<cNodeIDLen>         mNodeID;
+    iamanager_v5_IAMOutgoingMessages mOutgoingMessages;
+    iamanager_v5_IAMIncomingMessages mIncomingMessages;
 };
 
 } // namespace aos::zephyr::iamclient
