@@ -8,6 +8,7 @@
 #ifndef IAMCLIENT_HPP_
 #define IAMCLIENT_HPP_
 
+#include <aos/common/tools/thread.hpp>
 #include <aos/iam/nodeinfoprovider.hpp>
 #include <aos/iam/provisionmanager.hpp>
 
@@ -73,19 +74,27 @@ private:
     Error ReceiveMessage(const Array<uint8_t>& data) override;
 
     template <typename T>
-    Error SendError(const Error& err, T& pbMessage);
+    Error SendError(const void* message, T& pbMessage, const Error& err);
+    Error SendNodeInfo();
+    Error CheckNodeIDAndStatus(const String& nodeID, const Array<NodeStatus>& expectedStatuses);
     Error ProcessStartProvisioning(const iamanager_v5_StartProvisioningRequest& pbStartProvisioningRequest);
     Error ProcessFinishProvisioning(const iamanager_v5_FinishProvisioningRequest& pbFinishProvisioningRequest);
     Error ProcessDeprovision(const iamanager_v5_DeprovisionRequest& pbDeprovisionRequest);
+    Error ProcessPauseNode(const iamanager_v5_PauseNodeRequest& pbPauseNodeRequest);
+    Error ProcessResumeNode(const iamanager_v5_ResumeNodeRequest& pbResumeNodeRequest);
     Error ProcessGetCertTypes(const iamanager_v5_GetCertTypesRequest& pbGetCertTypesRequest);
     Error ProcessCreateKey(const iamanager_v5_CreateKeyRequest& pbCreateKeyRequest);
     Error ProcessApplyCert(const iamanager_v5_ApplyCertRequest& pbApplyCertRequest);
 
+    clocksync::ClockSyncItf*                    mClockSync {};
+    iam::nodeinfoprovider::NodeInfoProviderItf* mNodeInfoProvider {};
     iam::provisionmanager::ProvisionManagerItf* mProvisionManager {};
+    communication::ChannelManagerItf*           mChannelManager {};
 
-    StaticString<cNodeIDLen>         mNodeID;
-    iamanager_v5_IAMOutgoingMessages mOutgoingMessages;
-    iamanager_v5_IAMIncomingMessages mIncomingMessages;
+    NodeInfo mNodeInfo;
+    Mutex    mMutex;
+
+    StaticAllocator<sizeof(iamanager_v5_IAMIncomingMessages) + sizeof(iamanager_v5_IAMOutgoingMessages) * 2> mAllocator;
 };
 
 } // namespace aos::zephyr::iamclient

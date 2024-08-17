@@ -25,7 +25,10 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
 {
     LOG_DBG() << "Initialize IAM client";
 
+    mClockSync        = &clockSync;
+    mNodeInfoProvider = &nodeInfoProvider;
     mProvisionManager = &provisionManager;
+    mChannelManager   = &channelManager;
 
     if (auto err = clockSync.Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
@@ -35,29 +38,25 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
         return AOS_ERROR_WRAP(err);
     }
 
-    NodeInfo nodeInfo;
-
-    if (auto err = nodeInfoProvider.GetNodeInfo(nodeInfo); !err.IsNone()) {
+    if (auto err = mNodeInfoProvider->GetNodeInfo(mNodeInfo); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    mNodeID = nodeInfo.mNodeID;
-
-    if (nodeInfo.mStatus == NodeStatusEnum::eUnprovisioned) {
+    if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned) {
         LOG_INF() << "Node is unprovisioned";
+    }
 
-        auto channel = channelManager.CreateChannel(cOpenPort);
-        if (!channel.mError.IsNone()) {
-            return AOS_ERROR_WRAP(channel.mError);
-        }
+    auto channel = channelManager.CreateChannel(cOpenPort);
+    if (!channel.mError.IsNone()) {
+        return AOS_ERROR_WRAP(channel.mError);
+    }
 
-        if (auto err = PBHandler::Init("IAM open", *channel.mValue); !err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
+    if (auto err = PBHandler::Init("IAM open", *channel.mValue); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
 
-        if (auto err = Start(); !err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
+    if (auto err = Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
     return ErrorEnum::eNone;
@@ -73,12 +72,45 @@ void IAMClient::OnClockUnsynced()
 
 Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& status)
 {
+    LOG_DBG() << "Node status changed: nodeID=" << nodeID << ", status=" << status;
+
+    if (nodeID != mNodeInfo.mNodeID) {
+        LOG_ERR() << "Wrong node ID: nodeID=" << nodeID;
+    }
+
+    if (mNodeInfo.mStatus == status) {
+        return ErrorEnum::eNone;
+    }
+
+    auto sendNodeInfo = true;
+
+    if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned || status == NodeStatusEnum::eUnprovisioned) {
+        sendNodeInfo = false;
+    }
+
+    mNodeInfo.mStatus = status;
+
+    if (sendNodeInfo) {
+        if (auto err = SendNodeInfo(); !err.IsNone()) {
+            return err;
+        }
+    }
+
     return ErrorEnum::eNone;
 }
 
 IAMClient::~IAMClient()
 {
-    Stop();
+    if (auto err = Stop(); !err.IsNone()) {
+        LOG_ERR() << "Can't stop IAM handler: err=" << err;
+    }
+
+    if (auto err = mChannelManager->DeleteChannel(cOpenPort); !err.IsNone()) {
+        LOG_ERR() << "Can't delete IAM open channel: err=" << err;
+    }
+
+    mClockSync->Unsubscribe(*this);
+    mNodeInfoProvider->UnsubscribeNodeStatusChanged(*this);
 }
 
 /***********************************************************************************************************************
@@ -95,41 +127,52 @@ void IAMClient::OnDisconnect()
 
 Error IAMClient::ReceiveMessage(const Array<uint8_t>& data)
 {
-    auto stream = pb_istream_from_buffer(data.Get(), data.Size());
+    LockGuard lock {mMutex};
 
-    if (auto status = pb_decode(&stream, &iamanager_v5_IAMIncomingMessages_msg, &mIncomingMessages); !status) {
+    auto incomingMessages = MakeUnique<iamanager_v5_IAMIncomingMessages>(&mAllocator);
+    auto stream           = pb_istream_from_buffer(data.Get(), data.Size());
+
+    if (auto status = pb_decode(&stream, &iamanager_v5_IAMIncomingMessages_msg, incomingMessages.Get()); !status) {
         return AOS_ERROR_WRAP(Error(ErrorEnum::eRuntime, "failed to decode message"));
     }
 
     Error err;
 
-    switch (mIncomingMessages.which_IAMIncomingMessage) {
+    switch (incomingMessages->which_IAMIncomingMessage) {
     case iamanager_v5_IAMIncomingMessages_start_provisioning_request_tag:
-        err = ProcessStartProvisioning(mIncomingMessages.IAMIncomingMessage.start_provisioning_request);
+        err = ProcessStartProvisioning(incomingMessages->IAMIncomingMessage.start_provisioning_request);
         break;
 
     case iamanager_v5_IAMIncomingMessages_finish_provisioning_request_tag:
-        err = ProcessFinishProvisioning(mIncomingMessages.IAMIncomingMessage.finish_provisioning_request);
+        err = ProcessFinishProvisioning(incomingMessages->IAMIncomingMessage.finish_provisioning_request);
         break;
 
     case iamanager_v5_IAMIncomingMessages_deprovision_request_tag:
-        err = ProcessDeprovision(mIncomingMessages.IAMIncomingMessage.deprovision_request);
+        err = ProcessDeprovision(incomingMessages->IAMIncomingMessage.deprovision_request);
         break;
 
     case iamanager_v5_IAMIncomingMessages_get_cert_types_request_tag:
-        err = ProcessGetCertTypes(mIncomingMessages.IAMIncomingMessage.get_cert_types_request);
+        err = ProcessGetCertTypes(incomingMessages->IAMIncomingMessage.get_cert_types_request);
         break;
 
     case iamanager_v5_IAMIncomingMessages_create_key_request_tag:
-        err = ProcessCreateKey(mIncomingMessages.IAMIncomingMessage.create_key_request);
+        err = ProcessCreateKey(incomingMessages->IAMIncomingMessage.create_key_request);
         break;
 
     case iamanager_v5_IAMIncomingMessages_apply_cert_request_tag:
-        err = ProcessApplyCert(mIncomingMessages.IAMIncomingMessage.apply_cert_request);
+        err = ProcessApplyCert(incomingMessages->IAMIncomingMessage.apply_cert_request);
+        break;
+
+    case iamanager_v5_IAMIncomingMessages_pause_node_request_tag:
+        err = ProcessPauseNode(incomingMessages->IAMIncomingMessage.pause_node_request);
+        break;
+
+    case iamanager_v5_IAMIncomingMessages_resume_node_request_tag:
+        err = ProcessResumeNode(incomingMessages->IAMIncomingMessage.resume_node_request);
         break;
 
     default:
-        LOG_WRN() << "Receive unsupported message: tag=" << mIncomingMessages.which_IAMIncomingMessage;
+        LOG_WRN() << "Receive unsupported message: tag=" << incomingMessages->which_IAMIncomingMessage;
         break;
     }
 
@@ -137,89 +180,179 @@ Error IAMClient::ReceiveMessage(const Array<uint8_t>& data)
 }
 
 template <typename T>
-Error IAMClient::SendError(const Error& err, T& pbMessage)
+Error IAMClient::SendError(const void* message, T& pbMessage, const Error& err)
 {
     LOG_ERR() << "Process message error: err=" << err;
 
     utils::ErrorToPB(err, pbMessage);
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    return SendMessage(message, &iamanager_v5_IAMOutgoingMessages_msg);
+}
+
+Error IAMClient::CheckNodeIDAndStatus(const String& nodeID, const Array<NodeStatus>& expectedStatuses)
+{
+    if (nodeID != mNodeInfo.mNodeID) {
+        return Error(ErrorEnum::eInvalidArgument, "wrong node ID");
+    }
+
+    if (auto [_, err] = expectedStatuses.Find(mNodeInfo.mStatus); !err.IsNone()) {
+        return Error(ErrorEnum::eWrongState, "wrong node status");
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error IAMClient::SendNodeInfo()
+{
+    LOG_DBG() << "Send node info: status=" << mNodeInfo.mStatus;
+
+    auto  outgoingMessage = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbNodeInfo      = outgoingMessage->IAMOutgoingMessage.node_info;
+
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_node_info_tag;
+    pbNodeInfo                                = iamanager_v5_NodeInfo iamanager_v5_NodeInfo_init_default;
+
+    utils::StringFromCStr(pbNodeInfo.node_id)   = mNodeInfo.mNodeID;
+    utils::StringFromCStr(pbNodeInfo.node_type) = mNodeInfo.mNodeType;
+    utils::StringFromCStr(pbNodeInfo.name)      = mNodeInfo.mName;
+    utils::StringFromCStr(pbNodeInfo.status)    = mNodeInfo.mStatus.ToString();
+    utils::StringFromCStr(pbNodeInfo.os_type)   = mNodeInfo.mOSType;
+    pbNodeInfo.max_dmips                        = mNodeInfo.mMaxDMIPS;
+    pbNodeInfo.total_ram                        = mNodeInfo.mTotalRAM;
+
+    pbNodeInfo.cpus_count = mNodeInfo.mCPUs.Size();
+
+    for (size_t i = 0; i < mNodeInfo.mCPUs.Size(); i++) {
+        utils::StringFromCStr(pbNodeInfo.cpus[i].model_name)  = mNodeInfo.mCPUs[i].mModelName;
+        pbNodeInfo.cpus[i].num_cores                          = mNodeInfo.mCPUs[i].mNumCores;
+        pbNodeInfo.cpus[i].num_threads                        = mNodeInfo.mCPUs[i].mNumThreads;
+        utils::StringFromCStr(pbNodeInfo.cpus[i].arch)        = mNodeInfo.mCPUs[i].mArch;
+        utils::StringFromCStr(pbNodeInfo.cpus[i].arch_family) = mNodeInfo.mCPUs[i].mArchFamily;
+        pbNodeInfo.cpus[i].max_dmips                          = mNodeInfo.mCPUs[i].mMaxDMIPS;
+    }
+
+    pbNodeInfo.partitions_count = mNodeInfo.mPartitions.Size();
+
+    for (size_t i = 0; i < mNodeInfo.mPartitions.Size(); i++) {
+        utils::StringFromCStr(pbNodeInfo.partitions[i].name) = mNodeInfo.mPartitions[i].mName;
+        pbNodeInfo.partitions[i].total_size                  = mNodeInfo.mPartitions[i].mTotalSize;
+        utils::StringFromCStr(pbNodeInfo.partitions[i].path) = mNodeInfo.mPartitions[i].mPath;
+
+        pbNodeInfo.partitions[i].types_count = mNodeInfo.mPartitions[i].mTypes.Size();
+
+        for (size_t j = 0; j < mNodeInfo.mPartitions[i].mTypes.Size(); j++) {
+            utils::StringFromCStr(pbNodeInfo.partitions[i].types[j]) = mNodeInfo.mPartitions[i].mTypes[j];
+        }
+    }
+
+    pbNodeInfo.attrs_count = mNodeInfo.mAttrs.Size();
+
+    for (size_t i = 0; i < mNodeInfo.mAttrs.Size(); i++) {
+        utils::StringFromCStr(pbNodeInfo.attrs[i].name)  = mNodeInfo.mAttrs[i].mName;
+        utils::StringFromCStr(pbNodeInfo.attrs[i].value) = mNodeInfo.mAttrs[i].mValue;
+    }
+
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 Error IAMClient::ProcessStartProvisioning(const iamanager_v5_StartProvisioningRequest& pbStartProvisioningRequest)
 {
     LOG_INF() << "Process start provisioning request";
 
-    auto& pbStartProvisionResponse = mOutgoingMessages.IAMOutgoingMessage.start_provisioning_response;
+    auto  outgoingMessage          = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbStartProvisionResponse = outgoingMessage->IAMOutgoingMessage.start_provisioning_response;
 
-    mOutgoingMessages.which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_start_provisioning_response_tag;
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_start_provisioning_response_tag;
     pbStartProvisionResponse
         = iamanager_v5_StartProvisioningResponse iamanager_v5_StartProvisioningResponse_init_default;
 
-    if (pbStartProvisioningRequest.node_id != mNodeID) {
-        return SendError(AOS_ERROR_WRAP(Error(ErrorEnum::eInvalidArgument, "wrong node ID")), pbStartProvisionResponse);
+    NodeStatus expectedStatuses[] {NodeStatusEnum::eUnprovisioned};
+
+    if (auto err = CheckNodeIDAndStatus(pbStartProvisioningRequest.node_id, utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbStartProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
     if (auto err = mProvisionManager->StartProvisioning(pbStartProvisioningRequest.password); !err.IsNone()) {
-        return SendError(err, pbStartProvisionResponse);
+        return SendError(outgoingMessage.Get(), pbStartProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 Error IAMClient::ProcessFinishProvisioning(const iamanager_v5_FinishProvisioningRequest& pbFinishProvisioningRequest)
 {
     LOG_INF() << "Process finish provisioning request";
 
-    auto& pbFinishProvisionResponse = mOutgoingMessages.IAMOutgoingMessage.finish_provisioning_response;
+    auto  outgoingMessage           = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbFinishProvisionResponse = outgoingMessage->IAMOutgoingMessage.finish_provisioning_response;
 
-    mOutgoingMessages.which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_finish_provisioning_response_tag;
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_finish_provisioning_response_tag;
     pbFinishProvisionResponse
         = iamanager_v5_FinishProvisioningResponse iamanager_v5_FinishProvisioningResponse_init_default;
 
-    if (pbFinishProvisioningRequest.node_id != mNodeID) {
-        return SendError(
-            AOS_ERROR_WRAP(Error(ErrorEnum::eInvalidArgument, "wrong node ID")), pbFinishProvisionResponse);
+    NodeStatus expectedStatuses[] {NodeStatusEnum::eUnprovisioned};
+
+    if (auto err = CheckNodeIDAndStatus(pbFinishProvisioningRequest.node_id, utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbFinishProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
     if (auto err = mProvisionManager->FinishProvisioning(pbFinishProvisioningRequest.password); !err.IsNone()) {
-        return SendError(err, pbFinishProvisionResponse);
+        return SendError(outgoingMessage.Get(), pbFinishProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    if (auto err = mNodeInfoProvider->SetNodeStatus(NodeStatusEnum::eProvisioned); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbFinishProvisionResponse, AOS_ERROR_WRAP(err));
+    }
+
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 Error IAMClient::ProcessDeprovision(const iamanager_v5_DeprovisionRequest& pbDeprovisionRequest)
 {
     LOG_INF() << "Process deprovision request";
 
-    auto& pbDeprovisionResponse = mOutgoingMessages.IAMOutgoingMessage.deprovision_response;
+    auto  outgoingMessage       = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbDeprovisionResponse = outgoingMessage->IAMOutgoingMessage.deprovision_response;
 
-    mOutgoingMessages.which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_deprovision_response_tag;
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_deprovision_response_tag;
     pbDeprovisionResponse = iamanager_v5_DeprovisionResponse iamanager_v5_DeprovisionResponse_init_default;
 
-    if (pbDeprovisionRequest.node_id != mNodeID) {
-        return SendError(AOS_ERROR_WRAP(Error(ErrorEnum::eInvalidArgument, "wrong node ID")), pbDeprovisionResponse);
+    NodeStatus expectedStatuses[] {NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
+
+    if (auto err = CheckNodeIDAndStatus(pbDeprovisionRequest.node_id, utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbDeprovisionResponse, AOS_ERROR_WRAP(err));
     }
 
     if (auto err = mProvisionManager->Deprovision(pbDeprovisionRequest.password); !err.IsNone()) {
-        return SendError(err, pbDeprovisionResponse);
+        return SendError(outgoingMessage.Get(), pbDeprovisionResponse, AOS_ERROR_WRAP(err));
     }
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    if (auto err = mNodeInfoProvider->SetNodeStatus(NodeStatusEnum::eUnprovisioned); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbDeprovisionResponse, AOS_ERROR_WRAP(err));
+    }
+
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 Error IAMClient::ProcessGetCertTypes(const iamanager_v5_GetCertTypesRequest& pbGetCertTypesRequest)
 {
     LOG_INF() << "Process get cert types";
 
-    auto& pbGetCertTypesResponse = mOutgoingMessages.IAMOutgoingMessage.cert_types_response;
+    auto  outgoingMessage        = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbGetCertTypesResponse = outgoingMessage->IAMOutgoingMessage.cert_types_response;
 
-    mOutgoingMessages.which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_cert_types_response_tag;
-    pbGetCertTypesResponse                     = iamanager_v5_CertTypes iamanager_v5_CertTypes_init_default;
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_cert_types_response_tag;
+    pbGetCertTypesResponse                    = iamanager_v5_CertTypes iamanager_v5_CertTypes_init_default;
 
-    if (pbGetCertTypesRequest.node_id != mNodeID) {
-        LOG_ERR() << "Wrong node ID: " << pbGetCertTypesRequest.node_id;
+    NodeStatus expectedStatuses[] {
+        NodeStatusEnum::eUnprovisioned, NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
+
+    if (auto err = CheckNodeIDAndStatus(pbGetCertTypesRequest.node_id, utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
+        LOG_ERR() << "Wrong get cert types condition: err=" << err;
     }
 
     auto certTypes = mProvisionManager->GetCertTypes();
@@ -233,20 +366,24 @@ Error IAMClient::ProcessGetCertTypes(const iamanager_v5_GetCertTypesRequest& pbG
         utils::StringFromCStr(pbGetCertTypesResponse.types[i]) = certTypes.mValue[i];
     }
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 Error IAMClient::ProcessCreateKey(const iamanager_v5_CreateKeyRequest& pbCreateKeyRequest)
 {
     LOG_INF() << "Process create key: type=" << pbCreateKeyRequest.type << ", subject=" << pbCreateKeyRequest.subject;
 
-    auto& pbCreateKeyResponse = mOutgoingMessages.IAMOutgoingMessage.create_key_response;
+    auto  outgoingMessage     = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbCreateKeyResponse = outgoingMessage->IAMOutgoingMessage.create_key_response;
 
-    mOutgoingMessages.which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_create_key_response_tag;
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_create_key_response_tag;
     pbCreateKeyResponse = iamanager_v5_CreateKeyResponse iamanager_v5_CreateKeyResponse_init_default;
 
-    if (pbCreateKeyRequest.node_id != mNodeID) {
-        return SendError(AOS_ERROR_WRAP(Error(ErrorEnum::eInvalidArgument, "wrong node ID")), pbCreateKeyResponse);
+    NodeStatus expectedStatuses[] {
+        NodeStatusEnum::eUnprovisioned, NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
+
+    if (auto err = CheckNodeIDAndStatus(pbCreateKeyRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbCreateKeyResponse, AOS_ERROR_WRAP(err));
     }
 
     auto csr = utils::StringFromCStr(pbCreateKeyResponse.csr);
@@ -254,42 +391,92 @@ Error IAMClient::ProcessCreateKey(const iamanager_v5_CreateKeyRequest& pbCreateK
     if (auto err = mProvisionManager->CreateKey(
             pbCreateKeyRequest.type, pbCreateKeyRequest.subject, pbCreateKeyRequest.password, csr);
         !err.IsNone()) {
-        return SendError(err, pbCreateKeyResponse);
+        return SendError(outgoingMessage.Get(), pbCreateKeyResponse, AOS_ERROR_WRAP(err));
     }
 
     utils::StringFromCStr(pbCreateKeyResponse.type) = pbCreateKeyRequest.type;
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 Error IAMClient::ProcessApplyCert(const iamanager_v5_ApplyCertRequest& pbApplyCertRequest)
 {
     LOG_INF() << "Process apply cert: type=" << pbApplyCertRequest.type;
 
-    auto& pbApplyCertResponse = mOutgoingMessages.IAMOutgoingMessage.apply_cert_response;
+    auto  outgoingMessage     = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbApplyCertResponse = outgoingMessage->IAMOutgoingMessage.apply_cert_response;
 
-    mOutgoingMessages.which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_apply_cert_response_tag;
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_apply_cert_response_tag;
     pbApplyCertResponse = iamanager_v5_ApplyCertResponse iamanager_v5_ApplyCertResponse_init_default;
 
-    if (pbApplyCertRequest.node_id != mNodeID) {
-        return SendError(AOS_ERROR_WRAP(Error(ErrorEnum::eInvalidArgument, "wrong node ID")), pbApplyCertResponse);
+    NodeStatus expectedStatuses[] {
+        NodeStatusEnum::eUnprovisioned, NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
+
+    if (auto err = CheckNodeIDAndStatus(pbApplyCertRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbApplyCertResponse, AOS_ERROR_WRAP(err));
     }
 
     iam::certhandler::CertInfo certInfo {};
 
     if (auto err = mProvisionManager->ApplyCert(pbApplyCertRequest.type, pbApplyCertRequest.cert, certInfo);
         !err.IsNone()) {
-        return SendError(err, pbApplyCertResponse);
+        return SendError(outgoingMessage.Get(), pbApplyCertResponse, AOS_ERROR_WRAP(err));
     }
 
     utils::StringFromCStr(pbApplyCertResponse.type)     = pbApplyCertRequest.type;
     utils::StringFromCStr(pbApplyCertResponse.cert_url) = certInfo.mCertURL;
 
     if (auto err = utils::StringFromCStr(pbApplyCertResponse.serial).ByteArrayToHex(certInfo.mSerial); !err.IsNone()) {
-        return SendError(err, pbApplyCertResponse);
+        return SendError(outgoingMessage.Get(), pbApplyCertResponse, AOS_ERROR_WRAP(err));
     }
 
-    return SendMessage(&mOutgoingMessages, &iamanager_v5_IAMOutgoingMessages_msg);
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
+}
+
+Error IAMClient::ProcessPauseNode(const iamanager_v5_PauseNodeRequest& pbPauseNodeRequest)
+{
+    LOG_INF() << "Process pause node request";
+
+    auto  outgoingMessage     = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbPauseNodeResponse = outgoingMessage->IAMOutgoingMessage.pause_node_response;
+
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_pause_node_response_tag;
+    pbPauseNodeResponse = iamanager_v5_PauseNodeResponse iamanager_v5_PauseNodeResponse_init_default;
+
+    NodeStatus expectedStatuses[] {NodeStatusEnum::eProvisioned};
+
+    if (auto err = CheckNodeIDAndStatus(pbPauseNodeRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbPauseNodeResponse, AOS_ERROR_WRAP(err));
+    }
+
+    if (auto err = mNodeInfoProvider->SetNodeStatus(NodeStatusEnum::ePaused); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbPauseNodeResponse, AOS_ERROR_WRAP(err));
+    }
+
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
+}
+
+Error IAMClient::ProcessResumeNode(const iamanager_v5_ResumeNodeRequest& pbResumeNodeRequest)
+{
+    LOG_INF() << "Process resume node request";
+
+    auto  outgoingMessage      = aos::MakeUnique<iamanager_v5_IAMOutgoingMessages>(&mAllocator);
+    auto& pbResumeNodeResponse = outgoingMessage->IAMOutgoingMessage.resume_node_response;
+
+    outgoingMessage->which_IAMOutgoingMessage = iamanager_v5_IAMOutgoingMessages_resume_node_response_tag;
+    pbResumeNodeResponse = iamanager_v5_ResumeNodeResponse iamanager_v5_ResumeNodeResponse_init_default;
+
+    NodeStatus expectedStatuses[] {NodeStatusEnum::ePaused};
+
+    if (auto err = CheckNodeIDAndStatus(pbResumeNodeRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbResumeNodeResponse, AOS_ERROR_WRAP(err));
+    }
+
+    if (auto err = mNodeInfoProvider->SetNodeStatus(NodeStatusEnum::eProvisioned); !err.IsNone()) {
+        return SendError(outgoingMessage.Get(), pbResumeNodeResponse, AOS_ERROR_WRAP(err));
+    }
+
+    return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
 } // namespace aos::zephyr::iamclient
