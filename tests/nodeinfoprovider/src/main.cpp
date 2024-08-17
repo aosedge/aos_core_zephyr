@@ -15,6 +15,7 @@
 #include <aos/common/types.hpp>
 
 #include "nodeinfoprovider/nodeinfoprovider.hpp"
+#include "utils/log.hpp"
 
 #define LVGL_PARTITION    storage_partition
 #define LVGL_PARTITION_ID FIXED_PARTITION_ID(LVGL_PARTITION)
@@ -122,11 +123,6 @@ public:
 /***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
-
-static void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
-{
-    printk("[nodeinfoprovider] %s \n", message.CStr());
-}
 
 ZTEST_SUITE(nodeinfoprovider, NULL, setup_fs, before_test, NULL, teardown_fs);
 
