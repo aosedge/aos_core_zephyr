@@ -5,8 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <mutex>
-
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
 
@@ -65,7 +63,7 @@ ZTEST_SUITE(
 
         auto err = fixture->mSMClient.Init(fixture->mClockSync, fixture->mChannelManager);
 
-        zassert_true(err.IsNone(), "Can't initialize SM client: %s", AosErrorToStr(err));
+        zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
         return fixture;
     },
@@ -77,10 +75,13 @@ ZTEST_SUITE(
 
 ZTEST_F(smclient, test_ClockSync)
 {
+    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_SM_OPEN_PORT);
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
     // Wait clock sync start
 
-    auto err = fixture->mClockSync.WaitEvent(cWaitTimeout);
-    zassert_true(err.IsNone(), "Error waiting clock sync start: %s", AosErrorToStr(err));
+    err = fixture->mClockSync.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting clock sync start: %s", utils::ErrorToCStr(err));
 
     zassert_true(fixture->mClockSync.GetStarted());
 
@@ -88,36 +89,39 @@ ZTEST_F(smclient, test_ClockSync)
 
     err = fixture->mSMClient.SendClockSyncRequest();
 
-    zassert_true(err.IsNone(), "Error sending clock sync request: %s", AosErrorToStr(err));
+    zassert_true(err.IsNone(), "Error sending clock sync request: %s", utils::ErrorToCStr(err));
 
-    ChannelStub* channel;
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto&                                pbClockSyncRequest = outgoingMessage.SMOutgoingMessage.clock_sync_request;
 
-    aos::Tie(channel, err) = fixture->mChannelManager.GetChannel(CONFIG_AOS_SM_OPEN_PORT);
-    zassert_true(err.IsNone(), "Getting channel error: %s", AosErrorToStr(err));
-
-    servicemanager_v4_SMOutgoingMessages outgoingMessage servicemanager_v4_SMOutgoingMessages_init_default;
+    pbClockSyncRequest = servicemanager_v4_ClockSyncRequest servicemanager_v4_ClockSyncRequest_init_default;
 
     err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
-    zassert_true(err.IsNone(), "Error receiving message: %s", AosErrorToStr(err));
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
 
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v4_SMOutgoingMessages_clock_sync_request_tag);
 
     // Send clock sync
 
-    servicemanager_v4_SMIncomingMessages incomingMessage servicemanager_v4_SMIncomingMessages_init_default;
+    auto timestamp = aos::Time::Now();
 
-    incomingMessage.which_SMIncomingMessage                       = servicemanager_v4_SMIncomingMessages_clock_sync_tag;
-    incomingMessage.SMIncomingMessage.clock_sync.has_current_time = true;
-    incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds = 43;
-    incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos   = 234;
+    servicemanager_v4_SMIncomingMessages incomingMessage;
+    auto&                                pbClockSync = incomingMessage.SMIncomingMessage.clock_sync;
+
+    auto unixTime = timestamp.UnixTime();
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v4_SMIncomingMessages_clock_sync_tag;
+    pbClockSync                             = servicemanager_v4_ClockSync servicemanager_v4_ClockSync_init_default;
+
+    incomingMessage.SMIncomingMessage.clock_sync.has_current_time     = true;
+    incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds = unixTime.tv_sec;
+    incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos   = unixTime.tv_nsec;
 
     err = SendSMIncomingMessage(channel, incomingMessage);
-    zassert_true(err.IsNone(), "Error sending message: %s", AosErrorToStr(err));
+    zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
 
     err = fixture->mClockSync.WaitEvent(cWaitTimeout);
-    zassert_true(err.IsNone(), "Error waiting clock sync start: %s", AosErrorToStr(err));
+    zassert_true(err.IsNone(), "Error waiting clock sync start: %s", utils::ErrorToCStr(err));
 
-    zassert_equal(fixture->mClockSync.GetSyncTime(),
-        aos::Time::Unix(incomingMessage.SMIncomingMessage.clock_sync.current_time.seconds,
-            incomingMessage.SMIncomingMessage.clock_sync.current_time.nanos));
+    zassert_equal(fixture->mClockSync.GetSyncTime(), timestamp, "Wrong timestamp");
 }

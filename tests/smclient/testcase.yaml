@@ -1,5 +1,5 @@
 tests:
-  aoszephyrapp.communication:
+  aoszephyrapp.smclient:
     build_only: false
     tags: smclient
     timeout: 500
