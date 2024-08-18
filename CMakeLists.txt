@@ -273,5 +273,5 @@ if(CONFIG_NATIVE_APPLICATION)
     endif()
 
     file(COPY misc/softhsm2.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/softhsm)
-    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/softhsm2.conf "directories.tokendir = ${tokendir}/\n")
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/softhsm/softhsm2.conf "directories.tokendir = ${tokendir}/\n")
 endif()
