@@ -73,6 +73,10 @@ config AOS_PKCS11_MODULE_PIN_FILE
 	string "Path to PKCS11 module PIN file."
 	default "/aos/.pkcs11pin"
 
+config AOS_HSM_DIR
+	string "Path HSM tokens dir."
+	default "/aos/tee"
+
 config AOS_ROOT_CA_PATH
 	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
 	default "prebuilt/rootca.pem"

@@ -8,7 +8,7 @@
 #ifndef AOSCORECONFIG_HPP_
 #define AOSCORECONFIG_HPP_
 
-#ifndef CONFIG_BOARD_NATIVE_POSIX
+#ifndef CONFIG_NATIVE_APPLICATION
 
 /**
  * Set thread stack size.
@@ -40,7 +40,12 @@
  */
 #define AOS_CONFIG_THREAD_CLOCK_ID CLOCK_MONOTONIC
 
-#endif // CONFIG_POSIX_API
+/**
+ * Default static PKCS11 lib.
+ */
+#define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
+
+#endif // CONFIG_NATIVE_APPLICATION
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
 // Add condition to enable it for zephyr only to avoid the error.
@@ -66,10 +71,5 @@
  * Set Aos services dir.
  */
 #define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR CONFIG_AOS_SERVICES_DIR
-
-/**
- * Default static PKCS11 lib.
- */
-#define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
 
 #endif
