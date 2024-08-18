@@ -59,22 +59,25 @@ public:
     Error UnsubscribeNodeStatusChanged(iam::nodeinfoprovider::NodeStatusObserverItf& observer) override;
 
 private:
-    Error InitNodeID();
-    Error InitAttributes();
-    Error InitPartitionInfo();
-    Error StoreNodeStatus(const NodeStatus& status) const;
-    Error ReadNodeStatus(NodeStatus& status) const;
-    Error NotifyNodeStatusChanged(const NodeStatus& status);
-
     static constexpr auto cNodeStatusLen            = 16;
     static constexpr auto cDiskPartitionPoint       = CONFIG_AOS_DISK_MOUNT_POINT;
     static constexpr auto cMaxDMIPS                 = CONFIG_AOS_MAX_CPU_DMIPS;
     static constexpr auto cNodeType                 = CONFIG_AOS_NODE_TYPE;
     static constexpr auto cProvisioningStateFile    = CONFIG_AOS_PROVISION_STATE_FILE;
-    static constexpr auto cDiskPartitionName        = "Aos";
+    static constexpr auto cDiskPartitionName        = "aos";
     static constexpr auto cNodeRunner               = "xrun";
     static constexpr auto cAosComponents            = "iam,sm";
     static constexpr auto cMaxNodeStatusSubscribers = 4;
+#ifdef CONFIG_NATIVE_APPLICATION
+    static constexpr auto cNodeIDFile = "/etc/machine-id";
+#endif
+
+    Error                    InitNodeID();
+    Error                    InitAttributes();
+    Error                    InitPartitionInfo();
+    Error                    StoreNodeStatus(const NodeStatus& status) const;
+    RetWithError<NodeStatus> ReadNodeStatus() const;
+    Error                    NotifyNodeStatusChanged(const NodeStatus& status);
 
     NodeInfo                                                                                  mNodeInfo;
     StaticMap<iam::nodeinfoprovider::NodeStatusObserverItf*, bool, cMaxNodeStatusSubscribers> mStatusChangedSubscribers;
