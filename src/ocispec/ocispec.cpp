@@ -13,6 +13,8 @@
 #include "log.hpp"
 #include "ocispec.hpp"
 
+namespace aos::zephyr::ocispec {
+
 /***********************************************************************************************************************
  * Vars
  **********************************************************************************************************************/
@@ -29,17 +31,17 @@ const struct json_obj_descr ImageManifestDescr[] = {
     JSON_OBJ_DESCR_PRIM(ImageManifest, schemaVersion, JSON_TOK_NUMBER),
     JSON_OBJ_DESCR_PRIM(ImageManifest, mediaType, JSON_TOK_STRING),
     JSON_OBJ_DESCR_OBJECT(ImageManifest, config, ContentDescriptorDescr),
-    JSON_OBJ_DESCR_OBJ_ARRAY(ImageManifest, layers, aos::cMaxNumLayers, layersLen, ContentDescriptorDescr,
-        ARRAY_SIZE(ContentDescriptorDescr)),
+    JSON_OBJ_DESCR_OBJ_ARRAY(
+        ImageManifest, layers, cMaxNumLayers, layersLen, ContentDescriptorDescr, ARRAY_SIZE(ContentDescriptorDescr)),
     JSON_OBJ_DESCR_OBJECT(ImageManifest, aosService, ContentDescriptorDescr),
 };
 
 // Image spec
 
 const struct json_obj_descr ImageConfigDescr[] = {
-    JSON_OBJ_DESCR_ARRAY(ImageConfig, Env, aos::oci::cMaxParamCount, envLen, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(ImageConfig, Entrypoint, aos::oci::cMaxParamCount, entrypointLen, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(ImageConfig, Cmd, aos::oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Env, oci::cMaxParamCount, envLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Entrypoint, oci::cMaxParamCount, entrypointLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(ImageConfig, Cmd, oci::cMaxParamCount, cmdLen, JSON_TOK_STRING),
 };
 
 const struct json_obj_descr ImageSpecDescr[] = {
@@ -50,12 +52,12 @@ const struct json_obj_descr ImageSpecDescr[] = {
 
 static const struct json_obj_descr VMHypervisorDescr[] = {
     JSON_OBJ_DESCR_PRIM(VMHypervisor, path, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(VMHypervisor, parameters, aos::oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(VMHypervisor, parameters, oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
 };
 
 static const struct json_obj_descr VMKernelDescr[] = {
     JSON_OBJ_DESCR_PRIM(VMKernel, path, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(VMKernel, parameters, aos::oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(VMKernel, parameters, oci::cMaxParamCount, parametersLen, JSON_TOK_STRING),
 };
 
 static const struct json_obj_descr VMHWConfigIOMEMDescr[] = {
@@ -68,10 +70,10 @@ static const struct json_obj_descr VMHWConfigDescr[] = {
     JSON_OBJ_DESCR_PRIM(VMHWConfig, deviceTree, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(VMHWConfig, vcpus, JSON_TOK_NUMBER),
     JSON_OBJ_DESCR_PRIM(VMHWConfig, memKB, JSON_TOK_FLOAT),
-    JSON_OBJ_DESCR_ARRAY(VMHWConfig, dtdevs, aos::oci::cMaxDTDevsCount, dtdevsLen, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_OBJ_ARRAY(VMHWConfig, iomems, aos::oci::cMaxIOMEMsCount, iomemsLen, VMHWConfigIOMEMDescr,
-        ARRAY_SIZE(VMHWConfigIOMEMDescr)),
-    JSON_OBJ_DESCR_ARRAY(VMHWConfig, irqs, aos::oci::cMaxIRQsCount, irqsLen, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_ARRAY(VMHWConfig, dtdevs, oci::cMaxDTDevsCount, dtdevsLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJ_ARRAY(
+        VMHWConfig, iomems, oci::cMaxIOMEMsCount, iomemsLen, VMHWConfigIOMEMDescr, ARRAY_SIZE(VMHWConfigIOMEMDescr)),
+    JSON_OBJ_DESCR_ARRAY(VMHWConfig, irqs, oci::cMaxIRQsCount, irqsLen, JSON_TOK_NUMBER),
 };
 
 static const struct json_obj_descr VMDescr[] = {
@@ -90,13 +92,13 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
  **********************************************************************************************************************/
 
 // cppcheck-suppress unusedFunction
-aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageManifest& manifest)
+Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifest)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Load image manifest: " << path;
 
-    auto err = aos::FS::ReadFileToString(path, mJsonFileContent);
+    auto err = FS::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -127,8 +129,7 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
     int64_t size = 0;
 
     if (jsonImageManifest->config.size.start) {
-        auto configSize
-            = aos::String(jsonImageManifest->config.size.start, jsonImageManifest->config.size.length).ToInt64();
+        auto configSize = String(jsonImageManifest->config.size.start, jsonImageManifest->config.size.length).ToInt64();
         if (!configSize.mError.IsNone()) {
             return AOS_ERROR_WRAP(configSize.mError);
         }
@@ -145,8 +146,7 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
 
         if (jsonImageManifest->layers[i].size.start) {
             auto layerSize
-                = aos::String(jsonImageManifest->layers[i].size.start, jsonImageManifest->layers[i].size.length)
-                      .ToInt64();
+                = String(jsonImageManifest->layers[i].size.start, jsonImageManifest->layers[i].size.length).ToInt64();
             if (!layerSize.mError.IsNone()) {
                 return AOS_ERROR_WRAP(layerSize.mError);
             }
@@ -161,15 +161,14 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
 
     if (ret & eImageManifestAosServiceField) {
         if (manifest.mAosService == nullptr) {
-            return AOS_ERROR_WRAP(aos::ErrorEnum::eNoMemory);
+            return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
         }
 
         size = 0;
 
         if (jsonImageManifest->aosService.size.start) {
             auto serviceSize
-                = aos::String(jsonImageManifest->aosService.size.start, jsonImageManifest->aosService.size.length)
-                      .ToInt64();
+                = String(jsonImageManifest->aosService.size.start, jsonImageManifest->aosService.size.length).ToInt64();
             if (!serviceSize.mError.IsNone()) {
                 return AOS_ERROR_WRAP(serviceSize.mError);
             }
@@ -180,13 +179,13 @@ aos::Error OCISpec::LoadImageManifest(const aos::String& path, aos::oci::ImageMa
         *manifest.mAosService = {jsonImageManifest->aosService.mediaType, jsonImageManifest->aosService.digest, size};
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::ImageManifest& manifest)
+Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& manifest)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Save image manifest: " << path;
 
@@ -204,7 +203,7 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
 
     // config
 
-    auto configSize = new (&mAllocator) aos::StaticString<20>;
+    auto configSize = new (&mAllocator) StaticString<20>;
 
     auto err = configSize->Convert(manifest.mConfig.mSize);
     if (!err.IsNone()) {
@@ -219,7 +218,7 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
     jsonImageManifest->layersLen = manifest.mLayers.Size();
 
     for (size_t i = 0; i < jsonImageManifest->layersLen; i++) {
-        auto layerSize = new (&mAllocator) aos::StaticString<20>;
+        auto layerSize = new (&mAllocator) StaticString<20>;
 
         err = layerSize->Convert(manifest.mLayers[i].mSize);
         if (!err.IsNone()) {
@@ -233,7 +232,7 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
     // aosService
 
     if (manifest.mAosService) {
-        auto serviceSize = new (&mAllocator) aos::StaticString<20>;
+        auto serviceSize = new (&mAllocator) StaticString<20>;
 
         err = serviceSize->Convert(manifest.mAosService->mSize);
         if (!err.IsNone()) {
@@ -255,22 +254,22 @@ aos::Error OCISpec::SaveImageManifest(const aos::String& path, const aos::oci::I
         return AOS_ERROR_WRAP(err);
     }
 
-    err = aos::FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& imageSpec)
+Error OCISpec::LoadImageSpec(const String& path, oci::ImageSpec& imageSpec)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Load image spec: " << path;
 
-    auto err = aos::FS::ReadFileToString(path, mJsonFileContent);
+    auto err = FS::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -305,13 +304,13 @@ aos::Error OCISpec::LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& 
         imageSpec.mConfig.mCmd.PushBack(jsonImageSpec->config.Cmd[i]);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::ImageSpec& imageSpec)
+Error OCISpec::SaveImageSpec(const String& path, const oci::ImageSpec& imageSpec)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Save image spec: " << path;
 
@@ -356,22 +355,22 @@ aos::Error OCISpec::SaveImageSpec(const aos::String& path, const aos::oci::Image
         return AOS_ERROR_WRAP(err);
     }
 
-    err = aos::FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSpec& runtimeSpec)
+Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Load runtime spec: " << path;
 
-    auto err = aos::FS::ReadFileToString(path, mJsonFileContent);
+    auto err = FS::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -397,7 +396,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
 
     if (ret & eRuntimeVMField) {
         if (runtimeSpec.mVM == nullptr) {
-            return AOS_ERROR_WRAP(aos::ErrorEnum::eNoMemory);
+            return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
         }
 
         runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
@@ -417,9 +416,8 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         uint64_t memKB = 0;
 
         if (jsonRuntimeSpec->vm.hwConfig.memKB.start) {
-            auto result
-                = aos::String(jsonRuntimeSpec->vm.hwConfig.memKB.start, jsonRuntimeSpec->vm.hwConfig.memKB.length)
-                      .ToUint64();
+            auto result = String(jsonRuntimeSpec->vm.hwConfig.memKB.start, jsonRuntimeSpec->vm.hwConfig.memKB.length)
+                              .ToUint64();
             if (!result.mError.IsNone()) {
                 return AOS_ERROR_WRAP(result.mError);
             }
@@ -434,11 +432,11 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         }
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
-            aos::oci::VMHWConfigIOMEM ioMem {};
-            auto                      jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
+            oci::VMHWConfigIOMEM ioMem {};
+            auto                 jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
 
             if (jsonIOMem.firstGFN.start) {
-                auto result = aos::String(jsonIOMem.firstGFN.start, jsonIOMem.firstGFN.length).ToUint64();
+                auto result = String(jsonIOMem.firstGFN.start, jsonIOMem.firstGFN.length).ToUint64();
                 if (!result.mError.IsNone()) {
                     return AOS_ERROR_WRAP(result.mError);
                 }
@@ -447,7 +445,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
             }
 
             if (jsonIOMem.firstMFN.start) {
-                auto result = aos::String(jsonIOMem.firstMFN.start, jsonIOMem.firstMFN.length).ToUint64();
+                auto result = String(jsonIOMem.firstMFN.start, jsonIOMem.firstMFN.length).ToUint64();
                 if (!result.mError.IsNone()) {
                     return AOS_ERROR_WRAP(result.mError);
                 }
@@ -456,7 +454,7 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
             }
 
             if (jsonIOMem.nrMFNs.start) {
-                auto result = aos::String(jsonIOMem.nrMFNs.start, jsonIOMem.nrMFNs.length).ToUint64();
+                auto result = String(jsonIOMem.nrMFNs.start, jsonIOMem.nrMFNs.length).ToUint64();
                 if (!result.mError.IsNone()) {
                     return AOS_ERROR_WRAP(result.mError);
                 }
@@ -472,13 +470,13 @@ aos::Error OCISpec::LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSp
         }
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec)
+Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runtimeSpec)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Save runtime spec: " << path;
 
@@ -512,7 +510,7 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
         jsonRuntimeSpec->vm.hwConfig.deviceTree = runtimeSpec.mVM->mHWConfig.mDeviceTree.CStr();
         jsonRuntimeSpec->vm.hwConfig.vcpus      = runtimeSpec.mVM->mHWConfig.mVCPUs;
 
-        auto memKB = new (&mAllocator) aos::StaticString<20>;
+        auto memKB = new (&mAllocator) StaticString<20>;
 
         auto err = memKB->Convert(runtimeSpec.mVM->mHWConfig.mMemKB);
         if (!err.IsNone()) {
@@ -532,21 +530,21 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
             auto iomem = runtimeSpec.mVM->mHWConfig.mIOMEMs[i];
 
-            auto firstGFN = new (&mAllocator) aos::StaticString<20>;
+            auto firstGFN = new (&mAllocator) StaticString<20>;
 
             err = firstGFN->Convert(iomem.mFirstGFN);
             if (!err.IsNone()) {
                 return AOS_ERROR_WRAP(err);
             }
 
-            auto firstMFN = new (&mAllocator) aos::StaticString<20>;
+            auto firstMFN = new (&mAllocator) StaticString<20>;
 
             err = firstMFN->Convert(iomem.mFirstMFN);
             if (!err.IsNone()) {
                 return AOS_ERROR_WRAP(err);
             }
 
-            auto nrMFNs = new (&mAllocator) aos::StaticString<20>;
+            auto nrMFNs = new (&mAllocator) StaticString<20>;
 
             err = nrMFNs->Convert(iomem.mNrMFNs);
             if (!err.IsNone()) {
@@ -578,10 +576,12 @@ aos::Error OCISpec::SaveRuntimeSpec(const aos::String& path, const aos::oci::Run
         return AOS_ERROR_WRAP(err);
     }
 
-    err = aos::FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
+
+} // namespace aos::zephyr::ocispec
