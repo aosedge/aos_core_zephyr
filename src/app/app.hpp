@@ -58,6 +58,10 @@ private:
     static constexpr auto cPKCS11ModulePinFile    = CONFIG_AOS_PKCS11_MODULE_PIN_FILE;
     static constexpr auto cNodeType               = CONFIG_AOS_NODE_TYPE;
     static constexpr auto cNodeConfigFile         = CONFIG_AOS_NODE_CONFIG_FILE;
+#ifdef CONFIG_NATIVE_APPLICATION
+    static constexpr auto cHSMDir            = CONFIG_AOS_HSM_DIR;
+    static constexpr auto cAosDiskMountPoint = CONFIG_AOS_DISK_MOUNT_POINT;
+#endif
 
     Error InitCommon();
     Error InitIAM();
