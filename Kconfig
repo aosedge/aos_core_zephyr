@@ -37,9 +37,9 @@ config AOS_SERVICES_DIR
 	string "Aos services dir"
 	default "/aos/services"
 
-config AOS_UNIT_CONFIG_FILE
+config AOS_NODE_CONFIG_FILE
 	string "Node configuration file path"
-	default "/aos/unit_config.cfg"
+	default "/aos/node_config.cfg"
 
 config AOS_NODE_ID
 	string "Node id"
@@ -48,22 +48,6 @@ config AOS_NODE_ID
 config AOS_NODE_TYPE
 	string "Node type"
 	default "NODE_TYPE1"
-
-config AOS_NUM_CPU
-	int "Count of CPUs for domain with Zephyr"
-	default 1
-
-config AOS_TOTAL_RAM
-	int "Total RAM of the domain"
-	default 204800
-
-config AOS_PARTITION_SIZE
-	int "Partition size"
-	default 209715200
-
-config AOS_DISK_MOUNT_POINT
-	string "Disk mount point"
-	default "/aos"
 
 config AOS_CLOCK_SYNC_SEND_PERIOD_SEC
 	int "Send clock sync period in seconds"
