@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef RESOURCE_MANAGER_HPP_
-#define RESOURCE_MANAGER_HPP_
+#ifndef RESOURCEMANAGER_HPP_
+#define RESOURCEMANAGER_HPP_
 
 #include <zephyr/data/json.h>
 
