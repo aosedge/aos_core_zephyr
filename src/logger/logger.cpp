@@ -9,28 +9,31 @@
 
 #include "logger.hpp"
 
+namespace aos::zephyr::logger {
+
 /***********************************************************************************************************************
  * Consts
  **********************************************************************************************************************/
 
-static const aos::String cLogModuleApp              = "app";
-static const aos::String cLogModuleCommunication    = "communication";
-static const aos::String cLogModuleClockSync        = "clocksync";
-static const aos::String cLogModuleDownloader       = "downloader";
-static const aos::String cLogModuleOCISpec          = "ocispec";
-static const aos::String cLogModuleProvisionManager = "provisionmanager";
-static const aos::String cLogModuleResourceManager  = "resourcemanager";
-static const aos::String cLogModuleRunner           = "runner";
-static const aos::String cLogModuleSMClient         = "smclient";
-static const aos::String cLogModuleStorage          = "storage";
-static const aos::String cLogModuleNodeInfoProvider = "nodeinfoprovider";
+static const String cLogModuleApp              = "app";
+static const String cLogModuleClockSync        = "clocksync";
+static const String cLogModuleCommunication    = "communication";
+static const String cLogModuleDownloader       = "downloader";
+static const String cLogModuleIAMClient        = "iamclient";
+static const String cLogModuleNodeInfoProvider = "nodeinfoprovider";
+static const String cLogModuleOCISpec          = "ocispec";
+static const String cLogModuleProvisionManager = "provisionmanager";
+static const String cLogModuleResourceManager  = "resourcemanager";
+static const String cLogModuleRunner           = "runner";
+static const String cLogModuleSMClient         = "smclient";
+static const String cLogModuleStorage          = "storage";
 
-static const aos::String cLogModuleCerthandler    = "certhandler";
-static const aos::String cLogModuleCrypto         = "crypto";
-static const aos::String cLogModuleLauncher       = "launcher";
-static const aos::String cLogModuleMonitoring     = "monitoring";
-static const aos::String cLogModuleServiceManager = "servicemanager";
-static const aos::String cLogModulePKCS11         = "pkcs11";
+static const String cLogModuleCerthandler    = "certhandler";
+static const String cLogModuleCrypto         = "crypto";
+static const String cLogModuleLauncher       = "launcher";
+static const String cLogModuleMonitoring     = "monitoring";
+static const String cLogModulePKCS11         = "pkcs11";
+static const String cLogModuleServiceManager = "servicemanager";
 
 /***********************************************************************************************************************
  * Log module callbacks
@@ -41,25 +44,25 @@ static const aos::String cLogModulePKCS11         = "pkcs11";
     {                                                                                                                  \
         LOG_MODULE_REGISTER(name, CONFIG_LOG_DEFAULT_LEVEL);                                                           \
                                                                                                                        \
-        static void LogCallback(aos::LogLevel level, const aos::String& message)                                       \
+        static void LogCallback(LogLevel level, const String& message)                                                 \
         {                                                                                                              \
             switch (level.GetValue()) {                                                                                \
-            case aos::LogLevelEnum::eDebug:                                                                            \
+            case LogLevelEnum::eDebug:                                                                                 \
                 LOG_DBG("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
                                                                                                                        \
-            case aos::LogLevelEnum::eInfo:                                                                             \
+            case LogLevelEnum::eInfo:                                                                                  \
                 LOG_INF("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
                                                                                                                        \
-            case aos::LogLevelEnum::eWarning:                                                                          \
+            case LogLevelEnum::eWarning:                                                                               \
                 LOG_WRN("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
                                                                                                                        \
-            case aos::LogLevelEnum::eError:                                                                            \
+            case LogLevelEnum::eError:                                                                                 \
                 LOG_ERR("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
@@ -77,21 +80,22 @@ LOG_CALLBACK(app);
 LOG_CALLBACK(clocksync);
 LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
+LOG_CALLBACK(iamclient);
+LOG_CALLBACK(nodeinfoprovider);
 LOG_CALLBACK(ocispec);
 LOG_CALLBACK(provisionmanager);
 LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(smclient);
 LOG_CALLBACK(storage);
-LOG_CALLBACK(nodeinfoprovider);
 
 // Aos lib logs
 LOG_CALLBACK(certhandler);
 LOG_CALLBACK(crypto);
 LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
-LOG_CALLBACK(servicemanager);
 LOG_CALLBACK(pkcs11);
+LOG_CALLBACK(servicemanager);
 
 /***********************************************************************************************************************
  * Public
@@ -99,16 +103,16 @@ LOG_CALLBACK(pkcs11);
 
 void Logger::Init()
 {
-    aos::Log::SetCallback(LogCallback);
+    Log::SetCallback(LogCallback);
 }
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::String& message)
+void Logger::LogCallback(const char* module, LogLevel level, const String& message)
 {
-    aos::String logModule(module);
+    String logModule(module);
 
     if (logModule == cLogModuleApp) {
         log_app::LogCallback(level, message);
@@ -128,6 +132,8 @@ void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::Str
         log_runner::LogCallback(level, message);
     } else if (logModule == cLogModuleSMClient) {
         log_smclient::LogCallback(level, message);
+    } else if (logModule == cLogModuleIAMClient) {
+        log_iamclient::LogCallback(level, message);
     } else if (logModule == cLogModuleStorage) {
         log_storage::LogCallback(level, message);
     } else if (logModule == cLogModuleNodeInfoProvider) {
@@ -149,3 +155,5 @@ void Logger::LogCallback(const char* module, aos::LogLevel level, const aos::Str
             << "Log from unknown module received: module=" << module << ", level=" << level << ", message=" << message;
     }
 }
+
+} // namespace aos::zephyr::logger
