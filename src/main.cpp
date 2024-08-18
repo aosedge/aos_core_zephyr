@@ -13,6 +13,7 @@
 
 #include "app/app.hpp"
 #include "logger/logger.hpp"
+#include "utils/utils.hpp"
 
 // cppcheck-suppress missingInclude
 #include "version.hpp"
@@ -25,11 +26,13 @@
 #include "domains/dom_runner.h"
 #endif
 
+using namespace aos::zephyr;
+
 int main(void)
 {
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
-    printk("*** Aos core size: %lu ***\n", sizeof(aos::zephyr::app::App));
+    printk("*** Aos core size: %lu ***\n", sizeof(app::App));
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
     auto ret = littlefs_mount();
@@ -44,13 +47,12 @@ int main(void)
     __ASSERT(ret == 0, "Error creating domains: %s [%d]", strerror(ret), ret);
 #endif
 
-    Logger::Init();
+    logger::Logger::Init();
 
     auto& app = aos::zephyr::app::App::Get();
 
     auto err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
-        err.FileName(), err.LineNumber());
+    __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
 
     return 0;
 }
