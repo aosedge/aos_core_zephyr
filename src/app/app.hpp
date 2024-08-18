@@ -10,11 +10,12 @@
 
 #include <aos/common/crypto/mbedtls/cryptoprovider.hpp>
 #include <aos/common/cryptoutils.hpp>
-#include <aos/common/monitoring.hpp>
+#include <aos/common/monitoring/resourcemonitor.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
 #include <aos/iam/certhandler.hpp>
 #include <aos/iam/certmodules/pkcs11/pkcs11.hpp>
+#include <aos/iam/provisionmanager.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/servicemanager.hpp>
 
@@ -23,8 +24,9 @@
 #include "communication/xenvchan.hpp"
 #include "downloader/downloader.hpp"
 #include "monitoring/resourceusageprovider.hpp"
+#include "nodeinfoprovider/nodeinfoprovider.hpp"
 #include "ocispec/ocispec.hpp"
-#include "provisioning/provisioning.hpp"
+#include "provisionmanager/provisionmanagercallback.hpp"
 #include "resourcemanager/resourcemanager.hpp"
 #include "runner/runner.hpp"
 #include "smclient/smclient.hpp"
@@ -35,14 +37,14 @@ namespace aos::zephyr::app {
 /**
  * Aos zephyr application.
  */
-class App : private aos::NonCopyable {
+class App : private NonCopyable {
 public:
     /**
      * Initializes application.
      *
-     * @return aos::Error
+     * @return Error
      */
-    aos::Error Init();
+    Error Init();
 
     /**
      * Returns Aos application instance.
@@ -55,37 +57,46 @@ private:
     static constexpr auto cPKCS11ModuleTokenLabel = "aoscore";
     static constexpr auto cPKCS11ModulePinFile    = CONFIG_AOS_PKCS11_MODULE_PIN_FILE;
     static constexpr auto cNodeType               = CONFIG_AOS_NODE_TYPE;
-    static constexpr auto cUnitConfigFile         = CONFIG_AOS_UNIT_CONFIG_FILE;
+    static constexpr auto cNodeConfigFile         = CONFIG_AOS_NODE_CONFIG_FILE;
 
-    aos::Error InitCertHandler();
-    aos::Error InitCommunication();
+    Error InitCommon();
+    Error InitIAM();
+    Error InitSM();
+    Error InitZephyr();
+    Error InitCommunication();
 
-    static App                                      sApp;
-    aos::monitoring::ResourceMonitor                mResourceMonitor;
-    aos::sm::launcher::Launcher                     mLauncher;
-    aos::sm::servicemanager::ServiceManager         mServiceManager;
-    aos::iam::certhandler::CertModule               mIAMCertModule;
-    aos::iam::certhandler::PKCS11Module             mIAMHSMModule;
-    aos::iam::certhandler::CertModule               mSMCertModule;
-    aos::iam::certhandler::PKCS11Module             mSMHSMModule;
-    aos::iam::certhandler::CertHandler              mCertHandler;
-    aos::crypto::MbedTLSCryptoProvider              mCryptoProvider;
-    aos::cryptoutils::CertLoader                    mCertLoader;
-    aos::pkcs11::PKCS11Manager                      mPKCS11Manager;
-    clocksync::ClockSync                            mClockSync;
-    Downloader                                      mDownloader;
-    OCISpec                                         mJsonOciSpec;
-    aos::zephyr::resourcemanager::JSONProvider      mResourceManagerJSONProvider;
-    aos::zephyr::resourcemanager::HostDeviceManager mHostDeviceManager;
-    aos::zephyr::resourcemanager::HostGroupManager  mHostGroupManager;
-    aos::sm::resourcemanager::ResourceManager       mResourceManager;
-    ResourceUsageProvider                           mResourceUsageProvider;
-    Runner                                          mRunner;
-    Storage                                         mStorage;
-    Provisioning                                    mProvisioning;
-    smclient::SMClient                              mSMClient;
-    communication::ChannelManager                   mChannelManager;
-    communication::XenVChan                         mTransport;
+    static App sApp;
+
+    aos::crypto::MbedTLSCryptoProvider mCryptoProvider;
+    aos::cryptoutils::CertLoader       mCertLoader;
+    aos::monitoring::ResourceMonitor   mResourceMonitor;
+    aos::pkcs11::PKCS11Manager         mPKCS11Manager;
+
+    iam::certhandler::CertHandler           mCertHandler;
+    iam::certhandler::CertModule            mIAMCertModule;
+    iam::certhandler::CertModule            mSMCertModule;
+    iam::certhandler::PKCS11Module          mIAMHSMModule;
+    iam::certhandler::PKCS11Module          mSMHSMModule;
+    iam::provisionmanager::ProvisionManager mProvisionManager;
+
+    sm::launcher::Launcher               mLauncher;
+    sm::resourcemanager::ResourceManager mResourceManager;
+    sm::servicemanager::ServiceManager   mServiceManager;
+
+    clocksync::ClockSync                       mClockSync;
+    communication::ChannelManager              mChannelManager;
+    communication::XenVChan                    mTransport;
+    downloader::Downloader                     mDownloader;
+    monitoring::ResourceUsageProvider          mResourceUsageProvider;
+    nodeinfoprovider::NodeInfoProvider         mNodeInfoProvider;
+    ocispec::OCISpec                           mJsonOciSpec;
+    provisionmanager::ProvisionManagerCallback mProvisionManagerCallback;
+    resourcemanager::HostDeviceManager         mHostDeviceManager;
+    resourcemanager::HostGroupManager          mHostGroupManager;
+    resourcemanager::JSONProvider              mResourceManagerJSONProvider;
+    runner::Runner                             mRunner;
+    smclient::SMClient                         mSMClient;
+    storage::Storage                           mStorage;
 };
 
 } // namespace aos::zephyr::app
