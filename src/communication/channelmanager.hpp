@@ -8,6 +8,10 @@
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 
+#include <cstdint>
+
+#include <aos/common/tools/error.hpp>
+
 #include "channel.hpp"
 #include "transport.hpp"
 
@@ -22,17 +26,17 @@ public:
      * Create channel with dedicated port.
      *
      * @param port port to bind channel.
-     * @return aos::RetWithError<ChannelItf&>
+     * @return RetWithError<ChannelItf&>.
      */
-    virtual aos::RetWithError<ChannelItf&> CreateChannel(uint32_t port) = 0;
+    virtual RetWithError<ChannelItf*> CreateChannel(uint32_t port) = 0;
 
     /**
      * Deletes channel.
      *
      * @param port port channel is bound to.
-     * @return aos::Error
+     * @return Error.
      */
-    virtual aos::Error DeleteChannel(uint32_t port) = 0;
+    virtual Error DeleteChannel(uint32_t port) = 0;
 
     /**
      * Destructor.
@@ -49,9 +53,9 @@ public:
      * Initializes channel manager.
      *
      * @param transport communication transport.
-     * @return * aos::Error
+     * @return Error.
      */
-    aos::Error Init(TransportItf& transport);
+    Error Init(TransportItf& transport);
 
     /**
      * Create channel with dedicated port.
@@ -59,7 +63,7 @@ public:
      * @param port port to bind channel.
      * @return aos::RetWithError<ChannelItf&>
      */
-    aos::RetWithError<ChannelItf&> CreateChannel(uint32_t port) override;
+    RetWithError<ChannelItf*> CreateChannel(uint32_t port) override;
 
     /**
      * Deletes channel.
@@ -67,7 +71,7 @@ public:
      * @param port port channel is bound to.
      * @return aos::Error
      */
-    aos::Error DeleteChannel(uint32_t port) override;
+    Error DeleteChannel(uint32_t port) override;
 };
 
 } // namespace aos::zephyr::communication
