@@ -14,6 +14,8 @@
 #include <aos/common/tools/allocator.hpp>
 #include <aos/common/tools/thread.hpp>
 
+namespace aos::zephyr::ocispec {
+
 // Image spec
 
 /**
@@ -33,7 +35,7 @@ struct ImageManifest {
     int               schemaVersion;
     const char*       mediaType;
     ContentDescriptor config;
-    ContentDescriptor layers[aos::cMaxNumLayers];
+    ContentDescriptor layers[cMaxNumLayers];
     size_t            layersLen;
     ContentDescriptor aosService;
 };
@@ -53,11 +55,11 @@ enum ImageManifestFields {
  * OCI image config.
  */
 struct ImageConfig {
-    const char* Cmd[aos::oci::cMaxParamCount];
+    const char* Cmd[oci::cMaxParamCount];
     size_t      cmdLen;
-    const char* Env[aos::oci::cMaxParamCount];
+    const char* Env[oci::cMaxParamCount];
     size_t      envLen;
-    const char* Entrypoint[aos::oci::cMaxParamCount];
+    const char* Entrypoint[oci::cMaxParamCount];
     size_t      entrypointLen;
 };
 
@@ -75,7 +77,7 @@ struct ImageSpec {
  */
 struct VMHypervisor {
     const char* path;
-    const char* parameters[aos::oci::cMaxParamCount];
+    const char* parameters[oci::cMaxParamCount];
     size_t      parametersLen;
 };
 
@@ -84,7 +86,7 @@ struct VMHypervisor {
  */
 struct VMKernel {
     const char* path;
-    const char* parameters[aos::oci::cMaxParamCount];
+    const char* parameters[oci::cMaxParamCount];
     size_t      parametersLen;
 };
 
@@ -104,11 +106,11 @@ struct VMHWConfig {
     const char*     deviceTree;
     uint32_t        vcpus;
     json_obj_token  memKB;
-    const char*     dtdevs[aos::oci::cMaxDTDevsCount];
+    const char*     dtdevs[oci::cMaxDTDevsCount];
     size_t          dtdevsLen;
-    VMHWConfigIOMEM iomems[aos::oci::cMaxIOMEMsCount];
+    VMHWConfigIOMEM iomems[oci::cMaxIOMEMsCount];
     size_t          iomemsLen;
-    uint32_t        irqs[aos::oci::cMaxIRQsCount];
+    uint32_t        irqs[oci::cMaxIRQsCount];
     size_t          irqsLen;
 };
 
@@ -140,7 +142,7 @@ struct RuntimeSpec {
 /**
  * OCISpec instance.
  */
-class OCISpec : public aos::OCISpecItf {
+class OCISpec : public OCISpecItf {
 public:
     /**
      * Loads OCI image manifest.
@@ -149,7 +151,7 @@ public:
      * @param manifest image manifest.
      * @return Error.
      */
-    aos::Error LoadImageManifest(const aos::String& path, aos::oci::ImageManifest& manifest) override;
+    Error LoadImageManifest(const String& path, oci::ImageManifest& manifest) override;
 
     /**
      * Saves OCI image manifest.
@@ -158,7 +160,7 @@ public:
      * @param manifest image manifest.
      * @return Error.
      */
-    aos::Error SaveImageManifest(const aos::String& path, const aos::oci::ImageManifest& manifest) override;
+    Error SaveImageManifest(const String& path, const oci::ImageManifest& manifest) override;
 
     /**
      * Loads OCI image spec.
@@ -167,7 +169,7 @@ public:
      * @param imageSpec image spec.
      * @return Error.
      */
-    aos::Error LoadImageSpec(const aos::String& path, aos::oci::ImageSpec& imageSpec) override;
+    Error LoadImageSpec(const String& path, oci::ImageSpec& imageSpec) override;
 
     /**
      * Saves OCI image spec.
@@ -176,7 +178,7 @@ public:
      * @param imageSpec image spec.
      * @return Error.
      */
-    aos::Error SaveImageSpec(const aos::String& path, const aos::oci::ImageSpec& imageSpec) override;
+    Error SaveImageSpec(const String& path, const oci::ImageSpec& imageSpec) override;
 
     /**
      * Loads OCI runtime spec.
@@ -185,7 +187,7 @@ public:
      * @param runtimeSpec runtime spec.
      * @return Error.
      */
-    aos::Error LoadRuntimeSpec(const aos::String& path, aos::oci::RuntimeSpec& runtimeSpec) override;
+    Error LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec) override;
 
     /**
      * Saves OCI runtime spec.
@@ -194,16 +196,18 @@ public:
      * @param runtimeSpec runtime spec.
      * @return Error.
      */
-    virtual aos::Error SaveRuntimeSpec(const aos::String& path, const aos::oci::RuntimeSpec& runtimeSpec) override;
+    virtual Error SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runtimeSpec) override;
 
 private:
     static constexpr size_t cJsonMaxContentLen = 4096;
     static constexpr size_t cAllocationSize    = 2048;
     static constexpr size_t cMaxNumAllocations = 32;
 
-    aos::Mutex                                                mMutex;
-    aos::StaticString<cJsonMaxContentLen>                     mJsonFileContent;
-    aos::StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
+    Mutex                                                mMutex;
+    StaticString<cJsonMaxContentLen>                     mJsonFileContent;
+    StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
 };
+
+} // namespace aos::zephyr::ocispec
 
 #endif

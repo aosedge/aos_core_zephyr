@@ -12,6 +12,8 @@
 
 #include <ocispec/ocispec.hpp>
 
+using namespace aos::zephyr;
+
 /***********************************************************************************************************************
  * Consts
  **********************************************************************************************************************/
@@ -165,7 +167,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     // Save image spec
 
-    OCISpec ociSpec;
+    ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveImageManifest(cImageManifestPath, testItem.mImageManifest);
@@ -334,7 +336,7 @@ ZTEST(ocispec, test_ImageSpec)
 
     // Save image spec
 
-    OCISpec ociSpec;
+    ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveImageSpec(cImageSpecPath, testItem.mImageSpec);
@@ -549,7 +551,7 @@ ZTEST(ocispec, test_RuntimeSpec)
 
     // Save runtime spec
 
-    OCISpec ociSpec;
+    ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveRuntimeSpec(cRuntimeSpecPath, testItem.mRuntimeSpec);
