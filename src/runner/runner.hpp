@@ -10,10 +10,12 @@
 
 #include <aos/sm/runner.hpp>
 
+namespace aos::zephyr::runner {
+
 /**
  * Runner instance.
  */
-class Runner : public aos::sm::runner::RunnerItf, private aos::NonCopyable {
+class Runner : public sm::runner::RunnerItf, private NonCopyable {
 public:
     /**
      * Creates runner instance.
@@ -26,9 +28,9 @@ public:
     /**
      * Initializes runner instance.
      * @param launcher instance launcher.
-     * @return aos::Error.
+     * @return Error.
      */
-    aos::Error Init(aos::sm::runner::RunStatusReceiverItf& statusReceiver);
+    Error Init(sm::runner::RunStatusReceiverItf& statusReceiver);
 
     /**
      * Starts instance.
@@ -37,7 +39,7 @@ public:
      * @param runtimeDir directory with runtime spec.
      * @return RunStatus.
      */
-    aos::sm::runner::RunStatus StartInstance(const aos::String& instanceID, const aos::String& runtimeDir) override;
+    sm::runner::RunStatus StartInstance(const String& instanceID, const String& runtimeDir) override;
 
     /**
      * Stops instance.
@@ -45,12 +47,14 @@ public:
      * @param instanceID instance ID>
      * @return Error.
      */
-    aos::Error StopInstance(const aos::String& instanceID) override;
+    Error StopInstance(const String& instanceID) override;
 
 private:
     static constexpr int cConsoleSocket = 0;
 
-    aos::sm::runner::RunStatusReceiverItf* mStatusReceiver;
+    sm::runner::RunStatusReceiverItf* mStatusReceiver;
 };
+
+} // namespace aos::zephyr::runner
 
 #endif

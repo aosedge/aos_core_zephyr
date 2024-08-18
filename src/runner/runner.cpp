@@ -10,29 +10,29 @@
 #include "log.hpp"
 #include "runner.hpp"
 
-using namespace aos::sm::runner;
+namespace aos::zephyr::runner {
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error Runner::Init(RunStatusReceiverItf& statusReceiver)
+Error Runner::Init(sm::runner::RunStatusReceiverItf& statusReceiver)
 {
     LOG_DBG() << "Initialize runner";
 
     mStatusReceiver = &statusReceiver;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 // cppcheck-suppress unusedFunction
-RunStatus Runner::StartInstance(const aos::String& instanceID, const aos::String& runtimeDir)
+sm::runner::RunStatus Runner::StartInstance(const String& instanceID, const String& runtimeDir)
 {
-    RunStatus runStatus {instanceID, aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone};
+    sm::runner::RunStatus runStatus {instanceID, InstanceRunStateEnum::eActive, ErrorEnum::eNone};
 
     auto ret = xrun_run(runtimeDir.CStr(), cConsoleSocket, instanceID.CStr());
     if (ret != 0) {
-        runStatus.mState = aos::InstanceRunStateEnum::eFailed;
+        runStatus.mState = InstanceRunStateEnum::eFailed;
         runStatus.mError = AOS_ERROR_WRAP(ret);
     }
 
@@ -40,12 +40,14 @@ RunStatus Runner::StartInstance(const aos::String& instanceID, const aos::String
 }
 
 // cppcheck-suppress unusedFunction
-aos::Error Runner::StopInstance(const aos::String& instanceID)
+Error Runner::StopInstance(const String& instanceID)
 {
     auto ret = xrun_kill(instanceID.CStr());
     if (ret != 0) {
         return AOS_ERROR_WRAP(ret);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
+
+} // namespace aos::zephyr::runner
