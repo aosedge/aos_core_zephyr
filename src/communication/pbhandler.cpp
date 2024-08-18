@@ -17,6 +17,12 @@ namespace aos::zephyr::communication {
 template <size_t cReceiveBufferSize, size_t cSendBufferSize>
 Error PBHandler<cReceiveBufferSize, cSendBufferSize>::Init(const String& name, ChannelItf& channel)
 {
+    LockGuard lock {mMutex};
+
+    if (mStarted) {
+        return Error(ErrorEnum::eWrongState, "PB handler already started");
+    }
+
     mName    = name;
     mChannel = &channel;
 
@@ -47,14 +53,14 @@ Error PBHandler<cReceiveBufferSize, cSendBufferSize>::Start()
 template <size_t cReceiveBufferSize, size_t cSendBufferSize>
 Error PBHandler<cReceiveBufferSize, cSendBufferSize>::Stop()
 {
-    LOG_DBG() << "Stop PB handler: name=" << mName;
-
     {
         LockGuard lock {mMutex};
 
         if (!mStarted) {
             return ErrorEnum::eNone;
         }
+
+        LOG_DBG() << "Stop PB handler: name=" << mName;
 
         mStarted = false;
         mChannel->Close();
