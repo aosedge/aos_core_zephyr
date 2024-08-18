@@ -21,6 +21,10 @@ config AOS_REBOOT_XEN_STORE_PATH
 	string "Path to user reboot request"
 	default "/local/domain/1/data/user-reboot"
 
+config AOS_DISK_MOUNT_POINT
+	string "Disk mount point"
+	default "/aos"
+
 config AOS_STORAGE_DIR
 	string "Path to the storage"
 	default "/aos/storage"

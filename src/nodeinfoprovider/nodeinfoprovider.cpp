@@ -7,11 +7,17 @@
 
 #include <sys/stat.h>
 #include <zephyr/drivers/hwinfo.h>
+#ifndef CONFIG_NATIVE_APPLICATION
 #include <zephyr/fs/fs.h>
+#else
+#include <sys/statvfs.h>
+#endif
 
 #include <xstat.h>
 
 #include <aos/common/tools/fs.hpp>
+
+#include "utils/utils.hpp"
 
 #include "log.hpp"
 #include "nodeinfoprovider.hpp"
@@ -40,12 +46,18 @@ Error NodeInfoProvider::Init()
     mNodeInfo.mNodeType = cNodeType;
     mNodeInfo.mMaxDMIPS = cMaxDMIPS;
 
-    if (auto err = InitAttributes(); !err.IsNone()) {
-        return Error(AOS_ERROR_WRAP(err), "failed to init node attributes");
+    Error err;
+
+    if (Tie(mNodeInfo.mStatus, err) = ReadNodeStatus(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "failed to get node status"));
     }
 
-    if (auto err = InitPartitionInfo(); !err.IsNone()) {
-        return Error(AOS_ERROR_WRAP(err), "failed to init node partition info");
+    if (err = InitAttributes(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "failed to init node attributes"));
+    }
+
+    if (err = InitPartitionInfo(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "failed to init node partition info"));
     }
 
     return ErrorEnum::eNone;
@@ -55,18 +67,9 @@ Error NodeInfoProvider::GetNodeInfo(NodeInfo& nodeInfo) const
 {
     LockGuard lock {mMutex};
 
-    NodeStatus status;
+    LOG_DBG() << "Get node info: status=" << nodeInfo.mStatus;
 
-    if (auto err = ReadNodeStatus(status); !err.IsNone()) {
-        LOG_ERR() << "Get node info failed: error=" << err;
-
-        return AOS_ERROR_WRAP(err);
-    }
-
-    LOG_DBG() << "Get node info: status=" << status.ToString();
-
-    nodeInfo         = mNodeInfo;
-    nodeInfo.mStatus = status;
+    nodeInfo = mNodeInfo;
 
     return ErrorEnum::eNone;
 }
@@ -78,12 +81,12 @@ Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
 
     LOG_DBG() << "Set node status: status=" << status.ToString();
 
-    if (auto err = StoreNodeStatus(status); !err.IsNone()) {
-        return AOS_ERROR_WRAP(Error(err, "failed to store node status"));
-    }
-
     if (status == mNodeInfo.mStatus) {
         return ErrorEnum::eNone;
+    }
+
+    if (auto err = StoreNodeStatus(status); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "failed to store node status"));
     }
 
     mNodeInfo.mStatus = status;
@@ -131,10 +134,10 @@ Error NodeInfoProvider::UnsubscribeNodeStatusChanged(iam::nodeinfoprovider::Node
 
 Error NodeInfoProvider::InitNodeID()
 {
-    uint8_t buffer[cNodeIDLen];
-    memset(buffer, 0, sizeof(buffer));
+#ifndef CONFIG_NATIVE_APPLICATION
+    char buffer[cNodeIDLen + 1] {};
 
-    auto ret = hwinfo_get_device_id(buffer, sizeof(buffer) - 1);
+    auto ret = hwinfo_get_device_id(reinterpret_cast<uint8_t*>(buffer), sizeof(buffer) - 1);
 
     if (ret == -ENOSYS) {
         LOG_WRN() << "hwinfo_get_device_id is not supported";
@@ -144,7 +147,12 @@ Error NodeInfoProvider::InitNodeID()
         return AOS_ERROR_WRAP(ret);
     }
 
-    mNodeInfo.mNodeID = String(reinterpret_cast<char*>(buffer), ret);
+    mNodeInfo.mNodeID = utils::StringFromCStr(buffer);
+#else
+    if (auto err = FS::ReadFileToString(cNodeIDFile, mNodeInfo.mNodeID); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+#endif
 
     return ErrorEnum::eNone;
 }
@@ -179,15 +187,22 @@ Error NodeInfoProvider::InitPartitionInfo()
     }
 
     for (auto& partition : mNodeInfo.mPartitions) {
+#ifdef CONFIG_NATIVE_APPLICATION
+        struct statvfs sbuf;
+
+        if (auto ret = statvfs(partition.mPath.CStr(), &sbuf); ret != 0) {
+            return ret;
+        }
+#else
         struct fs_statvfs sbuf;
 
         if (auto ret = fs_statvfs(partition.mPath.CStr(), &sbuf); ret != 0) {
             return ret;
         }
-
+#endif
         partition.mTotalSize = sbuf.f_bsize * sbuf.f_blocks;
 
-        LOG_DBG() << "Init partition info: name=" << partition.mName << ", size=" << partition.mTotalSize;
+        LOG_DBG() << "Init partition info: name=" << partition.mName << ", totalSize=" << partition.mTotalSize;
     }
 
     return ErrorEnum::eNone;
@@ -204,20 +219,30 @@ Error NodeInfoProvider::StoreNodeStatus(const NodeStatus& status) const
     return ErrorEnum::eNone;
 }
 
-Error NodeInfoProvider::ReadNodeStatus(NodeStatus& status) const
+RetWithError<NodeStatus> NodeInfoProvider::ReadNodeStatus() const
 {
     StaticString<cNodeStatusLen> statusStr;
 
     auto err = FS::ReadFileToString(cProvisioningStateFile, statusStr);
     if (!err.IsNone()) {
-        return err;
+        if (err == -ENOENT) {
+            return {NodeStatusEnum::eUnprovisioned, ErrorEnum::eNone};
+        }
+
+        return {NodeStatusEnum::eUnprovisioned, AOS_ERROR_WRAP(err)};
     }
 
     if (statusStr.IsEmpty()) {
-        return ErrorEnum::eFailed;
+        return {NodeStatusEnum::eUnprovisioned, AOS_ERROR_WRAP(Error(ErrorEnum::eFailed, "node status is empty"))};
     }
 
-    return status.FromString(statusStr);
+    NodeStatus status;
+
+    if (err = status.FromString(statusStr); !err.IsNone()) {
+        return {NodeStatusEnum::eUnprovisioned, AOS_ERROR_WRAP(err)};
+    }
+
+    return status;
 }
 
 Error NodeInfoProvider::NotifyNodeStatusChanged(const NodeStatus& status)
