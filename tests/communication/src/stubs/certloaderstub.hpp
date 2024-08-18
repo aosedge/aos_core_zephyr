@@ -23,11 +23,6 @@
 
 class CertLoaderStub : public aos::cryptoutils::CertLoaderItf {
 public:
-    aos::Error Init(aos::crypto::x509::ProviderItf& cryptoProvider, aos::pkcs11::PKCS11Manager& pkcs11Manager) override
-    {
-        return aos::ErrorEnum::eNone;
-    }
-
     aos::RetWithError<aos::SharedPtr<aos::crypto::x509::CertificateChain>> LoadCertsChainByURL(
         const aos::String& url) override
     {
