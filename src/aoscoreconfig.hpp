@@ -35,6 +35,11 @@
  */
 #define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
 
+/**
+ * Configures clock ID used for thread time operations.
+ */
+#define AOS_CONFIG_THREAD_CLOCK_ID CLOCK_MONOTONIC
+
 #endif // CONFIG_POSIX_API
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
