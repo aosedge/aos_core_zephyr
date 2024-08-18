@@ -67,6 +67,16 @@ Error App::InitCommon()
 
 Error App::InitIAM()
 {
+#ifdef CONFIG_NATIVE_APPLICATION
+    if (auto ret = setenv("SOFTHSM2_CONF", "softhsm/softhsm2.conf", true); ret != 0) {
+        return AOS_ERROR_WRAP(Error(ret, "can't set softhsm env"));
+    }
+
+    if (auto err = FS::MakeDirAll(cHSMDir); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+#endif
+
     iam::certhandler::ExtendedKeyUsage keyUsage[] = {iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
 
     // Register iam cert module
@@ -139,6 +149,12 @@ Error App::InitSM()
 
 Error App::InitZephyr()
 {
+#ifdef CONFIG_NATIVE_APPLICATION
+    if (auto err = FS::MakeDirAll(cAosDiskMountPoint); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+#endif
+
     if (auto err = mClockSync.Init(mSMClient); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }

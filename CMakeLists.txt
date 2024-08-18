@@ -260,3 +260,18 @@ set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir
 set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aoscommon)
+
+# ######################################################################################################################
+# Prepare softhsm2 config
+# ######################################################################################################################
+
+if(CONFIG_NATIVE_APPLICATION)
+    set(tokendir ${CONFIG_AOS_HSM_DIR})
+
+    if(NOT IS_ABSOLUTE ${tokendir})
+        set(tokendir ${CMAKE_CURRENT_BINARY_DIR}/${tokendir})
+    endif()
+
+    file(COPY misc/softhsm2.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/softhsm)
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/softhsm2.conf "directories.tokendir = ${tokendir}/\n")
+endif()
