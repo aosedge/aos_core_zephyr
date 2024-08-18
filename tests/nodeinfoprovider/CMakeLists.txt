@@ -33,6 +33,8 @@ zephyr_include_directories_ifdef(CONFIG_NATIVE_APPLICATION ${APPLICATION_SOURCE_
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE ../../src/nodeinfoprovider/nodeinfoprovider.cpp ../utils/log.cpp src/main.cpp)
+target_sources(
+    app PRIVATE ../../src/nodeinfoprovider/nodeinfoprovider.cpp ../../src/utils/utils.cpp ../utils/log.cpp src/main.cpp
+)
 
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE ${APPLICATION_SOURCE_DIR}/../../mocks/xstat/xstat.cpp)
