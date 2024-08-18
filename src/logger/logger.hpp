@@ -10,6 +10,8 @@
 
 #include <aos/common/tools/log.hpp>
 
+namespace aos::zephyr::logger {
+
 /**
  * Logger instance.
  */
@@ -21,7 +23,9 @@ public:
     static void Init();
 
 private:
-    static void LogCallback(const char* module, aos::LogLevel level, const aos::String& message);
+    static void LogCallback(const char* module, LogLevel level, const String& message);
 };
+
+} // namespace aos::zephyr::logger
 
 #endif
