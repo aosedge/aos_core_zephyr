@@ -20,137 +20,172 @@ App App::sApp;
  * Public
  **********************************************************************************************************************/
 
-aos::Error App::Init()
+Error App::Init()
 {
     LOG_INF() << "Initialize application";
 
-    aos::Error err;
-
-    if (!(err = mStorage.Init()).IsNone()) {
+    if (auto err = InitZephyr(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mRunner.Init(mLauncher)).IsNone()) {
+    if (auto err = InitCommon(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage)).IsNone()) {
+    if (auto err = InitIAM(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mResourceUsageProvider.Init()).IsNone()) {
+    if (auto err = InitSM(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mSMClient, mSMClient)).IsNone()) {
-        return err;
-    }
-
-    if (!(err
-            = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mSMClient, mStorage, mResourceMonitor, mSMClient))
-             .IsNone()) {
-        return err;
-    }
-
-    if (!(err = mClockSync.Init(mSMClient)).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mProvisioning.Init()).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mCryptoProvider.Init()).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager)).IsNone()) {
-        return err;
-    }
-
-    if (!(err = mResourceManager.Init(
-              mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cUnitConfigFile))
-             .IsNone()) {
-        return err;
-    }
-
-    if (!(err = InitCertHandler()).IsNone()) {
-        return err;
-    }
-
-    if (!(err = InitCommunication()).IsNone()) {
-        return err;
-    }
-
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-aos::Error App::InitCertHandler()
+Error App::InitCommon()
 {
-    aos::Error                              err;
-    aos::iam::certhandler::ExtendedKeyUsage keyUsage[] = {aos::iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
+    if (auto err = mCryptoProvider.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mResourceMonitor.Init(mNodeInfoProvider, mResourceUsageProvider, mSMClient, mSMClient);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error App::InitIAM()
+{
+    iam::certhandler::ExtendedKeyUsage keyUsage[] = {iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
 
     // Register iam cert module
 
-    if (!(err = mIAMHSMModule.Init("iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
-              mPKCS11Manager, mCryptoProvider))
-             .IsNone()) {
-        return err;
+    if (auto err
+        = mIAMHSMModule.Init("iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+            mPKCS11Manager, mCryptoProvider);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mIAMCertModule.Init("iam",
-              {aos::crypto::KeyTypeEnum::eECDSA, 2,
-                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
-              mCryptoProvider, mIAMHSMModule, mStorage))
-             .IsNone()) {
-        return err;
+    if (auto err = mIAMCertModule.Init("iam",
+            {crypto::KeyTypeEnum::eECDSA, 2, Array<iam::certhandler::ExtendedKeyUsage>(keyUsage, ArraySize(keyUsage))},
+            mCryptoProvider, mIAMHSMModule, mStorage);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCertHandler.RegisterModule(mIAMCertModule)).IsNone()) {
-        return err;
+    if (auto err = mCertHandler.RegisterModule(mIAMCertModule); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
     // Register sm cert module
 
-    if (!(err = mSMHSMModule.Init("sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
-              mPKCS11Manager, mCryptoProvider))
-             .IsNone()) {
-        return err;
+    if (auto err
+        = mSMHSMModule.Init("sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+            mPKCS11Manager, mCryptoProvider);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mSMCertModule.Init("sm",
-              {aos::crypto::KeyTypeEnum::eECDSA, 2,
-                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
-              mCryptoProvider, mSMHSMModule, mStorage))
-             .IsNone()) {
-        return err;
+    if (auto err = mSMCertModule.Init("sm",
+            {crypto::KeyTypeEnum::eECDSA, 2, Array<iam::certhandler::ExtendedKeyUsage>(keyUsage, ArraySize(keyUsage))},
+            mCryptoProvider, mSMHSMModule, mStorage);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCertHandler.RegisterModule(mSMCertModule)).IsNone()) {
-        return err;
+    if (auto err = mCertHandler.RegisterModule(mSMCertModule); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    if (auto err = mProvisionManager.Init(mProvisionManagerCallback, mCertHandler); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
 }
 
-aos::Error App::InitCommunication()
+Error App::InitSM()
 {
-    aos::Error err;
-
-    if (!(err = mTransport.Init(communication::XenVChan::cXSReadPath, communication::XenVChan::cXSWritePath))
-             .IsNone()) {
-        return err;
+    if (auto err
+        = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mSMClient, mStorage, mResourceMonitor, mSMClient);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mChannelManager.Init(mTransport)).IsNone()) {
-        return err;
+    if (auto err = mResourceManager.Init(
+            mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cNodeConfigFile);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    if (auto err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error App::InitZephyr()
+{
+    if (auto err = mClockSync.Init(mSMClient); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mDownloader.Init(mSMClient); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mResourceUsageProvider.Init(mNodeInfoProvider); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mRunner.Init(mLauncher); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mSMClient.Init(mClockSync, mChannelManager); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mStorage.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = InitCommunication(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error App::InitCommunication()
+{
+    if (auto err = mTransport.Init(communication::XenVChan::cXSReadPath, communication::XenVChan::cXSWritePath);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mChannelManager.Init(mTransport); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
 }
 
 } // namespace aos::zephyr::app
