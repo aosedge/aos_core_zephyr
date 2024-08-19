@@ -43,6 +43,10 @@ manifest:
       remote: xen-troops
       revision: "soafee_1.1_wip"
 
+    - name: zephyr-xrun
+      remote: xen-troops
+      revision: "main"
+
     - name: littlefs
       remote: zephyrproject-rtos
       revision: "zephyr"
