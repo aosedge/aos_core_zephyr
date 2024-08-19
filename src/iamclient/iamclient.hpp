@@ -17,7 +17,9 @@
 #include "clocksync/clocksync.hpp"
 #include "communication/channelmanager.hpp"
 #include "communication/pbhandler.hpp"
+#ifndef CONFIG_ZTEST
 #include "communication/tlschannel.hpp"
+#endif
 
 namespace aos::zephyr::iamclient {
 
