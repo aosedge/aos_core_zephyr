@@ -33,7 +33,7 @@ public:
 
         mConnected = false;
 
-        mCV.notify_one();
+        mCV.notify_all();
 
         return mConnectError;
     }
@@ -66,7 +66,7 @@ public:
         mWriteData.insert(
             mWriteData.end(), static_cast<const uint8_t*>(data), static_cast<const uint8_t*>(data) + size);
 
-        mCV.notify_one();
+        mCV.notify_all();
 
         return size;
     }
@@ -101,7 +101,7 @@ public:
         mReadError = err;
         mReadData.insert(mReadData.end(), data.begin(), data.end());
 
-        mCV.notify_one();
+        mCV.notify_all();
     }
 
     void Clear()
