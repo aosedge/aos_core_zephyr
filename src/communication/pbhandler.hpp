@@ -25,6 +25,11 @@ template <size_t cReceiveBufferSize, size_t cSendBufferSize>
 class PBHandler {
 public:
     /**
+     * Constructor.
+     */
+    PBHandler() = default;
+
+    /**
      * Initializes protobuf handler.
      *
      * @param channel communication channel.

@@ -44,7 +44,6 @@ Error Storage::Init()
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::AddInstance(const aos::InstanceInfo& instance)
 {
     LockGuard lock(mMutex);
@@ -59,7 +58,6 @@ Error Storage::AddInstance(const aos::InstanceInfo& instance)
         });
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
 {
     LockGuard lock(mMutex);
@@ -77,7 +75,6 @@ Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
 {
     LockGuard lock(mMutex);
@@ -93,7 +90,6 @@ Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::GetAllInstances(Array<aos::InstanceInfo>& instances)
 {
     LockGuard lock(mMutex);
@@ -114,7 +110,6 @@ Error Storage::GetAllInstances(Array<aos::InstanceInfo>& instances)
     return err;
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::AddService(const sm::servicemanager::ServiceData& service)
 {
     LockGuard lock(mMutex);
@@ -130,7 +125,6 @@ Error Storage::AddService(const sm::servicemanager::ServiceData& service)
         });
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::UpdateService(const sm::servicemanager::ServiceData& service)
 {
     LockGuard lock(mMutex);
@@ -154,7 +148,6 @@ Error Storage::RemoveService(const String& serviceID, const String& version)
     });
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::GetAllServices(Array<sm::servicemanager::ServiceData>& services)
 {
     LockGuard lock(mMutex);
@@ -175,7 +168,6 @@ Error Storage::GetAllServices(Array<sm::servicemanager::ServiceData>& services)
     return err;
 }
 
-// cppcheck-suppress unusedFunction
 RetWithError<sm::servicemanager::ServiceData> Storage::GetService(const String& serviceID)
 {
     LockGuard lock(mMutex);
@@ -196,7 +188,6 @@ RetWithError<sm::servicemanager::ServiceData> Storage::GetService(const String& 
     return RetWithError<sm::servicemanager::ServiceData>(*retServiceData);
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::AddCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo)
 {
     LockGuard lock(mMutex);
@@ -215,7 +206,6 @@ Error Storage::AddCertInfo(const String& certType, const iam::certhandler::CertI
         });
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::RemoveCertInfo(const String& certType, const String& certURL)
 {
     LockGuard lock(mMutex);
@@ -227,7 +217,6 @@ Error Storage::RemoveCertInfo(const String& certType, const String& certURL)
     });
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::RemoveAllCertsInfo(const String& certType)
 {
     LockGuard lock(mMutex);
@@ -242,7 +231,6 @@ Error Storage::RemoveAllCertsInfo(const String& certType)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::GetCertsInfo(const String& certType, Array<iam::certhandler::CertInfo>& certsInfo)
 {
     LockGuard lock(mMutex);
@@ -265,7 +253,6 @@ Error Storage::GetCertsInfo(const String& certType, Array<iam::certhandler::Cert
     return err;
 }
 
-// cppcheck-suppress unusedFunction
 Error Storage::GetCertInfo(const Array<uint8_t>& issuer, const Array<uint8_t>& serial, iam::certhandler::CertInfo& cert)
 {
     LockGuard lock(mMutex);

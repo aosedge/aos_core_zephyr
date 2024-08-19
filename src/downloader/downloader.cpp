@@ -36,7 +36,6 @@ Error Downloader::Init(DownloadRequesterItf& downloadRequester)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error Downloader::Download(const String& url, const String& path, DownloadContent contentType)
 {
     UniqueLock lock(mMutex);
