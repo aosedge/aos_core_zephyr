@@ -20,6 +20,8 @@ namespace aos::zephyr::smclient {
 
 Error OpenHandler::Init(communication::ChannelItf& channel, clocksync::ClockSyncItf& clockSync)
 {
+    mClockSync = &clockSync;
+
     if (auto err = PBHandler::Init("SM open", channel); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -27,8 +29,6 @@ Error OpenHandler::Init(communication::ChannelItf& channel, clocksync::ClockSync
     if (auto err = Start(); err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
-
-    mClockSync = &clockSync;
 
     return ErrorEnum::eNone;
 }
