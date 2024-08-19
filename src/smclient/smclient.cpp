@@ -23,11 +23,11 @@ Error SMClient::Init(clocksync::ClockSyncItf& clockSync, communication::ChannelM
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mOpenHandler.Init(*openChannel, clockSync); !err.IsNone()) {
+    if (err = mOpenHandler.Init(*openChannel, clockSync); !err.IsNone()) {
         return err;
     }
 
-    if (auto err = clockSync.Subscribe(*this); err.IsNone()) {
+    if (err = clockSync.Subscribe(*this); err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

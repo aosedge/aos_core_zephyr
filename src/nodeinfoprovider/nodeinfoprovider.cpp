@@ -74,7 +74,6 @@ Error NodeInfoProvider::GetNodeInfo(NodeInfo& nodeInfo) const
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
 {
     LockGuard lock {mMutex};
@@ -100,7 +99,6 @@ Error NodeInfoProvider::SetNodeStatus(const NodeStatus& status)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error NodeInfoProvider::SubscribeNodeStatusChanged(iam::nodeinfoprovider::NodeStatusObserverItf& observer)
 {
     LockGuard lock {mMutex};
@@ -114,7 +112,6 @@ Error NodeInfoProvider::SubscribeNodeStatusChanged(iam::nodeinfoprovider::NodeSt
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error NodeInfoProvider::UnsubscribeNodeStatusChanged(iam::nodeinfoprovider::NodeStatusObserverItf& observer)
 {
     LockGuard lock {mMutex};
