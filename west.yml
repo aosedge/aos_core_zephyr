@@ -43,6 +43,10 @@ manifest:
       remote: xen-troops
       revision: "master"
 
+    - name: zephyr-xrun
+      remote: xen-troops
+      revision: "main"
+
     - name: littlefs
       remote: zephyrproject-rtos
       revision: "zephyr"
