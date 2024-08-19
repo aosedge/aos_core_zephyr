@@ -122,8 +122,7 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
             }
         }
 
-        auto err = mChannel->Connect();
-        if (!err.IsNone()) {
+        if (auto err = mChannel->Connect(); !err.IsNone()) {
             LOG_ERR() << "Failed to connect: name=" << mName << ", err=" << err;
             continue;
         }
@@ -139,19 +138,29 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
                 break;
             }
 
+            if (static_cast<size_t>(ret) != sizeof(header)) {
+                LOG_ERR() << "Wrong header size: name=" << mName << ", ret=" << ret;
+                break;
+            }
+
             if (header.mDataSize > mReceiveBuffer.Size()) {
                 LOG_ERR() << "Not enough mem in receive buffer: name=" << mName;
                 continue;
             }
 
-            if ((ret = mChannel->Read(mReceiveBuffer.Get(), header.mDataSize)) < 0) {
+            ret = mChannel->Read(mReceiveBuffer.Get(), header.mDataSize);
+            if (ret < 0) {
                 LOG_ERR() << "Failed to read channel: name=" << mName << ", ret=" << ret << ", err=" << strerror(errno);
                 break;
             }
 
-            auto err = ReceiveMessage(Array(static_cast<uint8_t*>(mReceiveBuffer.Get()), header.mDataSize));
+            if (static_cast<size_t>(ret) != header.mDataSize) {
+                LOG_ERR() << "Wrong data size: name=" << mName << ", ret=" << ret;
+                break;
+            }
 
-            if (!err.IsNone()) {
+            if (auto err = ReceiveMessage(Array(static_cast<uint8_t*>(mReceiveBuffer.Get()), header.mDataSize));
+                !err.IsNone()) {
                 LOG_ERR() << "Receive message error: name=" << mName << ", err=" << err;
                 continue;
             }

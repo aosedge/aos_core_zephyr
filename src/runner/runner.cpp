@@ -25,7 +25,6 @@ Error Runner::Init(sm::runner::RunStatusReceiverItf& statusReceiver)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 sm::runner::RunStatus Runner::StartInstance(const String& instanceID, const String& runtimeDir)
 {
     sm::runner::RunStatus runStatus {instanceID, InstanceRunStateEnum::eActive, ErrorEnum::eNone};
@@ -39,7 +38,6 @@ sm::runner::RunStatus Runner::StartInstance(const String& instanceID, const Stri
     return runStatus;
 }
 
-// cppcheck-suppress unusedFunction
 Error Runner::StopInstance(const String& instanceID)
 {
     auto ret = xrun_kill(instanceID.CStr());

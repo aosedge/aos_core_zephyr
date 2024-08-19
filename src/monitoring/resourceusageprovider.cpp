@@ -31,7 +31,6 @@ Error ResourceUsageProvider::Init(iam::nodeinfoprovider::NodeInfoProviderItf& no
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error ResourceUsageProvider::GetNodeMonitoringData(
     const String& nodeID, aos::monitoring::MonitoringData& monitoringData)
 {
@@ -80,7 +79,6 @@ Error ResourceUsageProvider::GetNodeMonitoringData(
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error ResourceUsageProvider::GetInstanceMonitoringData(
     const String& instanceID, aos::monitoring::MonitoringData& monitoringData)
 {
