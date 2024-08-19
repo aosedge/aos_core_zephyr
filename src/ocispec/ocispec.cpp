@@ -91,7 +91,6 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
  * Public
  **********************************************************************************************************************/
 
-// cppcheck-suppress unusedFunction
 Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifest)
 {
     LockGuard lock(mMutex);
@@ -182,7 +181,6 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& manifest)
 {
     LockGuard lock(mMutex);
@@ -262,7 +260,6 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error OCISpec::LoadImageSpec(const String& path, oci::ImageSpec& imageSpec)
 {
     LockGuard lock(mMutex);
@@ -307,7 +304,6 @@ Error OCISpec::LoadImageSpec(const String& path, oci::ImageSpec& imageSpec)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error OCISpec::SaveImageSpec(const String& path, const oci::ImageSpec& imageSpec)
 {
     LockGuard lock(mMutex);
@@ -363,7 +359,6 @@ Error OCISpec::SaveImageSpec(const String& path, const oci::ImageSpec& imageSpec
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec)
 {
     LockGuard lock(mMutex);
@@ -473,7 +468,6 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runtimeSpec)
 {
     LockGuard lock(mMutex);

@@ -38,7 +38,6 @@ static const struct json_obj_descr cNodeConfigDescr[] = {
  * Public
  **********************************************************************************************************************/
 
-// cppcheck-suppress unusedFunction
 Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config, String& json) const
 {
     LockGuard lock(mMutex);
@@ -65,7 +64,6 @@ Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::NodeConfig& config) const
 {
     LockGuard lock(mMutex);
@@ -93,11 +91,11 @@ Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::Nod
 /***********************************************************************************************************************
  * HostDeviceManager
  **********************************************************************************************************************/
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-// cppcheck-suppress unusedFunction
 Error HostDeviceManager::AllocateDevice(const DeviceInfo& deviceInfo, const String& instanceID)
 {
     (void)deviceInfo;
@@ -106,7 +104,6 @@ Error HostDeviceManager::AllocateDevice(const DeviceInfo& deviceInfo, const Stri
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error HostDeviceManager::RemoveInstanceFromDevice(const String& deviceName, const String& instanceID)
 {
     (void)deviceName;
@@ -115,7 +112,6 @@ Error HostDeviceManager::RemoveInstanceFromDevice(const String& deviceName, cons
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error HostDeviceManager::RemoveInstanceFromAllDevices(const String& instanceID)
 {
     (void)instanceID;
@@ -123,7 +119,6 @@ Error HostDeviceManager::RemoveInstanceFromAllDevices(const String& instanceID)
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 Error HostDeviceManager::GetDeviceInstances(
     const String& deviceName, Array<StaticString<cInstanceIDLen>>& instanceIDs) const
 {
@@ -133,7 +128,6 @@ Error HostDeviceManager::GetDeviceInstances(
     return ErrorEnum::eNone;
 }
 
-// cppcheck-suppress unusedFunction
 bool HostDeviceManager::DeviceExists(const String& device) const
 {
     (void)device;
@@ -148,7 +142,6 @@ bool HostDeviceManager::DeviceExists(const String& device) const
  * Public
  **********************************************************************************************************************/
 
-// cppcheck-suppress unusedFunction
 bool HostGroupManager::GroupExists(const String& group) const
 {
     (void)group;
