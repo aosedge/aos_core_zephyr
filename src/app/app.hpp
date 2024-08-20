@@ -23,6 +23,7 @@
 #include "communication/channelmanager.hpp"
 #include "communication/xenvchan.hpp"
 #include "downloader/downloader.hpp"
+#include "iamclient/iamclient.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "nodeinfoprovider/nodeinfoprovider.hpp"
 #include "ocispec/ocispec.hpp"
@@ -30,7 +31,6 @@
 #include "resourcemanager/resourcemanager.hpp"
 #include "runner/runner.hpp"
 #include "smclient/smclient.hpp"
-#include "iamclient/iamclient.hpp"
 #include "storage/storage.hpp"
 
 namespace aos::zephyr::app {
