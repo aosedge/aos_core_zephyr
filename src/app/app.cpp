@@ -163,6 +163,10 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
+    if (auto err = InitCommunication(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err
         = mIAMClient.Init(mClockSync, mNodeInfoProvider, mProvisionManager, mChannelManager, mCertHandler, mCertLoader);
         !err.IsNone()) {
@@ -182,10 +186,6 @@ Error App::InitZephyr()
     }
 
     if (auto err = mStorage.Init(); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    if (auto err = InitCommunication(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
