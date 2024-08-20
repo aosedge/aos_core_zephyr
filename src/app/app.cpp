@@ -155,6 +155,10 @@ Error App::InitZephyr()
     }
 #endif
 
+    if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mClockSync.Init(mSMClient); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -170,10 +174,6 @@ Error App::InitZephyr()
     }
 
     if (auto err = mResourceUsageProvider.Init(mNodeInfoProvider); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
