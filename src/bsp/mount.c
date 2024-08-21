@@ -1,24 +1,27 @@
-#include <zephyr/fs/fs.h>
-#include <zephyr/fs/littlefs.h>
+#include <zephyr/sys/printk.h>
 
 #include "mount.h"
 
-FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(lfsfs);
-static struct fs_mount_t mp = {
-    .type    = FS_LITTLEFS,
-    .fs_data = &lfsfs,
-    .flags   = FS_MOUNT_FLAG_USE_DISK_ACCESS,
-};
-
-int littlefs_mount()
+int mount_fs()
 {
-    static const char* disk_mount_pt = CONFIG_AOS_DISK_MOUNT_POINT;
-    static const char* disk_pdrv     = CONFIG_MMC_VOLUME_NAME;
+    int ret = 0;
 
-    printk("Mounting littlefs...");
+#if defined(CONFIG_FILE_SYSTEM_LITTLEFS)
+    ret = littlefs_mount();
+    if (ret != 0) {
+        printk("littlefs mount failed (%d)\n", ret);
 
-    mp.storage_dev = (void*)disk_pdrv;
-    mp.mnt_point   = disk_mount_pt;
+        return ret;
+    }
 
-    return fs_mount(&mp);
+#elif defined(CONFIG_FAT_FILESYSTEM_ELM)
+    ret = fatfs_mount();
+    if (ret != 0) {
+        printk("fatfs mount failed (%d)\n", ret);
+
+        return ret;
+    }
+#endif
+
+    return ret;
 }

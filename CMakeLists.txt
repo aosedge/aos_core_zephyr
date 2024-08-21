@@ -118,6 +118,8 @@ target_sources_ifdef(CONFIG_DOMU_ENABLE app PRIVATE src/domains/domu/domu_cfg.c)
 
 # Include HW-specific source file
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
+target_sources_ifdef(CONFIG_FILE_SYSTEM_LITTLEFS app PRIVATE src/bsp/mount_littlefs.c)
+target_sources_ifdef(CONFIG_FAT_FILESYSTEM_ELM app PRIVATE src/bsp/mount_fatfs.c)
 
 # ######################################################################################################################
 # Versioning
