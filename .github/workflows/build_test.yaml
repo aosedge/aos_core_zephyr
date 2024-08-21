@@ -26,6 +26,7 @@ jobs:
             rcar_h3ulcb_ca57,
             native_posix,
             native_posix_64,
+            rpi_5,
           ]
 
     steps:
