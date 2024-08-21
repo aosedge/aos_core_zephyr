@@ -35,8 +35,8 @@ int main(void)
     printk("*** Aos core size: %lu ***\n", sizeof(app::App));
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
-    auto ret = littlefs_mount();
-    __ASSERT(ret == 0, "Error mounting little FS: %s [%d]", strerror(ret), ret);
+    auto ret = mount_fs();
+    __ASSERT(ret == 0, "Error mounting FS: %s [%d]", strerror(ret), ret);
 
     ret = TEE_SupplicantInit();
     __ASSERT(ret == 0, "Error initializing TEE supplicant: %s [%d]", strerror(ret), ret);
