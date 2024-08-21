@@ -6,6 +6,8 @@ extern "C" {
 #endif
 
 int littlefs_mount();
+int fatfs_mount();
+int mount_fs();
 
 #ifdef __cplusplus
 }
