@@ -6,6 +6,7 @@
 
 #include <zephyr/toolchain.h>
 
+#ifdef CONFIG_DOMD_ENABLE
 .section .data.img_ipl,"a"
 GDATA(__img_ipl_start)
 GDATA(__img_ipl_end)
@@ -20,6 +21,7 @@ __dtb_ipl_start:
 .align 8
 .incbin CONFIG_DOMD_DTB_PATH
 __dtb_ipl_end:
+#endif
 
 #ifdef CONFIG_DOMU_ENABLE
 .section .data.img_domu,"a"
