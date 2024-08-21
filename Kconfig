@@ -109,16 +109,19 @@ config AOS_SOCKET_SERVER_PORT
 	depends on NATIVE_APPLICATION
 	default 30001
 
+config DOMD_ENABLE
+	bool "Enable Domain-D creation"
+	default y
+
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"
+	depends on DOMD_ENABLE
 	default "prebuilt/ipl.bin"
 
 config DOMD_DTB_PATH
 	string "Location of Domain-D partial device-tree"
+	depends on DOMD_ENABLE
 	default "prebuilt/ipl.dtb"
-
-config TA_DEPLOY_DIR
-	string "Location of optee TA's deploy dir"
 
 config DOMU_ENABLE
 	bool "Enable Domain-U creation"
@@ -132,5 +135,8 @@ config DOMU_DTB_PATH
 	string "Location for Domain-U device-tree"
 	depends on DOMU_ENABLE
 	default "prebuilt/domu.dtb"
+
+config TA_DEPLOY_DIR
+	string "Location of optee TA's deploy dir"
 
 source "Kconfig"
