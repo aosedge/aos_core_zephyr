@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <memory>
+
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
 
@@ -12,6 +14,8 @@
 
 #include "stubs/channelmanagerstub.hpp"
 #include "stubs/clocksyncstub.hpp"
+#include "stubs/nodeinfoproviderstub.hpp"
+#include "stubs/resourcemanagerstub.hpp"
 #include "utils/log.hpp"
 #include "utils/pbmessages.hpp"
 #include "utils/utils.hpp"
@@ -29,9 +33,11 @@ static constexpr auto cWaitTimeout = std::chrono::seconds {5};
  **********************************************************************************************************************/
 
 struct smclient_fixture {
-    ClockSyncStub      mClockSync;
-    ChannelManagerStub mChannelManager;
-    smclient::SMClient mSMClient;
+    NodeInfoProviderStub                mNodeInfoProvider;
+    ResourceManagerStub                 mResourceManager;
+    ClockSyncStub                       mClockSync;
+    ChannelManagerStub                  mChannelManager;
+    std::unique_ptr<smclient::SMClient> mSMClient;
 };
 
 /***********************************************************************************************************************
@@ -50,6 +56,21 @@ static aos::Error SendSMIncomingMessage(ChannelStub* channel, const servicemanag
         channel, &message, servicemanager_v4_SMIncomingMessages_size, &servicemanager_v4_SMIncomingMessages_msg);
 }
 
+static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, uint32_t port,
+    const aos::NodeInfo& nodeInfo = {}, const aos::String& nodeConfigVersion = "1.0.0")
+{
+    fixture->mNodeInfoProvider.SetNodeInfo(nodeInfo);
+    fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
+
+    auto err = fixture->mSMClient->Init(
+        fixture->mNodeInfoProvider, fixture->mResourceManager, fixture->mClockSync, fixture->mChannelManager);
+    zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
+
+    fixture->mSMClient->OnClockSynced();
+
+    return fixture->mChannelManager.GetChannel(CONFIG_AOS_SM_OPEN_PORT);
+}
+
 /***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
@@ -61,13 +82,11 @@ ZTEST_SUITE(
 
         auto fixture = new smclient_fixture;
 
-        auto err = fixture->mSMClient.Init(fixture->mClockSync, fixture->mChannelManager);
-
-        zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
-
         return fixture;
     },
-    nullptr, nullptr, [](void* fixture) { delete static_cast<smclient_fixture*>(fixture); });
+    [](void* fixture) { static_cast<smclient_fixture*>(fixture)->mSMClient.reset(new smclient::SMClient); },
+    [](void* fixture) { static_cast<smclient_fixture*>(fixture)->mSMClient.reset(); },
+    [](void* fixture) { delete static_cast<smclient_fixture*>(fixture); });
 
 /***********************************************************************************************************************
  * Tests
@@ -75,7 +94,7 @@ ZTEST_SUITE(
 
 ZTEST_F(smclient, test_ClockSync)
 {
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_SM_OPEN_PORT);
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_OPEN_PORT);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Wait clock sync start
@@ -87,7 +106,7 @@ ZTEST_F(smclient, test_ClockSync)
 
     // Wait clock sync request
 
-    err = fixture->mSMClient.SendClockSyncRequest();
+    err = fixture->mSMClient->SendClockSyncRequest();
 
     zassert_true(err.IsNone(), "Error sending clock sync request: %s", utils::ErrorToCStr(err));
 
