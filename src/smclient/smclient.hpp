@@ -24,7 +24,10 @@ namespace aos::zephyr::smclient {
 /**
  * SM client instance.
  */
-class SMClient : public sm::launcher::InstanceStatusReceiverItf,
+class SMClient : public communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
+                     servicemanager_v4_SMOutgoingMessages_size>,
+                 public iam::nodeinfoprovider::NodeStatusObserverItf,
+                 public sm::launcher::InstanceStatusReceiverItf,
                  public downloader::DownloadRequesterItf,
                  public aos::monitoring::SenderItf,
                  public ConnectionPublisherItf,
@@ -35,16 +38,20 @@ public:
     /**
      * Initializes SM client instance.
      *
+     * @param nodeInfoProvider node info provider instance.
+     * @param resourceManager resource manager instance.
      * @param clockSync clock sync instance.
      * @param channelManager channel manager instance.
      * @return Error.
      */
-    Error Init(clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager);
+    Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
+        sm::resourcemanager::ResourceManagerItf& resourceManager, clocksync::ClockSyncItf& clockSync,
+        communication::ChannelManagerItf& channelManager);
 
     /**
      * Destructor.
      */
-    ~SMClient() = default;
+    ~SMClient();
 
     /**
      * Sends instances run status.
@@ -101,6 +108,15 @@ public:
     Error SendClockSyncRequest() override;
 
     /**
+     * On node status changed event.
+     *
+     * @param nodeID node id
+     * @param status node status
+     * @return Error
+     */
+    Error OnNodeStatusChanged(const String& nodeID, const NodeStatus& status) override;
+
+    /**
      * Notifies subscriber clock is synced.
      */
     void OnClockSynced() override;
@@ -114,7 +130,24 @@ private:
     static constexpr auto cOpenPort   = CONFIG_AOS_SM_OPEN_PORT;
     static constexpr auto cSecurePort = CONFIG_AOS_SM_SECURE_PORT;
 
-    OpenHandler mOpenHandler;
+    void  OnConnect() override;
+    void  OnDisconnect() override;
+    Error ReceiveMessage(const Array<uint8_t>& data) override;
+
+    void UpdatePBHandlerState();
+
+    OpenHandler                                 mOpenHandler;
+    iam::nodeinfoprovider::NodeInfoProviderItf* mNodeInfoProvider {};
+    sm::resourcemanager::ResourceManagerItf*    mResourceManager {};
+    communication::ChannelManagerItf*           mChannelManager {};
+
+    Mutex mMutex;
+    bool  mClockSynced = false;
+    bool  mProvisioned = false;
+
+    StaticAllocator<sizeof(servicemanager_v4_SMIncomingMessages) + sizeof(servicemanager_v4_SMOutgoingMessages)
+        + sizeof(NodeInfo)>
+        mAllocator;
 };
 
 } // namespace aos::zephyr::smclient
