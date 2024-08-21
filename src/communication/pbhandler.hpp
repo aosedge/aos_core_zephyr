@@ -52,6 +52,18 @@ public:
     Error Stop();
 
     /**
+     * Returns true if handler is started.
+     *
+     * @return bool.
+     */
+    bool IsStarted() const
+    {
+        LockGuard lock {mMutex};
+
+        return mStarted;
+    }
+
+    /**
      * Destructor.
      */
     virtual ~PBHandler();
@@ -89,7 +101,7 @@ private:
 
     StaticString<64>                                               mName;
     ChannelItf*                                                    mChannel;
-    Mutex                                                          mMutex;
+    mutable Mutex                                                  mMutex;
     ConditionalVariable                                            mCondVar;
     Thread<>                                                       mThread;
     bool                                                           mStarted = false;
