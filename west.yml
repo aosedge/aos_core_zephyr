@@ -54,6 +54,13 @@ manifest:
       groups:
         - fs
 
+    - name: fatfs
+      remote: zephyrproject-rtos
+      revision: master
+      path: modules/fs/fatfs
+      groups:
+        - fs
+
     - name: nanopb
       remote: zephyrproject-rtos
       revision: "zephyr"
