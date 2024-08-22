@@ -80,7 +80,8 @@ static void InstanceStatusToPB(
 
 Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider, sm::launcher::LauncherItf& launcher,
     sm::resourcemanager::ResourceManagerItf& resourceManager, monitoring::ResourceMonitorItf& resourceMonitor,
-    clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager)
+    downloader::DownloadReceiverItf& downloader, clocksync::ClockSyncItf& clockSync,
+    communication::ChannelManagerItf& channelManager)
 {
     LOG_DBG() << "Initialize SM client";
 
@@ -88,6 +89,7 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     mLauncher         = &launcher;
     mResourceManager  = &resourceManager;
     mResourceMonitor  = &resourceMonitor;
+    mDownloader       = &downloader;
     mChannelManager   = &channelManager;
 
     auto nodeInfo = MakeUnique<NodeInfo>(&mAllocator);
@@ -186,7 +188,22 @@ Error SMClient::InstancesUpdateStatus(const Array<InstanceStatus>& instances)
 
 Error SMClient::SendImageContentRequest(const downloader::ImageContentRequest& request)
 {
-    return ErrorEnum::eNone;
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "Send image content request: requestID=" << request.mRequestID << ", url=" << request.mURL
+              << ", contentType=" << request.mContentType;
+
+    auto  outgoingMessage       = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbImageContentRequest = outgoingMessage->SMOutgoingMessage.image_content_request;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_image_content_request_tag;
+    pbImageContentRequest = servicemanager_v4_ImageContentRequest servicemanager_v4_ImageContentRequest_init_default;
+
+    pbImageContentRequest.request_id                          = request.mRequestID;
+    utils::StringFromCStr(pbImageContentRequest.content_type) = request.mContentType.ToString();
+    utils::StringFromCStr(pbImageContentRequest.url)          = request.mURL;
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::SendMonitoringData(const monitoring::NodeMonitoringData& nodeMonitoring)
@@ -305,6 +322,14 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
 
     case servicemanager_v4_SMIncomingMessages_run_instances_tag:
         err = ProcessRunInstances(incomingMessages->SMIncomingMessage.run_instances);
+        break;
+
+    case servicemanager_v4_SMIncomingMessages_image_content_info_tag:
+        err = ProcessImageContentInfo(incomingMessages->SMIncomingMessage.image_content_info);
+        break;
+
+    case servicemanager_v4_SMIncomingMessages_image_content_tag:
+        err = ProcessImageContent(incomingMessages->SMIncomingMessage.image_content);
         break;
 
     default:
@@ -428,6 +453,54 @@ Error SMClient::ProcessRunInstances(const servicemanager_v4_RunInstances& pbRunI
     }
 
     return ErrorEnum::eNone;
+}
+
+Error SMClient::ProcessImageContentInfo(const servicemanager_v4_ImageContentInfo& pbImageContentInfo)
+{
+    LOG_INF() << "Process image content info: requestID=" << pbImageContentInfo.request_id;
+
+    auto aosImageContentInfo = aos::MakeUnique<downloader::ImageContentInfo>(&mAllocator);
+
+    aosImageContentInfo->mRequestID = pbImageContentInfo.request_id;
+    aosImageContentInfo->mFiles.Resize(pbImageContentInfo.image_files_count);
+
+    for (auto i = 0; i < pbImageContentInfo.image_files_count; i++) {
+        aosImageContentInfo->mFiles[i].mRelativePath
+            = utils::StringFromCStr(pbImageContentInfo.image_files[i].relative_path);
+        utils::PBToByteArray(pbImageContentInfo.image_files[i].sha256, aosImageContentInfo->mFiles[i].mSHA256);
+        aosImageContentInfo->mFiles[i].mSize = pbImageContentInfo.image_files[i].size;
+    }
+
+    if (pbImageContentInfo.has_error) {
+        aosImageContentInfo->mError = utils::PBToError(pbImageContentInfo.error);
+    }
+
+    if (auto err = mDownloader->ReceiveImageContentInfo(*aosImageContentInfo); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+Error SMClient::ProcessImageContent(const servicemanager_v4_ImageContent& pbImageContent)
+{
+    LOG_DBG() << "Process image content: requestID=" << pbImageContent.request_id
+              << ", relativePath=" << pbImageContent.relative_path;
+
+    auto fileChunk = aos::MakeUnique<downloader::FileChunk>(&mAllocator);
+
+    fileChunk->mRequestID    = pbImageContent.request_id;
+    fileChunk->mRelativePath = utils::StringFromCStr(pbImageContent.relative_path);
+    fileChunk->mPartsCount   = pbImageContent.parts_count;
+    fileChunk->mPart         = pbImageContent.part;
+    utils::PBToByteArray(pbImageContent.data, fileChunk->mData);
+
+    auto err = mDownloader->ReceiveFileChunk(*fileChunk);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
 Error SMClient::SendNodeConfigStatus(const String& version, const Error& configErr)
