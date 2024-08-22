@@ -16,7 +16,9 @@
 #include "stubs/clocksyncstub.hpp"
 #include "stubs/nodeinfoproviderstub.hpp"
 #include "stubs/resourcemanagerstub.hpp"
+#include "stubs/resourcemonitorstub.hpp"
 #include "utils/log.hpp"
+#include "utils/pbconvert.hpp"
 #include "utils/pbmessages.hpp"
 #include "utils/utils.hpp"
 
@@ -35,6 +37,7 @@ static constexpr auto cWaitTimeout = std::chrono::seconds {5};
 struct smclient_fixture {
     NodeInfoProviderStub                mNodeInfoProvider;
     ResourceManagerStub                 mResourceManager;
+    ResourceMonitorStub                 mResourceMonitor;
     ClockSyncStub                       mClockSync;
     ChannelManagerStub                  mChannelManager;
     std::unique_ptr<smclient::SMClient> mSMClient;
@@ -81,8 +84,8 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
     fixture->mNodeInfoProvider.SetNodeInfo(nodeInfo);
     fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
 
-    auto err = fixture->mSMClient->Init(
-        fixture->mNodeInfoProvider, fixture->mResourceManager, fixture->mClockSync, fixture->mChannelManager);
+    auto err = fixture->mSMClient->Init(fixture->mNodeInfoProvider, fixture->mResourceManager,
+        fixture->mResourceMonitor, fixture->mClockSync, fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
     fixture->mSMClient->OnClockSynced();
@@ -97,6 +100,65 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
     }
 
     return channel;
+}
+
+static void PBToMonitoringData(
+    const servicemanager_v4_MonitoringData& pbMonitoring, aos::monitoring::MonitoringData& aosMonitoring)
+{
+    aosMonitoring.mRAM = pbMonitoring.ram;
+    aosMonitoring.mCPU = pbMonitoring.cpu;
+    aosMonitoring.mDisk.Resize(pbMonitoring.disk_count);
+
+    for (size_t i = 0; i < pbMonitoring.disk_count; i++) {
+        aosMonitoring.mDisk[i].mName     = utils::StringFromCStr(pbMonitoring.disk[i].name);
+        aosMonitoring.mDisk[i].mUsedSize = pbMonitoring.disk[i].used_size;
+    }
+
+    aosMonitoring.mDownload = pbMonitoring.download;
+    aosMonitoring.mUpload   = pbMonitoring.upload;
+}
+
+template <typename T>
+static void PBToNodeMonitoring(const T& pbNodeMonitoring, aos::monitoring::NodeMonitoringData& nodeMonitoring)
+{
+    if (pbNodeMonitoring.has_node_monitoring) {
+        if (pbNodeMonitoring.node_monitoring.has_timestamp) {
+            nodeMonitoring.mTimestamp = aos::Time::Unix(
+                pbNodeMonitoring.node_monitoring.timestamp.seconds, pbNodeMonitoring.node_monitoring.timestamp.nanos);
+        }
+
+        PBToMonitoringData(pbNodeMonitoring.node_monitoring, nodeMonitoring.mMonitoringData);
+    }
+
+    nodeMonitoring.mServiceInstances.Resize(pbNodeMonitoring.instances_monitoring_count);
+
+    for (size_t i = 0; i < pbNodeMonitoring.instances_monitoring_count; i++) {
+        utils::PBToInstanceIdent(
+            pbNodeMonitoring.instances_monitoring[i].instance, nodeMonitoring.mServiceInstances[i].mInstanceIdent);
+        PBToMonitoringData(pbNodeMonitoring.instances_monitoring[i].monitoring_data,
+            nodeMonitoring.mServiceInstances[i].mMonitoringData);
+    }
+}
+
+static void GenerateNodeMonitoring(aos::monitoring::NodeMonitoringData& nodeMonitoring)
+{
+    aos::PartitionInfo nodeDisks[]     = {{.mName = "disk1", .mUsedSize = 512}, {.mName = "disk2", .mUsedSize = 1024}};
+    aos::PartitionInfo instanceDisks[] = {{.mName = "disk3", .mUsedSize = 2048}};
+
+    aos::monitoring::InstanceMonitoringData instancesData[] = {
+        {{"service1", "subject1", 1},
+            {2000, 34423, aos::Array<aos::PartitionInfo>(instanceDisks, aos::ArraySize(instanceDisks)), 342, 432}},
+        {{"service2", "subject2", 2},
+            {3000, 54344, aos::Array<aos::PartitionInfo>(instanceDisks, aos::ArraySize(instanceDisks)), 432, 321}},
+        {{"service3", "subject3", 3},
+            {4000, 90995, aos::Array<aos::PartitionInfo>(instanceDisks, aos::ArraySize(instanceDisks)), 594, 312}},
+    };
+
+    nodeMonitoring.mTimestamp = aos::Time::Now();
+    nodeMonitoring.mMonitoringData
+        = {1000, 2048, aos::Array<aos::PartitionInfo>(nodeDisks, aos::ArraySize(nodeDisks)), 4, 5};
+    nodeMonitoring.mServiceInstances
+        = aos::Array<aos::monitoring::InstanceMonitoringData>(instancesData, aos::ArraySize(instancesData));
 }
 
 /***********************************************************************************************************************
@@ -253,4 +315,80 @@ ZTEST_F(smclient, test_SetNodeConfig)
 
     ReceiveNodeConfigStatus(channel, nodeInfo, pbSetNodeConfig.version);
     zassert_equal(fixture->mResourceManager.GetNodeConfig(), pbSetNodeConfig.node_config, "Wrong node config");
+}
+
+ZTEST_F(smclient, test_InstantMonitoring)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send node monitoring
+
+    aos::monitoring::NodeMonitoringData sendMonitoring;
+
+    GenerateNodeMonitoring(sendMonitoring);
+
+    err = fixture->mSMClient->SendMonitoringData(sendMonitoring);
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Receive monitoring data
+
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto&                                pbInstantMonitoring = outgoingMessage.SMOutgoingMessage.instant_monitoring;
+
+    pbInstantMonitoring = servicemanager_v4_InstantMonitoring servicemanager_v4_InstantMonitoring_init_default;
+
+    err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v4_SMOutgoingMessages_instant_monitoring_tag,
+        "Unexpected message type");
+
+    aos::monitoring::NodeMonitoringData receiveMonitoring;
+
+    PBToNodeMonitoring(pbInstantMonitoring, receiveMonitoring);
+    zassert_equal(receiveMonitoring, sendMonitoring, "Wrong node monitoring");
+}
+
+ZTEST_F(smclient, test_GetAverageMonitoring)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send get average monitoring
+
+    aos::monitoring::NodeMonitoringData sendMonitoring;
+
+    GenerateNodeMonitoring(sendMonitoring);
+
+    fixture->mResourceMonitor.SetMonitoringData(sendMonitoring);
+
+    servicemanager_v4_SMIncomingMessages incomingMessage;
+    auto& pbGetAverageMonitoring = incomingMessage.SMIncomingMessage.get_average_monitoring;
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v4_SMIncomingMessages_get_average_monitoring_tag;
+    pbGetAverageMonitoring = servicemanager_v4_GetAverageMonitoring servicemanager_v4_GetAverageMonitoring_init_default;
+
+    err = SendSMIncomingMessage(channel, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
+
+    // Receive monitoring data
+
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto&                                pbAverageMonitoring = outgoingMessage.SMOutgoingMessage.average_monitoring;
+
+    pbAverageMonitoring = servicemanager_v4_AverageMonitoring servicemanager_v4_AverageMonitoring_init_default;
+
+    err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v4_SMOutgoingMessages_average_monitoring_tag,
+        "Unexpected message type");
+
+    aos::monitoring::NodeMonitoringData receiveMonitoring;
+
+    PBToNodeMonitoring(pbAverageMonitoring, receiveMonitoring);
+    zassert_equal(receiveMonitoring, sendMonitoring, "Wrong node monitoring");
 }
