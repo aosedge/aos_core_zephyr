@@ -14,6 +14,7 @@
 
 #include "stubs/channelmanagerstub.hpp"
 #include "stubs/clocksyncstub.hpp"
+#include "stubs/connectionsubscriberstub.hpp"
 #include "stubs/downloaderstub.hpp"
 #include "stubs/launcherstub.hpp"
 #include "stubs/nodeinfoproviderstub.hpp"
@@ -747,4 +748,32 @@ ZTEST_F(smclient, test_ImageContent)
     zassert_true(err.IsNone(), "Error waiting downloader event: %s", utils::ErrorToCStr(err));
 
     zassert_equal(fixture->mDownloader.GetFileChunk(), aosFileChunk);
+}
+
+ZTEST_F(smclient, test_ConnectionNotification)
+{
+    ConnectionSubscriberStub subscriber;
+
+    auto err = fixture->mSMClient->Subscribe(subscriber);
+    zassert_true(err.IsNone(), "Error subscribing connection notification: %s", utils::ErrorToCStr(err));
+
+    ChannelStub* channel = nullptr;
+
+    aos::Tie(channel, err) = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Wait connected
+
+    err = subscriber.WaitConnect(cWaitTimeout);
+    zassert_true(err.IsNone(), "Wait connection error: %s", err.Message());
+
+    // Wait disconnected
+
+    fixture->mSMClient->OnClockUnsynced();
+
+    err = subscriber.WaitDisconnect(cWaitTimeout);
+    zassert_true(err.IsNone(), "Wait connection error: %s", err.Message());
+
+    fixture->mSMClient->Unsubscribe(subscriber);
 }
