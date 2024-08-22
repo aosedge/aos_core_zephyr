@@ -42,13 +42,15 @@ public:
      * @param launcher launcher instance.
      * @param resourceManager resource manager instance.
      * @param resourceMonitor resource monitor instance.
+     * @param downloader downloader instance.
      * @param clockSync clock sync instance.
      * @param channelManager channel manager instance.
      * @return Error.
      */
     Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider, sm::launcher::LauncherItf& launcher,
         sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
-        clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager);
+        downloader::DownloadReceiverItf& downloader, clocksync::ClockSyncItf& clockSync,
+        communication::ChannelManagerItf& channelManager);
 
     /**
      * Destructor.
@@ -143,12 +145,15 @@ private:
     Error ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSetNodeConfig);
     Error ProcessGetAverageMonitoring(const servicemanager_v4_GetAverageMonitoring& pbGetAverageMonitoring);
     Error ProcessRunInstances(const servicemanager_v4_RunInstances& pbRunInstances);
+    Error ProcessImageContentInfo(const servicemanager_v4_ImageContentInfo& pbImageContentInfo);
+    Error ProcessImageContent(const servicemanager_v4_ImageContent& pbImageContent);
 
     OpenHandler                                 mOpenHandler;
     iam::nodeinfoprovider::NodeInfoProviderItf* mNodeInfoProvider {};
     sm::launcher::LauncherItf*                  mLauncher {};
     sm::resourcemanager::ResourceManagerItf*    mResourceManager {};
     aos::monitoring::ResourceMonitorItf*        mResourceMonitor {};
+    downloader::DownloadReceiverItf*            mDownloader {};
     communication::ChannelManagerItf*           mChannelManager {};
 
     Mutex mMutex;
@@ -156,8 +161,9 @@ private:
     bool  mProvisioned = false;
 
     StaticAllocator<sizeof(servicemanager_v4_SMIncomingMessages) + sizeof(servicemanager_v4_SMOutgoingMessages)
-        + Max(sizeof(NodeInfo), sizeof(aos::monitoring::NodeMonitoringData))>,
-            sizeof(ServiceInfoStaticArray) + sizeof(LayerInfoStaticArray) + sizeof(InstanceInfoStaticArray))>
+        + Max(sizeof(NodeInfo), sizeof(aos::monitoring::NodeMonitoringData),
+            sizeof(ServiceInfoStaticArray) + sizeof(LayerInfoStaticArray) + sizeof(InstanceInfoStaticArray),
+            sizeof(downloader::ImageContentInfo), sizeof(downloader::FileChunk))>
         mAllocator;
 };
 
