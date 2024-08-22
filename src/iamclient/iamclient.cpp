@@ -351,7 +351,8 @@ Error IAMClient::SendError(const void* message, T& pbMessage, const Error& err)
 {
     LOG_ERR() << "Process message error: err=" << err;
 
-    utils::ErrorToPB(err, pbMessage);
+    pbMessage.has_error = true;
+    pbMessage.error     = utils::ErrorToPB(err);
 
     return SendMessage(message, &iamanager_v5_IAMOutgoingMessages_msg);
 }
