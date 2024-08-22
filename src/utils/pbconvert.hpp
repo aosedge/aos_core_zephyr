@@ -42,21 +42,34 @@ constexpr void PBToEnum(const char (&src)[cSize], T& dst)
  * Converts Aos error to PB error info.
  *
  * @param aosError Aos error to convert from.
- * @param[out] errorInfo PB error info to convert to.
+ * @return common_v1_ErrorInfo.
  */
-template <typename T>
-void ErrorToPB(const Error& aosError, T& errorInfo)
+inline common_v1_ErrorInfo ErrorToPB(const Error& aosError)
 {
-    if (aosError.IsNone()) {
-        errorInfo.has_error = false;
-        return;
+    common_v1_ErrorInfo errorInfo = {static_cast<int32_t>(aosError.Value()), aosError.Errno()};
+
+    StringFromCStr(errorInfo.message).Convert(aosError);
+
+    return errorInfo;
+}
+
+/**
+ * Converts Aos error to PB error info.
+ *
+ * @param errorInfo PB error info to convert from.
+ * return Error.
+ */
+inline Error PBToError(const common_v1_ErrorInfo& errorInfo)
+{
+    if (errorInfo.aos_code) {
+        return Error(static_cast<ErrorEnum>(errorInfo.aos_code), errorInfo.message);
     }
 
-    errorInfo.has_error       = true;
-    errorInfo.error.aos_code  = int(aosError.Value());
-    errorInfo.error.exit_code = aosError.Errno();
+    if (errorInfo.exit_code) {
+        return Error(errorInfo.exit_code, errorInfo.message);
+    }
 
-    StringFromCStr(errorInfo.error.message).Convert(aosError);
+    return ErrorEnum::eNone;
 }
 
 /**
