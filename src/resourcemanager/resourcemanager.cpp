@@ -20,13 +20,13 @@ namespace aos::zephyr::resourcemanager {
  * Node config.
  */
 struct NodeConfig {
-    const char* vendorVersion = "";
-    const char* nodeType      = "";
-    uint32_t    priority      = 0;
+    const char* version  = "";
+    const char* nodeType = "";
+    uint32_t    priority = 0;
 };
 
 static const struct json_obj_descr cNodeConfigDescr[] = {
-    JSON_OBJ_DESCR_PRIM(NodeConfig, vendorVersion, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(NodeConfig, version, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(NodeConfig, nodeType, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(NodeConfig, priority, JSON_TOK_NUMBER),
 };
@@ -46,9 +46,9 @@ Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config
 
     auto jsonNodeConfig = MakeUnique<NodeConfig>(&mAllocator);
 
-    jsonNodeConfig->vendorVersion = config.mVendorVersion.CStr();
-    jsonNodeConfig->nodeType      = config.mNodeConfig.mNodeType.CStr();
-    jsonNodeConfig->priority      = config.mNodeConfig.mPriority;
+    jsonNodeConfig->version  = config.mVersion.CStr();
+    jsonNodeConfig->nodeType = config.mNodeConfig.mNodeType.CStr();
+    jsonNodeConfig->priority = config.mNodeConfig.mPriority;
 
     auto ret = json_obj_encode_buf(
         cNodeConfigDescr, ARRAY_SIZE(cNodeConfigDescr), jsonNodeConfig.Get(), json.Get(), json.MaxSize());
@@ -81,7 +81,7 @@ Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::Nod
         return AOS_ERROR_WRAP(ret);
     }
 
-    config.mVendorVersion        = parsedNodeConfig->vendorVersion;
+    config.mVersion              = parsedNodeConfig->version;
     config.mNodeConfig.mNodeType = parsedNodeConfig->nodeType;
     config.mNodeConfig.mPriority = parsedNodeConfig->priority;
 
