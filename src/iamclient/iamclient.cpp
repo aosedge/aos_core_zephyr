@@ -561,7 +561,8 @@ Error IAMClient::ProcessCreateKey(const iamanager_v5_CreateKeyRequest& pbCreateK
         return SendError(outgoingMessage.Get(), pbCreateKeyResponse, AOS_ERROR_WRAP(err));
     }
 
-    utils::StringFromCStr(pbCreateKeyResponse.type) = pbCreateKeyRequest.type;
+    utils::StringFromCStr(pbCreateKeyResponse.type)    = pbCreateKeyRequest.type;
+    utils::StringFromCStr(pbCreateKeyResponse.node_id) = mNodeInfo.mNodeID;
 
     return SendMessage(outgoingMessage.Get(), &iamanager_v5_IAMOutgoingMessages_msg);
 }
@@ -592,6 +593,7 @@ Error IAMClient::ProcessApplyCert(const iamanager_v5_ApplyCertRequest& pbApplyCe
 
     utils::StringFromCStr(pbApplyCertResponse.type)     = pbApplyCertRequest.type;
     utils::StringFromCStr(pbApplyCertResponse.cert_url) = certInfo.mCertURL;
+    utils::StringFromCStr(pbApplyCertResponse.node_id)  = mNodeInfo.mNodeID;
 
     if (auto err = utils::StringFromCStr(pbApplyCertResponse.serial).ByteArrayToHex(certInfo.mSerial); !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbApplyCertResponse, AOS_ERROR_WRAP(err));
