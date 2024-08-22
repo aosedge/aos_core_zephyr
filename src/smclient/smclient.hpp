@@ -95,14 +95,14 @@ public:
      * @param subscriber The ConnectionSubscriberItf that wants to subscribe.
      * @return Error.
      */
-    Error Subscribes(ConnectionSubscriberItf& subscriber) override;
+    Error Subscribe(ConnectionSubscriberItf& subscriber) override;
 
     /**
      * Unsubscribes the provided ConnectionSubscriberItf from this object.
      *
      * @param subscriber The ConnectionSubscriberItf that wants to unsubscribe.
      */
-    void Unsubscribes(ConnectionSubscriberItf& subscriber) override;
+    void Unsubscribe(ConnectionSubscriberItf& subscriber) override;
 
     /**
      * Sends clock sync request.
@@ -131,8 +131,9 @@ public:
     void OnClockUnsynced() override;
 
 private:
-    static constexpr auto cOpenPort   = CONFIG_AOS_SM_OPEN_PORT;
-    static constexpr auto cSecurePort = CONFIG_AOS_SM_SECURE_PORT;
+    static constexpr auto cOpenPort                 = CONFIG_AOS_SM_OPEN_PORT;
+    static constexpr auto cSecurePort               = CONFIG_AOS_SM_SECURE_PORT;
+    static constexpr auto cMaxConnectionSubscribers = 2;
 
     void  OnConnect() override;
     void  OnDisconnect() override;
@@ -159,6 +160,8 @@ private:
     Mutex mMutex;
     bool  mClockSynced = false;
     bool  mProvisioned = false;
+
+    StaticArray<ConnectionSubscriberItf*, cMaxConnectionSubscribers> mConnectionSubscribers;
 
     StaticAllocator<sizeof(servicemanager_v4_SMIncomingMessages) + sizeof(servicemanager_v4_SMOutgoingMessages)
         + Max(sizeof(NodeInfo), sizeof(aos::monitoring::NodeMonitoringData),
