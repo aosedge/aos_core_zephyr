@@ -170,7 +170,94 @@ void SMClient::OnDisconnect()
 
 Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
 {
-    return ErrorEnum::eNone;
+    LockGuard lock {mMutex};
+
+    auto incomingMessages = MakeUnique<servicemanager_v4_SMIncomingMessages>(&mAllocator);
+    auto stream           = pb_istream_from_buffer(data.Get(), data.Size());
+
+    if (auto status = pb_decode(&stream, &servicemanager_v4_SMIncomingMessages_msg, incomingMessages.Get()); !status) {
+        return AOS_ERROR_WRAP(Error(ErrorEnum::eRuntime, "failed to decode message"));
+    }
+
+    Error err;
+
+    switch (incomingMessages->which_SMIncomingMessage) {
+    case servicemanager_v4_SMIncomingMessages_get_node_config_status_tag:
+        err = ProcessGetNodeConfigStatus(incomingMessages->SMIncomingMessage.get_node_config_status);
+        break;
+
+    case servicemanager_v4_SMIncomingMessages_check_node_config_tag:
+        err = ProcessCheckNodeConfig(incomingMessages->SMIncomingMessage.check_node_config);
+        break;
+
+    case servicemanager_v4_SMIncomingMessages_set_node_config_tag:
+        err = ProcessSetNodeConfig(incomingMessages->SMIncomingMessage.set_node_config);
+        break;
+
+    default:
+        LOG_WRN() << "Receive unsupported message: tag=" << incomingMessages->which_SMIncomingMessage;
+        break;
+    }
+
+    return err;
+}
+
+Error SMClient::ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus)
+{
+    LOG_INF() << "Process get node config status";
+
+    auto [version, configErr] = mResourceManager->GetNodeConfigVersion();
+
+    return SendNodeConfigStatus(version, configErr);
+}
+
+Error SMClient::ProcessCheckNodeConfig(const servicemanager_v4_CheckNodeConfig& pbCheckNodeConfig)
+{
+    auto version = utils::StringFromCStr(pbCheckNodeConfig.version);
+
+    LOG_INF() << "Process check node config: version=" << version;
+
+    auto configErr = mResourceManager->CheckNodeConfig(version, utils::StringFromCStr(pbCheckNodeConfig.node_config));
+
+    return SendNodeConfigStatus(version, configErr);
+}
+
+Error SMClient::ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSetNodeConfig)
+{
+    auto version = utils::StringFromCStr(pbSetNodeConfig.version);
+
+    LOG_INF() << "Process set node config: version=" << version;
+
+    auto configErr = mResourceManager->UpdateNodeConfig(version, utils::StringFromCStr(pbSetNodeConfig.node_config));
+
+    return SendNodeConfigStatus(version, configErr);
+}
+
+Error SMClient::SendNodeConfigStatus(const String& version, const Error& configErr)
+{
+    LOG_INF() << "Send node config status: version=" << version << ", configErr=" << configErr;
+
+    auto  outgoingMessage    = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbNodeConfigStatus = outgoingMessage->SMOutgoingMessage.node_config_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_node_config_status_tag;
+    pbNodeConfigStatus = servicemanager_v4_NodeConfigStatus servicemanager_v4_NodeConfigStatus_init_default;
+
+    auto nodeInfo = MakeUnique<NodeInfo>(&mAllocator);
+
+    if (auto err = mNodeInfoProvider->GetNodeInfo(*nodeInfo); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    utils::StringFromCStr(pbNodeConfigStatus.node_id)   = nodeInfo->mNodeID;
+    utils::StringFromCStr(pbNodeConfigStatus.node_type) = nodeInfo->mNodeType;
+    utils::StringFromCStr(pbNodeConfigStatus.version)   = version;
+
+    if (!configErr.IsNone()) {
+        utils::ErrorToPB(configErr, pbNodeConfigStatus);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 void SMClient::UpdatePBHandlerState()
@@ -204,6 +291,13 @@ void SMClient::UpdatePBHandlerState()
 
         if (err = Start(); !err.IsNone()) {
             LOG_ERR() << "Failed to start PB handler: err=" << err;
+            return;
+        }
+
+        auto [version, configErr] = mResourceManager->GetNodeConfigVersion();
+
+        if (err = SendNodeConfigStatus(version, configErr); !err.IsNone()) {
+            LOG_ERR() << "Failed to send node config status: err=" << err;
             return;
         }
     }
