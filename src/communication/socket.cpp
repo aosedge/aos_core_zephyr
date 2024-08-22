@@ -20,22 +20,22 @@ namespace aos::zephyr::communication {
  * Public
  **********************************************************************************************************************/
 
-aos::Error Socket::Init(const aos::String& serverAddress, int serverPort)
+Error Socket::Init(const String& serverAddress, int serverPort)
 {
     mServerAddress = serverAddress;
     mServerPort    = serverPort;
     mSocketFd      = -1;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error Socket::Open()
+Error Socket::Open()
 {
-    LOG_INF() << "Connecting socket to: address=" << mServerAddress.CStr() << " port=" << mServerPort;
+    LOG_INF() << "Connecting socket to: address=" << mServerAddress << ", port=" << mServerPort;
 
     mSocketFd = socket(AF_INET, SOCK_STREAM, 0);
     if (mSocketFd == -1) {
-        return aos::Error(aos::ErrorEnum::eRuntime, "failed to create socket");
+        return Error(ErrorEnum::eRuntime, "failed to create socket");
     }
 
     struct sockaddr_in addr;
@@ -45,23 +45,23 @@ aos::Error Socket::Open()
     if (inet_pton(AF_INET, mServerAddress.CStr(), &addr.sin_addr) <= 0) {
         close(mSocketFd);
         mSocketFd = -1;
-        return aos::Error(aos::ErrorEnum::eRuntime, "invalid server address");
+        return Error(ErrorEnum::eRuntime, "invalid server address");
     }
 
     if (connect(mSocketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         close(mSocketFd);
         mSocketFd = -1;
-        return aos::Error(aos::ErrorEnum::eRuntime, "failed to connect to server");
+        return Error(ErrorEnum::eRuntime, "failed to connect to server");
     }
 
-    LOG_INF() << "Connected to server: address=" << mServerAddress.CStr() << " port=" << mServerPort;
+    LOG_INF() << "Connected to server: address=" << mServerAddress.CStr() << ", port=" << mServerPort;
 
     mOpened = true;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error Socket::Close()
+Error Socket::Close()
 {
     if (mSocketFd != -1) {
         close(mSocketFd);
@@ -70,7 +70,7 @@ aos::Error Socket::Close()
 
     mOpened = false;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 int Socket::Read(void* data, size_t size)
