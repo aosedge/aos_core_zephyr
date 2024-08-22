@@ -17,17 +17,63 @@
 namespace aos::zephyr::smclient {
 
 /***********************************************************************************************************************
+ * Static
+ **********************************************************************************************************************/
+
+static google_protobuf_Timestamp TimestampToPB(const Time& time)
+{
+    auto unixTime = time.UnixTime();
+
+    return google_protobuf_Timestamp {unixTime.tv_sec, static_cast<int32_t>(unixTime.tv_nsec)};
+}
+
+static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
+    servicemanager_v4_MonitoringData& pbMonitoringData)
+{
+    pbMonitoringData.cpu           = monitoringData.mCPU;
+    pbMonitoringData.ram           = monitoringData.mRAM;
+    pbMonitoringData.download      = monitoringData.mDownload;
+    pbMonitoringData.upload        = monitoringData.mUpload;
+    pbMonitoringData.disk_count    = monitoringData.mDisk.Size();
+    pbMonitoringData.has_timestamp = true;
+    pbMonitoringData.timestamp     = TimestampToPB(timestamp);
+
+    for (size_t i = 0; i < monitoringData.mDisk.Size(); i++) {
+        utils::StringFromCStr(pbMonitoringData.disk[i].name) = monitoringData.mDisk[i].mName;
+        pbMonitoringData.disk[i].used_size                   = monitoringData.mDisk[i].mUsedSize;
+    }
+}
+
+template <typename T>
+static constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& nodeMonitoring, T& pbNodeMonitoring)
+{
+    pbNodeMonitoring.has_node_monitoring = true;
+    MonitoringDataToPB(nodeMonitoring.mMonitoringData, nodeMonitoring.mTimestamp, pbNodeMonitoring.node_monitoring);
+    pbNodeMonitoring.instances_monitoring_count = nodeMonitoring.mServiceInstances.Size();
+
+    for (size_t i = 0; i < nodeMonitoring.mServiceInstances.Size(); i++) {
+        pbNodeMonitoring.instances_monitoring[i].has_instance = true;
+        utils::InstanceIdentToPB(
+            nodeMonitoring.mServiceInstances[i].mInstanceIdent, pbNodeMonitoring.instances_monitoring[i].instance);
+        pbNodeMonitoring.instances_monitoring[i].has_monitoring_data = true;
+        MonitoringDataToPB(nodeMonitoring.mServiceInstances[i].mMonitoringData, nodeMonitoring.mTimestamp,
+            pbNodeMonitoring.instances_monitoring[i].monitoring_data);
+    }
+}
+
+/***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
 Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
-    sm::resourcemanager::ResourceManagerItf& resourceManager, clocksync::ClockSyncItf& clockSync,
-    communication::ChannelManagerItf& channelManager)
+    sm::resourcemanager::ResourceManagerItf& resourceManager, monitoring::ResourceMonitorItf& resourceMonitor,
+    clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager)
 {
     LOG_DBG() << "Initialize SM client";
 
     mNodeInfoProvider = &nodeInfoProvider;
     mResourceManager  = &resourceManager;
+    mResourceMonitor  = &resourceMonitor;
     mChannelManager   = &channelManager;
 
     auto nodeInfo = MakeUnique<NodeInfo>(&mAllocator);
@@ -96,9 +142,21 @@ Error SMClient::SendImageContentRequest(const downloader::ImageContentRequest& r
     return ErrorEnum::eNone;
 }
 
-Error SMClient::SendMonitoringData(const monitoring::NodeMonitoringData& monitoringData)
+Error SMClient::SendMonitoringData(const monitoring::NodeMonitoringData& nodeMonitoring)
 {
-    return ErrorEnum::eNone;
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "Send node monitoring";
+
+    auto  outgoingMessage     = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbInstantMonitoring = outgoingMessage->SMOutgoingMessage.instant_monitoring;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_instant_monitoring_tag;
+    pbInstantMonitoring = servicemanager_v4_InstantMonitoring servicemanager_v4_InstantMonitoring_init_default;
+
+    NodeMonitoringToPB(nodeMonitoring, pbInstantMonitoring);
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::Subscribes(ConnectionSubscriberItf& subscriber)
@@ -194,6 +252,10 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
         err = ProcessSetNodeConfig(incomingMessages->SMIncomingMessage.set_node_config);
         break;
 
+    case servicemanager_v4_SMIncomingMessages_get_average_monitoring_tag:
+        err = ProcessGetAverageMonitoring(incomingMessages->SMIncomingMessage.get_average_monitoring);
+        break;
+
     default:
         LOG_WRN() << "Receive unsupported message: tag=" << incomingMessages->which_SMIncomingMessage;
         break;
@@ -231,6 +293,27 @@ Error SMClient::ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSe
     auto configErr = mResourceManager->UpdateNodeConfig(version, utils::StringFromCStr(pbSetNodeConfig.node_config));
 
     return SendNodeConfigStatus(version, configErr);
+}
+
+Error SMClient::ProcessGetAverageMonitoring(const servicemanager_v4_GetAverageMonitoring& pbGetAverageMonitoring)
+{
+    LOG_INF() << "Process get average monitoring";
+
+    auto  outgoingMessage     = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbAverageMonitoring = outgoingMessage->SMOutgoingMessage.average_monitoring;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_average_monitoring_tag;
+    pbAverageMonitoring = servicemanager_v4_AverageMonitoring servicemanager_v4_AverageMonitoring_init_default;
+
+    auto averageMonitoring = aos::MakeUnique<monitoring::NodeMonitoringData>(&mAllocator);
+
+    if (auto err = mResourceMonitor->GetAverageMonitoringData(*averageMonitoring); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    NodeMonitoringToPB(*averageMonitoring, pbAverageMonitoring);
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::SendNodeConfigStatus(const String& version, const Error& configErr)
