@@ -134,7 +134,11 @@ private:
     void  OnDisconnect() override;
     Error ReceiveMessage(const Array<uint8_t>& data) override;
 
-    void UpdatePBHandlerState();
+    void  UpdatePBHandlerState();
+    Error SendNodeConfigStatus(const String& version, const Error& configErr);
+    Error ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus);
+    Error ProcessCheckNodeConfig(const servicemanager_v4_CheckNodeConfig& pbCheckNodeConfig);
+    Error ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSetNodeConfig);
 
     OpenHandler                                 mOpenHandler;
     iam::nodeinfoprovider::NodeInfoProviderItf* mNodeInfoProvider {};
