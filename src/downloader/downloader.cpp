@@ -171,14 +171,12 @@ Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
         return AOS_ERROR_WRAP(ErrorEnum::eFailed);
     }
 
-    if (content.mError != "") {
-        LOG_ERR() << "Error: " << content.mError;
+    if (!content.mError.IsNone()) {
+        LOG_ERR() << "Image content info error: err=" << content.mError;
 
-        auto err = AOS_ERROR_WRAP(ErrorEnum::eFailed);
+        SetErrorAndNotify(content.mError);
 
-        SetErrorAndNotify(err);
-
-        return err;
+        return content.mError;
     }
 
     for (auto& file : content.mFiles) {
