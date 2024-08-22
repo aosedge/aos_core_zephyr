@@ -14,6 +14,7 @@
 
 #include "stubs/channelmanagerstub.hpp"
 #include "stubs/clocksyncstub.hpp"
+#include "stubs/launcherstub.hpp"
 #include "stubs/nodeinfoproviderstub.hpp"
 #include "stubs/resourcemanagerstub.hpp"
 #include "stubs/resourcemonitorstub.hpp"
@@ -36,6 +37,7 @@ static constexpr auto cWaitTimeout = std::chrono::seconds {5};
 
 struct smclient_fixture {
     NodeInfoProviderStub                mNodeInfoProvider;
+    LauncherStub                        mLauncher;
     ResourceManagerStub                 mResourceManager;
     ResourceMonitorStub                 mResourceMonitor;
     ClockSyncStub                       mClockSync;
@@ -84,7 +86,7 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
     fixture->mNodeInfoProvider.SetNodeInfo(nodeInfo);
     fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
 
-    auto err = fixture->mSMClient->Init(fixture->mNodeInfoProvider, fixture->mResourceManager,
+    auto err = fixture->mSMClient->Init(fixture->mNodeInfoProvider, fixture->mLauncher, fixture->mResourceManager,
         fixture->mResourceMonitor, fixture->mClockSync, fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
@@ -140,6 +142,26 @@ static void PBToNodeMonitoring(const T& pbNodeMonitoring, aos::monitoring::NodeM
     }
 }
 
+static void PBToInstanceStatus(const servicemanager_v4_InstanceStatus& pbInstance, aos::InstanceStatus& aosInstance)
+{
+    if (pbInstance.has_instance) {
+        utils::PBToInstanceIdent(pbInstance.instance, aosInstance.mInstanceIdent);
+    }
+
+    aosInstance.mServiceVersion = utils::StringFromCStr(pbInstance.service_version);
+    utils::PBToEnum(pbInstance.run_state, aosInstance.mRunState);
+
+    aosInstance.mError = utils::PBToError(pbInstance.error_info);
+
+    if (pbInstance.has_error_info) {
+        if (pbInstance.error_info.exit_code) {
+            aosInstance.mError = pbInstance.error_info.exit_code;
+        } else {
+            aosInstance.mError = static_cast<aos::ErrorEnum>(pbInstance.error_info.aos_code);
+        }
+    }
+}
+
 static void GenerateNodeMonitoring(aos::monitoring::NodeMonitoringData& nodeMonitoring)
 {
     aos::PartitionInfo nodeDisks[]     = {{.mName = "disk1", .mUsedSize = 512}, {.mName = "disk2", .mUsedSize = 1024}};
@@ -161,6 +183,46 @@ static void GenerateNodeMonitoring(aos::monitoring::NodeMonitoringData& nodeMoni
         = aos::Array<aos::monitoring::InstanceMonitoringData>(instancesData, aos::ArraySize(instancesData));
 }
 
+static void GenerateServicesInfo(aos::Array<aos::ServiceInfo>& services)
+{
+    uint8_t sha256[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    services.EmplaceBack(aos::ServiceInfo {
+        "service1", "provider1", "1.0.0", 1, "service1 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 312});
+    services.EmplaceBack(aos::ServiceInfo {
+        "service2", "provider2", "2.0.0", 2, "service2 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 512});
+}
+
+static void GenerateLayersInfo(aos::Array<aos::LayerInfo>& layers)
+{
+    uint8_t sha256[] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+
+    layers.EmplaceBack(
+        aos::LayerInfo {"layer1", "digest1", "1.0.0", "layer1 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 1024});
+    layers.EmplaceBack(
+        aos::LayerInfo {"layer2", "digest2", "2.0.0", "layer2 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 2048});
+    layers.EmplaceBack(
+        aos::LayerInfo {"layer3", "digest3", "3.0.0", "layer3 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 4096});
+}
+
+static void GenerateInstancesInfo(aos::Array<aos::InstanceInfo>& instances)
+{
+    instances.EmplaceBack(aos::InstanceInfo {{"service1", "subject1", 1}, 1, 1, "storage1", "state1"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service2", "subject2", 2}, 2, 2, "storage2", "state2"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service3", "subject3", 3}, 3, 3, "storage3", "state3"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service4", "subject4", 4}, 4, 4, "storage4", "state4"});
+}
+
+static void GenerateInstancesRunStatus(aos::Array<aos::InstanceStatus>& status)
+{
+    status.EmplaceBack(aos::InstanceStatus {
+        {"service1", "subject1", 0}, "1.0.0", aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone});
+    status.EmplaceBack(
+        aos::InstanceStatus {{"service1", "subject1", 1}, "3.0.0", aos::InstanceRunStateEnum::eFailed, 42});
+    status.EmplaceBack(aos::InstanceStatus {
+        {"service1", "subject1", 2}, "2.0.0", aos::InstanceRunStateEnum::eFailed, aos::ErrorEnum::eRuntime});
+}
+
 /***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
@@ -177,6 +239,7 @@ ZTEST_SUITE(
     [](void* fixture) {
         auto smclientFixture = static_cast<smclient_fixture*>(fixture);
 
+        smclientFixture->mLauncher.Clear();
         smclientFixture->mClockSync.Clear();
         smclientFixture->mSMClient.reset(new smclient::SMClient);
     },
@@ -391,4 +454,164 @@ ZTEST_F(smclient, test_GetAverageMonitoring)
 
     PBToNodeMonitoring(pbAverageMonitoring, receiveMonitoring);
     zassert_equal(receiveMonitoring, sendMonitoring, "Wrong node monitoring");
+}
+
+ZTEST_F(smclient, test_RunInstance)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send run instances
+
+    aos::ServiceInfoStaticArray  services;
+    aos::LayerInfoStaticArray    layers;
+    aos::InstanceInfoStaticArray instances;
+
+    GenerateServicesInfo(services);
+    GenerateLayersInfo(layers);
+    GenerateInstancesInfo(instances);
+
+    servicemanager_v4_SMIncomingMessages incomingMessage;
+    auto&                                pbRunInstances = incomingMessage.SMIncomingMessage.run_instances;
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v4_SMIncomingMessages_run_instances_tag;
+    pbRunInstances = servicemanager_v4_RunInstances servicemanager_v4_RunInstances_init_default;
+
+    pbRunInstances.services_count = services.Size();
+
+    for (size_t i = 0; i < services.Size(); i++) {
+        const auto& aosService = services[i];
+        auto&       pbService  = pbRunInstances.services[i];
+
+        utils::StringFromCStr(pbService.service_id)  = aosService.mServiceID;
+        utils::StringFromCStr(pbService.provider_id) = aosService.mProviderID;
+        utils::StringFromCStr(pbService.version)     = aosService.mVersion;
+        pbService.gid                                = aosService.mGID;
+        utils::StringFromCStr(pbService.url)         = aosService.mURL;
+        utils::ByteArrayToPB(aosService.mSHA256, pbService.sha256);
+        pbService.size = aosService.mSize;
+    }
+
+    pbRunInstances.layers_count = layers.Size();
+
+    for (size_t i = 0; i < layers.Size(); i++) {
+        const auto& aosLayer = layers[i];
+        auto&       pbLayer  = incomingMessage.SMIncomingMessage.run_instances.layers[i];
+
+        utils::StringFromCStr(pbLayer.layer_id) = aosLayer.mLayerID;
+        utils::StringFromCStr(pbLayer.digest)   = aosLayer.mLayerDigest;
+        utils::StringFromCStr(pbLayer.version)  = aosLayer.mVersion;
+        utils::StringFromCStr(pbLayer.url)      = aosLayer.mURL;
+        utils::ByteArrayToPB(aosLayer.mSHA256, pbLayer.sha256);
+        pbLayer.size = aosLayer.mSize;
+    }
+
+    pbRunInstances.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        const auto& aosInstance = instances[i];
+        auto&       pbInstance  = incomingMessage.SMIncomingMessage.run_instances.instances[i];
+
+        pbInstance.has_instance = true;
+        utils::InstanceIdentToPB(aosInstance.mInstanceIdent, pbInstance.instance);
+        pbInstance.uid                                 = aosInstance.mUID;
+        pbInstance.priority                            = aosInstance.mPriority;
+        utils::StringFromCStr(pbInstance.storage_path) = aosInstance.mStoragePath;
+        utils::StringFromCStr(pbInstance.state_path)   = aosInstance.mStatePath;
+    }
+
+    err = SendSMIncomingMessage(channel, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
+
+    // Check run instances
+
+    err = fixture->mLauncher.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting run instances: %s", utils::ErrorToCStr(err));
+
+    auto receivedServices = fixture->mLauncher.GetServices();
+
+    zassert_equal(fixture->mLauncher.IsForceRestart(), incomingMessage.SMIncomingMessage.run_instances.force_restart);
+    zassert_equal(fixture->mLauncher.GetServices(), services);
+    zassert_equal(fixture->mLauncher.GetLayers(), layers);
+    zassert_equal(fixture->mLauncher.GetInstances(), instances);
+}
+
+ZTEST_F(smclient, test_RunInstancesStatus)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send run instances status
+
+    aos::InstanceStatusStaticArray sendRunStatus;
+
+    GenerateInstancesRunStatus(sendRunStatus);
+
+    err = fixture->mSMClient->InstancesRunStatus(sendRunStatus);
+    zassert_true(err.IsNone(), "Error sending run instances status: %s", utils::ErrorToCStr(err));
+
+    // Receive run instances status
+
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto&                                pbRunInstancesStatus = outgoingMessage.SMOutgoingMessage.run_instances_status;
+
+    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
+
+    err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage,
+        servicemanager_v4_SMOutgoingMessages_run_instances_status_tag, "Unexpected message type");
+
+    aos::InstanceStatusStaticArray receivedRunStatus;
+
+    receivedRunStatus.Resize(pbRunInstancesStatus.instances_count);
+
+    for (auto i = 0; i < pbRunInstancesStatus.instances_count; i++) {
+        PBToInstanceStatus(pbRunInstancesStatus.instances[i], receivedRunStatus[i]);
+    }
+
+    zassert_equal(receivedRunStatus, sendRunStatus, "Wrong run instances status");
+}
+
+ZTEST_F(smclient, test_UpdateInstancesStatus)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send update instances status
+
+    aos::InstanceStatusStaticArray sendUpdateStatus;
+
+    GenerateInstancesRunStatus(sendUpdateStatus);
+
+    err = fixture->mSMClient->InstancesUpdateStatus(sendUpdateStatus);
+    zassert_true(err.IsNone(), "Error sending update instances status: %s", utils::ErrorToCStr(err));
+
+    // Receive run instances status
+
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto& pbUpdateInstancesStatus = outgoingMessage.SMOutgoingMessage.update_instances_status;
+
+    pbUpdateInstancesStatus
+        = servicemanager_v4_UpdateInstancesStatus servicemanager_v4_UpdateInstancesStatus_init_default;
+
+    err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage,
+        servicemanager_v4_SMOutgoingMessages_update_instances_status_tag, "Unexpected message type");
+
+    aos::InstanceStatusStaticArray receivedUpdateStatus;
+
+    receivedUpdateStatus.Resize(pbUpdateInstancesStatus.instances_count);
+
+    for (auto i = 0; i < outgoingMessage.SMOutgoingMessage.run_instances_status.instances_count; i++) {
+        PBToInstanceStatus(pbUpdateInstancesStatus.instances[i], receivedUpdateStatus[i]);
+    }
+
+    zassert_equal(receivedUpdateStatus, sendUpdateStatus, "Wrong update instances status");
 }
