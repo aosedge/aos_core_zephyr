@@ -22,7 +22,12 @@ namespace aos::zephyr::utils {
 template <size_t cSize>
 constexpr String StringFromCStr(char (&cStr)[cSize])
 {
-    return String(cStr, cSize - 1);
+    auto str = String(cStr, cSize - 1);
+
+    cStr[cSize - 1] = '\0';
+    str.Resize(strlen(cStr));
+
+    return str;
 }
 
 /**
@@ -35,7 +40,10 @@ constexpr String StringFromCStr(char (&cStr)[cSize])
 template <size_t cSize>
 constexpr const String StringFromCStr(const char (&cStr)[cSize])
 {
-    return String(cStr, cSize - 1);
+    auto str = String(cStr, cSize - 1);
+    str.Resize(strlen(cStr));
+
+    return str;
 }
 
 /**
