@@ -14,6 +14,7 @@
 
 #include "stubs/channelmanagerstub.hpp"
 #include "stubs/clocksyncstub.hpp"
+#include "stubs/downloaderstub.hpp"
 #include "stubs/launcherstub.hpp"
 #include "stubs/nodeinfoproviderstub.hpp"
 #include "stubs/resourcemanagerstub.hpp"
@@ -40,6 +41,7 @@ struct smclient_fixture {
     LauncherStub                        mLauncher;
     ResourceManagerStub                 mResourceManager;
     ResourceMonitorStub                 mResourceMonitor;
+    DownloaderStub                      mDownloader;
     ClockSyncStub                       mClockSync;
     ChannelManagerStub                  mChannelManager;
     std::unique_ptr<smclient::SMClient> mSMClient;
@@ -87,7 +89,7 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
     fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
 
     auto err = fixture->mSMClient->Init(fixture->mNodeInfoProvider, fixture->mLauncher, fixture->mResourceManager,
-        fixture->mResourceMonitor, fixture->mClockSync, fixture->mChannelManager);
+        fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync, fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
     fixture->mSMClient->OnClockSynced();
@@ -223,6 +225,21 @@ static void GenerateInstancesRunStatus(aos::Array<aos::InstanceStatus>& status)
         {"service1", "subject1", 2}, "2.0.0", aos::InstanceRunStateEnum::eFailed, aos::ErrorEnum::eRuntime});
 }
 
+static void GenerateImageContentInfo(downloader::ImageContentInfo& contentInfo)
+
+{
+    uint8_t sha256[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    contentInfo.mRequestID = 42;
+    contentInfo.mFiles.EmplaceBack(
+        downloader::FileInfo {"path/to/file1", aos::Array<uint8_t>(sha256, sizeof(sha256)), 1024});
+    contentInfo.mFiles.EmplaceBack(
+        downloader::FileInfo {"path/to/file2", aos::Array<uint8_t>(sha256, sizeof(sha256)), 2048});
+    contentInfo.mFiles.EmplaceBack(
+        downloader::FileInfo {"path/to/file3", aos::Array<uint8_t>(sha256, sizeof(sha256)), 4096});
+    contentInfo.mError = aos::Error(aos::ErrorEnum::eRuntime, "some error");
+}
+
 /***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
@@ -240,6 +257,7 @@ ZTEST_SUITE(
         auto smclientFixture = static_cast<smclient_fixture*>(fixture);
 
         smclientFixture->mLauncher.Clear();
+        smclientFixture->mDownloader.Clear();
         smclientFixture->mClockSync.Clear();
         smclientFixture->mSMClient.reset(new smclient::SMClient);
     },
@@ -614,4 +632,119 @@ ZTEST_F(smclient, test_UpdateInstancesStatus)
     }
 
     zassert_equal(receivedUpdateStatus, sendUpdateStatus, "Wrong update instances status");
+}
+
+ZTEST_F(smclient, test_ImageContentRequest)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send image content request
+
+    downloader::ImageContentRequest sendContentRequest {"content URL", 42, aos::DownloadContentEnum::eService};
+
+    err = fixture->mSMClient->SendImageContentRequest(sendContentRequest);
+    zassert_true(err.IsNone(), "Error sending image content request: %s", utils::ErrorToCStr(err));
+
+    // Receive image content request
+
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto& pbImageContentRequest = outgoingMessage.SMOutgoingMessage.image_content_request;
+
+    pbImageContentRequest = servicemanager_v4_ImageContentRequest servicemanager_v4_ImageContentRequest_init_default;
+
+    err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage,
+        servicemanager_v4_SMOutgoingMessages_image_content_request_tag, "Unexpected message type");
+
+    downloader::ImageContentRequest receiveContentRequest;
+
+    receiveContentRequest.mRequestID = pbImageContentRequest.request_id;
+    utils::PBToEnum(pbImageContentRequest.content_type, receiveContentRequest.mContentType);
+    receiveContentRequest.mURL = utils::StringFromCStr(pbImageContentRequest.url);
+
+    zassert_equal(receiveContentRequest, sendContentRequest);
+}
+
+ZTEST_F(smclient, test_ImageContentInfo)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send image content info
+
+    downloader::ImageContentInfo aosContentInfo;
+
+    GenerateImageContentInfo(aosContentInfo);
+
+    servicemanager_v4_SMIncomingMessages incomingMessage;
+    auto&                                pbImageContentInfo = incomingMessage.SMIncomingMessage.image_content_info;
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v4_SMIncomingMessages_image_content_info_tag;
+    pbImageContentInfo = servicemanager_v4_ImageContentInfo servicemanager_v4_ImageContentInfo_init_default;
+
+    pbImageContentInfo.request_id        = aosContentInfo.mRequestID;
+    pbImageContentInfo.image_files_count = aosContentInfo.mFiles.Size();
+
+    for (size_t i = 0; i < aosContentInfo.mFiles.Size(); i++) {
+        const auto& aosFileInfo = aosContentInfo.mFiles[i];
+        auto&       pbFileInfo  = incomingMessage.SMIncomingMessage.image_content_info.image_files[i];
+
+        utils::StringFromCStr(pbFileInfo.relative_path) = aosFileInfo.mRelativePath;
+        utils::ByteArrayToPB(aosFileInfo.mSHA256, pbFileInfo.sha256);
+        pbFileInfo.size = aosFileInfo.mSize;
+    }
+
+    if (!aosContentInfo.mError.IsNone()) {
+        pbImageContentInfo.has_error = true;
+        pbImageContentInfo.error     = utils::ErrorToPB(aosContentInfo.mError);
+    }
+
+    err = SendSMIncomingMessage(channel, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
+
+    // Receive image content info
+
+    err = fixture->mDownloader.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting downloader event: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(fixture->mDownloader.GetContentInfo(), aosContentInfo);
+}
+
+ZTEST_F(smclient, test_ImageContent)
+{
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send image content
+
+    uint8_t data[]       = {12, 23, 45, 32, 21, 56, 12, 18};
+    auto    aosFileChunk = downloader::FileChunk {43, "path/to/file1", 4, 1, aos::Array<uint8_t>(data, sizeof(data))};
+
+    servicemanager_v4_SMIncomingMessages incomingMessage;
+    auto&                                pbImageContent = incomingMessage.SMIncomingMessage.image_content;
+
+    incomingMessage.which_SMIncomingMessage = servicemanager_v4_SMIncomingMessages_image_content_tag;
+    pbImageContent = servicemanager_v4_ImageContent servicemanager_v4_ImageContent_init_default;
+
+    pbImageContent.request_id                           = aosFileChunk.mRequestID;
+    utils::StringFromCStr(pbImageContent.relative_path) = aosFileChunk.mRelativePath;
+    pbImageContent.parts_count                          = aosFileChunk.mPartsCount;
+    pbImageContent.part                                 = aosFileChunk.mPart;
+    utils::ByteArrayToPB(aosFileChunk.mData, pbImageContent.data);
+
+    err = SendSMIncomingMessage(channel, incomingMessage);
+    zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
+
+    // Receive image content
+
+    err = fixture->mDownloader.WaitEvent(cWaitTimeout);
+    zassert_true(err.IsNone(), "Error waiting downloader event: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(fixture->mDownloader.GetFileChunk(), aosFileChunk);
 }
