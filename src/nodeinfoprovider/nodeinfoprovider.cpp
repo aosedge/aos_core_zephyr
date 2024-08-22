@@ -42,6 +42,7 @@ Error NodeInfoProvider::Init()
         return AOS_ERROR_WRAP(ret);
     }
 
+    mNodeInfo.mName     = cNodeName;
     mNodeInfo.mTotalRAM = xstat.tot_mem;
     mNodeInfo.mNodeType = cNodeType;
     mNodeInfo.mMaxDMIPS = cMaxDMIPS;
