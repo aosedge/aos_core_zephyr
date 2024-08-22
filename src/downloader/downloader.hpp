@@ -78,9 +78,9 @@ struct FileInfo {
  * Image content info.
  */
 struct ImageContentInfo {
-    uint64_t                       mRequestID;
-    StaticArray<FileInfo, 32>      mFiles;
-    StaticString<cErrorMessageLen> mError;
+    uint64_t                  mRequestID;
+    StaticArray<FileInfo, 32> mFiles;
+    Error                     mError;
 
     /**
      * Compares content info.
