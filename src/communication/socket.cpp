@@ -31,7 +31,7 @@ aos::Error Socket::Init(const aos::String& serverAddress, int serverPort)
 
 aos::Error Socket::Open()
 {
-    LOG_DBG() << "Connecting client socket to connect to: address=" << mServerAddress.CStr() << " port=" << mServerPort;
+    LOG_INF() << "Connecting socket to: address=" << mServerAddress.CStr() << " port=" << mServerPort;
 
     mSocketFd = socket(AF_INET, SOCK_STREAM, 0);
     if (mSocketFd == -1) {
@@ -54,7 +54,7 @@ aos::Error Socket::Open()
         return aos::Error(aos::ErrorEnum::eRuntime, "failed to connect to server");
     }
 
-    LOG_DBG() << "Connected to server: address=" << mServerAddress.CStr() << " port=" << mServerPort;
+    LOG_INF() << "Connected to server: address=" << mServerAddress.CStr() << " port=" << mServerPort;
 
     mOpened = true;
 
