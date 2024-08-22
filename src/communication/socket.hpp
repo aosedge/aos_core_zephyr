@@ -24,14 +24,14 @@ public:
      *
      * @param serverAddress Server address.
      * @param serverPort Server port.
-     * @return aos::Error.
+     * @return Error.
      */
-    Error Init(const aos::String& serverAddress, int serverPort);
+    Error Init(const String& serverAddress, int serverPort);
 
     /**
      * Opens the socket.
      *
-     * @return aos::Error.
+     * @return Error.
      */
     Error Open() override;
 
@@ -71,10 +71,10 @@ private:
     int ReadFromSocket(int fd, void* data, size_t size);
     int WriteToSocket(int fd, const void* data, size_t size);
 
-    aos::StaticString<cIPAddrLen> mServerAddress;
-    int                           mServerPort {-1};
-    int                           mSocketFd {-1};
-    bool                          mOpened {};
+    StaticString<cIPAddrLen> mServerAddress;
+    int                      mServerPort {-1};
+    int                      mSocketFd {-1};
+    bool                     mOpened {};
 };
 
 } // namespace aos::zephyr::communication
