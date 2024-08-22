@@ -141,6 +141,10 @@ SMClient::~SMClient()
             LOG_ERR() << "Failed to delete channel: err=" << err;
         }
     }
+
+    LockGuard lock {mMutex};
+
+    mConnectionSubscribers.Clear();
 }
 
 Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
@@ -223,13 +227,24 @@ Error SMClient::SendMonitoringData(const monitoring::NodeMonitoringData& nodeMon
     return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
-Error SMClient::Subscribes(ConnectionSubscriberItf& subscriber)
+Error SMClient::Subscribe(ConnectionSubscriberItf& subscriber)
 {
-    return ErrorEnum::eNone;
+    LockGuard lock(mMutex);
+
+    if (auto err = mConnectionSubscribers.PushBack(&subscriber); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return aos::ErrorEnum::eNone;
 }
 
-void SMClient::Unsubscribes(ConnectionSubscriberItf& subscriber)
+void SMClient::Unsubscribe(ConnectionSubscriberItf& subscriber)
 {
+    LockGuard lock(mMutex);
+
+    if (auto it = mConnectionSubscribers.Find(&subscriber); it.mError.IsNone()) {
+        mConnectionSubscribers.Remove(it.mValue);
+    }
 }
 
 Error SMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& status)
@@ -284,10 +299,24 @@ Error SMClient::SendClockSyncRequest()
 
 void SMClient::OnConnect()
 {
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "On connect notification";
+
+    for (auto& subscriber : mConnectionSubscribers) {
+        subscriber->OnConnect();
+    }
 }
 
 void SMClient::OnDisconnect()
 {
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "On disconnect notification";
+
+    for (auto& subscriber : mConnectionSubscribers) {
+        subscriber->OnDisconnect();
+    }
 }
 
 Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
