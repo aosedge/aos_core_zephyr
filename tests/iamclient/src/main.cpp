@@ -406,6 +406,7 @@ ZTEST_F(iamclient, test_ApplyCert)
     zassert_equal(pbApplyCertResponse.type, fixture->mProvisionManager.GetCertType(), "Wrong cert type");
     zassert_equal(pbApplyCertResponse.cert_url, certInfo.mCertURL, "Wrong cert URL");
     zassert_equal(pbApplyCertResponse.serial, serial, "Wrong serial");
+    zassert_equal(pbApplyCertRequest.cert, fixture->mProvisionManager.GetCert(), "Wrong cert");
 }
 
 ZTEST_F(iamclient, test_PauseNode)
