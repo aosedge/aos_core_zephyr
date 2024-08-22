@@ -61,17 +61,31 @@ static constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& n
     }
 }
 
+static void InstanceStatusToPB(
+    const InstanceStatus& aosInstanceStatus, servicemanager_v4_InstanceStatus& pbInstanceStatus)
+{
+    pbInstanceStatus.has_instance = true;
+    utils::InstanceIdentToPB(aosInstanceStatus.mInstanceIdent, pbInstanceStatus.instance);
+    utils::StringFromCStr(pbInstanceStatus.service_version) = aosInstanceStatus.mServiceVersion;
+    utils::StringFromCStr(pbInstanceStatus.run_state)       = aosInstanceStatus.mRunState.ToString();
+
+    if (!aosInstanceStatus.mError.IsNone()) {
+        pbInstanceStatus.has_error_info = true;
+        pbInstanceStatus.error_info     = utils::ErrorToPB(aosInstanceStatus.mError);
+    }
+}
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
+Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider, sm::launcher::LauncherItf& launcher,
     sm::resourcemanager::ResourceManagerItf& resourceManager, monitoring::ResourceMonitorItf& resourceMonitor,
     clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager)
 {
     LOG_DBG() << "Initialize SM client";
 
     mNodeInfoProvider = &nodeInfoProvider;
+    mLauncher         = &launcher;
     mResourceManager  = &resourceManager;
     mResourceMonitor  = &resourceMonitor;
     mChannelManager   = &channelManager;
@@ -129,12 +143,45 @@ SMClient::~SMClient()
 
 Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
 {
-    return ErrorEnum::eNone;
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "Send run instances status";
+
+    auto  outgoingMessage      = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbRunInstancesStatus = outgoingMessage->SMOutgoingMessage.run_instances_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_run_instances_status_tag;
+    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
+
+    pbRunInstancesStatus.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        InstanceStatusToPB(instances[i], pbRunInstancesStatus.instances[i]);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::InstancesUpdateStatus(const Array<InstanceStatus>& instances)
 {
-    return ErrorEnum::eNone;
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "Send update instances status";
+
+    auto  outgoingMessage         = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbUpdateInstancesStatus = outgoingMessage->SMOutgoingMessage.update_instances_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_update_instances_status_tag;
+    pbUpdateInstancesStatus
+        = servicemanager_v4_UpdateInstancesStatus servicemanager_v4_UpdateInstancesStatus_init_default;
+
+    pbUpdateInstancesStatus.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        InstanceStatusToPB(instances[i], pbUpdateInstancesStatus.instances[i]);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::SendImageContentRequest(const downloader::ImageContentRequest& request)
@@ -148,7 +195,7 @@ Error SMClient::SendMonitoringData(const monitoring::NodeMonitoringData& nodeMon
 
     LOG_INF() << "Send node monitoring";
 
-    auto  outgoingMessage     = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto  outgoingMessage     = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
     auto& pbInstantMonitoring = outgoingMessage->SMOutgoingMessage.instant_monitoring;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_instant_monitoring_tag;
@@ -256,6 +303,10 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
         err = ProcessGetAverageMonitoring(incomingMessages->SMIncomingMessage.get_average_monitoring);
         break;
 
+    case servicemanager_v4_SMIncomingMessages_run_instances_tag:
+        err = ProcessRunInstances(incomingMessages->SMIncomingMessage.run_instances);
+        break;
+
     default:
         LOG_WRN() << "Receive unsupported message: tag=" << incomingMessages->which_SMIncomingMessage;
         break;
@@ -299,13 +350,13 @@ Error SMClient::ProcessGetAverageMonitoring(const servicemanager_v4_GetAverageMo
 {
     LOG_INF() << "Process get average monitoring";
 
-    auto  outgoingMessage     = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto  outgoingMessage     = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
     auto& pbAverageMonitoring = outgoingMessage->SMOutgoingMessage.average_monitoring;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_average_monitoring_tag;
     pbAverageMonitoring = servicemanager_v4_AverageMonitoring servicemanager_v4_AverageMonitoring_init_default;
 
-    auto averageMonitoring = aos::MakeUnique<monitoring::NodeMonitoringData>(&mAllocator);
+    auto averageMonitoring = MakeUnique<monitoring::NodeMonitoringData>(&mAllocator);
 
     if (auto err = mResourceMonitor->GetAverageMonitoringData(*averageMonitoring); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
@@ -316,11 +367,74 @@ Error SMClient::ProcessGetAverageMonitoring(const servicemanager_v4_GetAverageMo
     return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
+Error SMClient::ProcessRunInstances(const servicemanager_v4_RunInstances& pbRunInstances)
+{
+    LOG_INF() << "Process run instances";
+
+    auto aosServices = MakeUnique<ServiceInfoStaticArray>(&mAllocator);
+
+    aosServices->Resize(pbRunInstances.services_count);
+
+    for (auto i = 0; i < pbRunInstances.services_count; i++) {
+        const auto& pbService  = pbRunInstances.services[i];
+        auto&       aosService = (*aosServices)[i];
+
+        aosService.mServiceID  = utils::StringFromCStr(pbService.service_id);
+        aosService.mProviderID = utils::StringFromCStr(pbService.provider_id);
+        aosService.mVersion    = utils::StringFromCStr(pbService.version);
+        aosService.mGID        = pbService.gid;
+        aosService.mURL        = pbService.url;
+        utils::PBToByteArray(pbService.sha256, aosService.mSHA256);
+        aosService.mSize = pbService.size;
+    }
+
+    auto aosLayers = MakeUnique<LayerInfoStaticArray>(&mAllocator);
+
+    aosLayers->Resize(pbRunInstances.layers_count);
+
+    for (auto i = 0; i < pbRunInstances.layers_count; i++) {
+        const auto& pbLayer  = pbRunInstances.layers[i];
+        auto&       aosLayer = (*aosLayers)[i];
+
+        aosLayer.mLayerID     = utils::StringFromCStr(pbLayer.layer_id);
+        aosLayer.mLayerDigest = utils::StringFromCStr(pbLayer.digest);
+        aosLayer.mVersion     = utils::StringFromCStr(pbLayer.version);
+        aosLayer.mURL         = utils::StringFromCStr(pbLayer.url);
+        utils::PBToByteArray(pbLayer.sha256, aosLayer.mSHA256);
+        aosLayer.mSize = pbLayer.size;
+    }
+
+    auto aosInstances = MakeUnique<InstanceInfoStaticArray>(&mAllocator);
+
+    aosInstances->Resize(pbRunInstances.instances_count);
+
+    for (auto i = 0; i < pbRunInstances.instances_count; i++) {
+        const auto& pbInstance  = pbRunInstances.instances[i];
+        auto&       aosInstance = (*aosInstances)[i];
+
+        if (pbInstance.has_instance) {
+            utils::PBToInstanceIdent(pbInstance.instance, aosInstance.mInstanceIdent);
+        }
+
+        aosInstance.mUID         = pbInstance.uid;
+        aosInstance.mPriority    = pbInstance.priority;
+        aosInstance.mStoragePath = utils::StringFromCStr(pbInstance.storage_path);
+        aosInstance.mStatePath   = utils::StringFromCStr(pbInstance.state_path);
+    }
+
+    auto err = mLauncher->RunInstances(*aosServices, *aosLayers, *aosInstances, pbRunInstances.force_restart);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
 Error SMClient::SendNodeConfigStatus(const String& version, const Error& configErr)
 {
     LOG_INF() << "Send node config status: version=" << version << ", configErr=" << configErr;
 
-    auto  outgoingMessage    = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto  outgoingMessage    = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
     auto& pbNodeConfigStatus = outgoingMessage->SMOutgoingMessage.node_config_status;
 
     outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_node_config_status_tag;
@@ -337,7 +451,8 @@ Error SMClient::SendNodeConfigStatus(const String& version, const Error& configE
     utils::StringFromCStr(pbNodeConfigStatus.version)   = version;
 
     if (!configErr.IsNone()) {
-        utils::ErrorToPB(configErr, pbNodeConfigStatus);
+        pbNodeConfigStatus.has_error = true;
+        pbNodeConfigStatus.error     = utils::ErrorToPB(configErr);
     }
 
     return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);

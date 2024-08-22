@@ -39,13 +39,14 @@ public:
      * Initializes SM client instance.
      *
      * @param nodeInfoProvider node info provider instance.
+     * @param launcher launcher instance.
      * @param resourceManager resource manager instance.
      * @param resourceMonitor resource monitor instance.
      * @param clockSync clock sync instance.
      * @param channelManager channel manager instance.
      * @return Error.
      */
-    Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
+    Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider, sm::launcher::LauncherItf& launcher,
         sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
         clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager);
 
@@ -141,9 +142,11 @@ private:
     Error ProcessCheckNodeConfig(const servicemanager_v4_CheckNodeConfig& pbCheckNodeConfig);
     Error ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSetNodeConfig);
     Error ProcessGetAverageMonitoring(const servicemanager_v4_GetAverageMonitoring& pbGetAverageMonitoring);
+    Error ProcessRunInstances(const servicemanager_v4_RunInstances& pbRunInstances);
 
     OpenHandler                                 mOpenHandler;
     iam::nodeinfoprovider::NodeInfoProviderItf* mNodeInfoProvider {};
+    sm::launcher::LauncherItf*                  mLauncher {};
     sm::resourcemanager::ResourceManagerItf*    mResourceManager {};
     aos::monitoring::ResourceMonitorItf*        mResourceMonitor {};
     communication::ChannelManagerItf*           mChannelManager {};
@@ -153,7 +156,8 @@ private:
     bool  mProvisioned = false;
 
     StaticAllocator<sizeof(servicemanager_v4_SMIncomingMessages) + sizeof(servicemanager_v4_SMOutgoingMessages)
-        + Max(sizeof(NodeInfo), sizeof(aos::monitoring::NodeMonitoringData))>
+        + Max(sizeof(NodeInfo), sizeof(aos::monitoring::NodeMonitoringData))>,
+            sizeof(ServiceInfoStaticArray) + sizeof(LayerInfoStaticArray) + sizeof(InstanceInfoStaticArray))>
         mAllocator;
 };
 
