@@ -40,13 +40,14 @@ public:
      *
      * @param nodeInfoProvider node info provider instance.
      * @param resourceManager resource manager instance.
+     * @param resourceMonitor resource monitor instance.
      * @param clockSync clock sync instance.
      * @param channelManager channel manager instance.
      * @return Error.
      */
     Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider,
-        sm::resourcemanager::ResourceManagerItf& resourceManager, clocksync::ClockSyncItf& clockSync,
-        communication::ChannelManagerItf& channelManager);
+        sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
+        clocksync::ClockSyncItf& clockSync, communication::ChannelManagerItf& channelManager);
 
     /**
      * Destructor.
@@ -80,10 +81,10 @@ public:
     /**
      * Sends monitoring data.
      *
-     * @param monitoringData monitoring data.
+     * @param nodeMonitoring node monitoring data.
      * @return Error.
      */
-    Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& monitoringData) override;
+    Error SendMonitoringData(const aos::monitoring::NodeMonitoringData& nodeMonitoring) override;
 
     /**
      * Subscribes the provided ConnectionSubscriberItf to this object.
@@ -139,10 +140,12 @@ private:
     Error ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus);
     Error ProcessCheckNodeConfig(const servicemanager_v4_CheckNodeConfig& pbCheckNodeConfig);
     Error ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSetNodeConfig);
+    Error ProcessGetAverageMonitoring(const servicemanager_v4_GetAverageMonitoring& pbGetAverageMonitoring);
 
     OpenHandler                                 mOpenHandler;
     iam::nodeinfoprovider::NodeInfoProviderItf* mNodeInfoProvider {};
     sm::resourcemanager::ResourceManagerItf*    mResourceManager {};
+    aos::monitoring::ResourceMonitorItf*        mResourceMonitor {};
     communication::ChannelManagerItf*           mChannelManager {};
 
     Mutex mMutex;
@@ -150,7 +153,7 @@ private:
     bool  mProvisioned = false;
 
     StaticAllocator<sizeof(servicemanager_v4_SMIncomingMessages) + sizeof(servicemanager_v4_SMOutgoingMessages)
-        + sizeof(NodeInfo)>
+        + Max(sizeof(NodeInfo), sizeof(aos::monitoring::NodeMonitoringData))>
         mAllocator;
 };
 
