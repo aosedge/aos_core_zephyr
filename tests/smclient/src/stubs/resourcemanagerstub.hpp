@@ -12,7 +12,7 @@
 
 class ResourceManagerStub : public aos::sm::resourcemanager::ResourceManagerItf {
 public:
-    aos::RetWithError<aos::StaticString<aos::cVersionLen>> GetNodeConfigVersion() const override { return {"1.0.0"}; }
+    aos::RetWithError<aos::StaticString<aos::cVersionLen>> GetNodeConfigVersion() const override { return mVersion; }
 
     aos::Error GetDeviceInfo(const aos::String& deviceName, aos::DeviceInfo& deviceInfo) const override
     {
@@ -49,8 +49,13 @@ public:
 
     aos::Error UpdateNodeConfig(const aos::String& version, const aos::String& config) override
     {
+        mVersion = version;
+        mConfig  = config;
+
         return aos::ErrorEnum::eNone;
     }
+
+    const aos::String& GetNodeConfig() const { return mConfig; }
 
 private:
     aos::StaticString<aos::cVersionLen>                             mVersion;
