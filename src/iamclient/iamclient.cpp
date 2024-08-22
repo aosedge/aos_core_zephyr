@@ -436,12 +436,14 @@ Error IAMClient::ProcessStartProvisioning(const iamanager_v5_StartProvisioningRe
 
     NodeStatus expectedStatuses[] {NodeStatusEnum::eUnprovisioned};
 
-    if (auto err = CheckNodeIDAndStatus(pbStartProvisioningRequest.node_id, utils::ToArray(expectedStatuses));
+    if (auto err = CheckNodeIDAndStatus(
+            utils::StringFromCStr(pbStartProvisioningRequest.node_id), utils::ToArray(expectedStatuses));
         !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbStartProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
-    if (auto err = mProvisionManager->StartProvisioning(pbStartProvisioningRequest.password); !err.IsNone()) {
+    if (auto err = mProvisionManager->StartProvisioning(utils::StringFromCStr(pbStartProvisioningRequest.password));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbStartProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
@@ -461,12 +463,14 @@ Error IAMClient::ProcessFinishProvisioning(const iamanager_v5_FinishProvisioning
 
     NodeStatus expectedStatuses[] {NodeStatusEnum::eUnprovisioned};
 
-    if (auto err = CheckNodeIDAndStatus(pbFinishProvisioningRequest.node_id, utils::ToArray(expectedStatuses));
+    if (auto err = CheckNodeIDAndStatus(
+            utils::StringFromCStr(pbFinishProvisioningRequest.node_id), utils::ToArray(expectedStatuses));
         !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbFinishProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
-    if (auto err = mProvisionManager->FinishProvisioning(pbFinishProvisioningRequest.password); !err.IsNone()) {
+    if (auto err = mProvisionManager->FinishProvisioning(utils::StringFromCStr(pbFinishProvisioningRequest.password));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbFinishProvisionResponse, AOS_ERROR_WRAP(err));
     }
 
@@ -489,12 +493,14 @@ Error IAMClient::ProcessDeprovision(const iamanager_v5_DeprovisionRequest& pbDep
 
     NodeStatus expectedStatuses[] {NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
 
-    if (auto err = CheckNodeIDAndStatus(pbDeprovisionRequest.node_id, utils::ToArray(expectedStatuses));
+    if (auto err
+        = CheckNodeIDAndStatus(utils::StringFromCStr(pbDeprovisionRequest.node_id), utils::ToArray(expectedStatuses));
         !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbDeprovisionResponse, AOS_ERROR_WRAP(err));
     }
 
-    if (auto err = mProvisionManager->Deprovision(pbDeprovisionRequest.password); !err.IsNone()) {
+    if (auto err = mProvisionManager->Deprovision(utils::StringFromCStr(pbDeprovisionRequest.password));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbDeprovisionResponse, AOS_ERROR_WRAP(err));
     }
 
@@ -518,7 +524,8 @@ Error IAMClient::ProcessGetCertTypes(const iamanager_v5_GetCertTypesRequest& pbG
     NodeStatus expectedStatuses[] {
         NodeStatusEnum::eUnprovisioned, NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
 
-    if (auto err = CheckNodeIDAndStatus(pbGetCertTypesRequest.node_id, utils::ToArray(expectedStatuses));
+    if (auto err
+        = CheckNodeIDAndStatus(utils::StringFromCStr(pbGetCertTypesRequest.node_id), utils::ToArray(expectedStatuses));
         !err.IsNone()) {
         LOG_ERR() << "Wrong get cert types condition: err=" << err;
     }
@@ -550,14 +557,16 @@ Error IAMClient::ProcessCreateKey(const iamanager_v5_CreateKeyRequest& pbCreateK
     NodeStatus expectedStatuses[] {
         NodeStatusEnum::eUnprovisioned, NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
 
-    if (auto err = CheckNodeIDAndStatus(pbCreateKeyRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+    if (auto err
+        = CheckNodeIDAndStatus(utils::StringFromCStr(pbCreateKeyRequest.node_id), utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbCreateKeyResponse, AOS_ERROR_WRAP(err));
     }
 
     auto csr = utils::StringFromCStr(pbCreateKeyResponse.csr);
 
-    if (auto err = mProvisionManager->CreateKey(
-            pbCreateKeyRequest.type, pbCreateKeyRequest.subject, pbCreateKeyRequest.password, csr);
+    if (auto err = mProvisionManager->CreateKey(utils::StringFromCStr(pbCreateKeyRequest.type),
+            utils::StringFromCStr(pbCreateKeyRequest.subject), utils::StringFromCStr(pbCreateKeyRequest.password), csr);
         !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbCreateKeyResponse, AOS_ERROR_WRAP(err));
     }
@@ -581,13 +590,16 @@ Error IAMClient::ProcessApplyCert(const iamanager_v5_ApplyCertRequest& pbApplyCe
     NodeStatus expectedStatuses[] {
         NodeStatusEnum::eUnprovisioned, NodeStatusEnum::eProvisioned, NodeStatusEnum::ePaused};
 
-    if (auto err = CheckNodeIDAndStatus(pbApplyCertRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+    if (auto err
+        = CheckNodeIDAndStatus(utils::StringFromCStr(pbApplyCertRequest.node_id), utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbApplyCertResponse, AOS_ERROR_WRAP(err));
     }
 
     iam::certhandler::CertInfo certInfo {};
 
-    if (auto err = mProvisionManager->ApplyCert(pbApplyCertRequest.type, pbApplyCertRequest.cert, certInfo);
+    if (auto err = mProvisionManager->ApplyCert(
+            utils::StringFromCStr(pbApplyCertRequest.type), utils::StringFromCStr(pbApplyCertRequest.cert), certInfo);
         !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbApplyCertResponse, AOS_ERROR_WRAP(err));
     }
@@ -615,7 +627,9 @@ Error IAMClient::ProcessPauseNode(const iamanager_v5_PauseNodeRequest& pbPauseNo
 
     NodeStatus expectedStatuses[] {NodeStatusEnum::eProvisioned};
 
-    if (auto err = CheckNodeIDAndStatus(pbPauseNodeRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+    if (auto err
+        = CheckNodeIDAndStatus(utils::StringFromCStr(pbPauseNodeRequest.node_id), utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbPauseNodeResponse, AOS_ERROR_WRAP(err));
     }
 
@@ -638,7 +652,9 @@ Error IAMClient::ProcessResumeNode(const iamanager_v5_ResumeNodeRequest& pbResum
 
     NodeStatus expectedStatuses[] {NodeStatusEnum::ePaused};
 
-    if (auto err = CheckNodeIDAndStatus(pbResumeNodeRequest.node_id, utils::ToArray(expectedStatuses)); !err.IsNone()) {
+    if (auto err
+        = CheckNodeIDAndStatus(utils::StringFromCStr(pbResumeNodeRequest.node_id), utils::ToArray(expectedStatuses));
+        !err.IsNone()) {
         return SendError(outgoingMessage.Get(), pbResumeNodeResponse, AOS_ERROR_WRAP(err));
     }
 
