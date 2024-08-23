@@ -150,6 +150,8 @@ Error NodeInfoProvider::InitNodeID()
     if (auto err = FS::ReadFileToString(cNodeIDFile, mNodeInfo.mNodeID); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
+
+    mNodeInfo.mNodeID.Trim("\r\n");
 #endif
 
     return ErrorEnum::eNone;
