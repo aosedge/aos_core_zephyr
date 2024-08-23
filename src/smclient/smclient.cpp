@@ -30,7 +30,7 @@ static google_protobuf_Timestamp TimestampToPB(const Time& time)
 static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
     servicemanager_v4_MonitoringData& pbMonitoringData)
 {
-    pbMonitoringData.cpu           = monitoringData.mCPU;
+    pbMonitoringData.cpu           = monitoringData.mCPU + 0.5;
     pbMonitoringData.ram           = monitoringData.mRAM;
     pbMonitoringData.download      = monitoringData.mDownload;
     pbMonitoringData.upload        = monitoringData.mUpload;
