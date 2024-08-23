@@ -19,14 +19,9 @@ namespace aos::zephyr::monitoring {
  * Public
  **********************************************************************************************************************/
 
-Error ResourceUsageProvider::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider)
+Error ResourceUsageProvider::Init()
 {
     LOG_DBG() << "Init resource usage provider";
-
-    auto err = nodeInfoProvider.GetNodeInfo(mNodeInfo);
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
 
     return ErrorEnum::eNone;
 }
@@ -53,7 +48,7 @@ Error ResourceUsageProvider::GetNodeMonitoringData(
 
         auto us_elapsed = (curTime.tv_sec - mPrevTime.tv_sec) * 1000000.0 + (curTime.tv_usec - mPrevTime.tv_usec);
 
-        monitoringData.mCPU = (cpuTimeDiff_ns * mNodeInfo.mMaxDMIPS / 1000.0 / us_elapsed);
+        monitoringData.mCPU = (cpuTimeDiff_ns * 100.0 / 1000.0 / us_elapsed);
     }
 
     LOG_DBG() << "Get node monitoring data: RAM(K): " << (monitoringData.mRAM / 1024)
