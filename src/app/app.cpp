@@ -171,7 +171,7 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mResourceUsageProvider.Init(mNodeInfoProvider); !err.IsNone()) {
+    if (auto err = mResourceUsageProvider.Init(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

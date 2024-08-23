@@ -21,9 +21,9 @@ public:
      * Initializes resource usage provider.
      *
      * @param nodeInfoProvider node info provider.
-     * @return Error
+     * @return Error.
      */
-    Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider);
+    Error Init();
 
     /**
      * Returns node monitoring data.
@@ -63,7 +63,6 @@ private:
     timeval                                             mPrevTime {};
     StaticArray<InstanceCPUData, aos::cMaxNumInstances> mPrevInstanceCPUTime {};
     Mutex                                               mMutex {};
-    NodeInfo                                            mNodeInfo {};
 };
 
 } // namespace aos::zephyr::monitoring
