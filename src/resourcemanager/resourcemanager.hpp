@@ -40,12 +40,10 @@ public:
 
 private:
     static constexpr size_t cJsonMaxContentLen = 1024;
-    static constexpr size_t cAllocationSize    = 2048;
-    static constexpr size_t cMaxNumAllocations = 32;
 
-    mutable Mutex                                                mMutex;
-    mutable StaticString<cJsonMaxContentLen>                     mJSONBuffer;
-    mutable StaticAllocator<cAllocationSize, cMaxNumAllocations> mAllocator;
+    mutable Mutex                               mMutex;
+    mutable StaticString<cJsonMaxContentLen>    mJSONBuffer;
+    mutable StaticAllocator<sizeof(NodeConfig)> mAllocator;
 };
 
 /**

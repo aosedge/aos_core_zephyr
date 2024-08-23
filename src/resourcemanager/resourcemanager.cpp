@@ -42,8 +42,6 @@ Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config
 {
     LockGuard lock(mMutex);
 
-    mAllocator.Clear();
-
     auto jsonNodeConfig = MakeUnique<NodeConfig>(&mAllocator);
 
     jsonNodeConfig->version  = config.mVersion.CStr();
@@ -67,8 +65,6 @@ Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config
 Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::NodeConfig& config) const
 {
     LockGuard lock(mMutex);
-
-    mAllocator.Clear();
 
     // json_object_parse mutates the input string, so we need to copy it
     mJSONBuffer = json;
