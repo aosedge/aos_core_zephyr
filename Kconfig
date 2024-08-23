@@ -25,11 +25,11 @@ config AOS_REBOOT_XEN_STORE_PATH
 
 config AOS_DISK_MOUNT_POINT
 	string "Disk mount point"
-	default "/aos"
+	default "/lfs"
 
 config AOS_STORAGE_DIR
 	string "Path to the storage"
-	default "/aos/storage"
+	default "/lfs/aos/storage"
 
 config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
@@ -37,11 +37,23 @@ config AOS_RUNTIME_DIR
 
 config AOS_SERVICES_DIR
 	string "Aos services dir"
-	default "/aos/services"
+	default "/lfs/aos/services"
 
 config AOS_NODE_CONFIG_FILE
 	string "Node configuration file path"
-	default "/aos/node_config.cfg"
+	default "/lfs/aos/node_config.cfg"
+
+config AOS_NODE_STATUS_FILE
+	string "Path to provisioning state file."
+	default "/lfs/aos/.nodestatus"
+
+config AOS_PKCS11_MODULE_PIN_FILE
+	string "Path to PKCS11 module PIN file."
+	default "/lfs/aos/.pkcs11pin"
+
+config AOS_HSM_DIR
+	string "Path HSM tokens dir."
+	default "/lfs/tee"
 
 config AOS_NODE_NAME
 	string "Node name"
@@ -66,18 +78,6 @@ config AOS_CLOCK_SYNC_MAX_DIFF_MSEC
 config AOS_MAX_CPU_DMIPS
 	int "Maximum CPU DMIPS"
 	default 10000
-
-config AOS_PROVISION_STATE_FILE
-	string "Path to provisioning state file."
-	default "/aos/.provisionstate"
-
-config AOS_PKCS11_MODULE_PIN_FILE
-	string "Path to PKCS11 module PIN file."
-	default "/aos/.pkcs11pin"
-
-config AOS_HSM_DIR
-	string "Path HSM tokens dir."
-	default "/aos/tee"
 
 config AOS_ROOT_CA_PATH
 	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
