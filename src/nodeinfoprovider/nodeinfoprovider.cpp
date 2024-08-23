@@ -212,7 +212,7 @@ Error NodeInfoProvider::StoreNodeStatus(const NodeStatus& status) const
 {
     auto statusStr = status.ToString();
 
-    if (auto err = FS::WriteStringToFile(cProvisioningStateFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
+    if (auto err = FS::WriteStringToFile(cNodeStatusFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -223,7 +223,7 @@ RetWithError<NodeStatus> NodeInfoProvider::ReadNodeStatus() const
 {
     StaticString<cNodeStatusLen> statusStr;
 
-    auto err = FS::ReadFileToString(cProvisioningStateFile, statusStr);
+    auto err = FS::ReadFileToString(cNodeStatusFile, statusStr);
     if (!err.IsNone()) {
         if (err == -ENOENT) {
             return {NodeStatusEnum::eUnprovisioned, ErrorEnum::eNone};

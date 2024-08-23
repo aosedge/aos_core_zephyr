@@ -64,7 +64,7 @@ private:
     static constexpr auto cNodeName                 = CONFIG_AOS_NODE_NAME;
     static constexpr auto cMaxDMIPS                 = CONFIG_AOS_MAX_CPU_DMIPS;
     static constexpr auto cDiskPartitionPoint       = CONFIG_AOS_DISK_MOUNT_POINT;
-    static constexpr auto cProvisioningStateFile    = CONFIG_AOS_PROVISION_STATE_FILE;
+    static constexpr auto cNodeStatusFile           = CONFIG_AOS_NODE_STATUS_FILE;
     static constexpr auto cDiskPartitionName        = "aos";
     static constexpr auto cNodeRunner               = "xrun";
     static constexpr auto cAosComponents            = "iam,sm";
