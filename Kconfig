@@ -43,10 +43,6 @@ config AOS_NODE_CONFIG_FILE
 	string "Node configuration file path"
 	default "/aos/node_config.cfg"
 
-config AOS_NODE_ID
-	string "Node id"
-	default "NODE_0"
-
 config AOS_NODE_NAME
 	string "Node name"
 	default "zephyr"
