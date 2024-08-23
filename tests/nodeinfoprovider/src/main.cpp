@@ -25,8 +25,8 @@ using namespace aos::zephyr;
  * Consts
  **********************************************************************************************************************/
 
-static constexpr auto cNodeStateFile = CONFIG_AOS_PROVISION_STATE_FILE;
-static constexpr auto cUnprovisioned = "unprovisioned";
+static constexpr auto cNodeStatusFile = CONFIG_AOS_NODE_STATUS_FILE;
+static constexpr auto cUnprovisioned  = "unprovisioned";
 
 /***********************************************************************************************************************
  * Static
@@ -50,7 +50,7 @@ void teardown(void* data)
 
 void before_test(void* data)
 {
-    auto err = aos::FS::WriteStringToFile(cNodeStateFile, cUnprovisioned, S_IRUSR | S_IWUSR);
+    auto err = aos::FS::WriteStringToFile(cNodeStatusFile, cUnprovisioned, S_IRUSR | S_IWUSR);
     zassert_true(err.IsNone(), "Failed to create provisioning state file: %s", utils::ErrorToCStr(err));
 }
 
