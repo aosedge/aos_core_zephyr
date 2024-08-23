@@ -7,7 +7,11 @@ mainmenu "Aos zephyr application"
 
 config AOS_NODE_TYPE
 	string "Node type"
-	default "NODE_TYPE1"
+	default "NODE_NAME"
+
+config AOS_NODE_NAME
+	string "Node name"
+	default "NODE_NAME"
 
 config AOS_MAX_CPU_DMIPS
 	int "Maximum CPU DMIPS"
