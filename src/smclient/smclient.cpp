@@ -81,7 +81,12 @@ static void InstanceStatusToPB(
 Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider, sm::launcher::LauncherItf& launcher,
     sm::resourcemanager::ResourceManagerItf& resourceManager, monitoring::ResourceMonitorItf& resourceMonitor,
     downloader::DownloadReceiverItf& downloader, clocksync::ClockSyncItf& clockSync,
-    communication::ChannelManagerItf& channelManager)
+    communication::ChannelManagerItf& channelManager
+#ifndef CONFIG_ZTEST
+    ,
+    iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader
+#endif
+)
 {
     LOG_DBG() << "Initialize SM client";
 
@@ -91,6 +96,10 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     mResourceMonitor  = &resourceMonitor;
     mDownloader       = &downloader;
     mChannelManager   = &channelManager;
+#ifndef CONFIG_ZTEST
+    mCertHandler = &certHandler;
+    mCertLoader  = &certLoader;
+#endif
 
     auto nodeInfo = MakeUnique<NodeInfo>(&mAllocator);
 
@@ -578,13 +587,27 @@ void SMClient::UpdatePBHandlerState()
     }
 
     if (start) {
-        auto [secureChannel, err] = mChannelManager->CreateChannel(cSecurePort);
+        auto [channel, err] = mChannelManager->CreateChannel(cSecurePort);
         if (!err.IsNone()) {
             LOG_ERR() << "Failed to create channel: err=" << err;
             return;
         }
 
-        if (err = PBHandler::Init("SM secure", *secureChannel); !err.IsNone()) {
+#ifndef CONFIG_ZTEST
+        if (err = mTLSChannel.Init(*mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
+            LOG_ERR() << "Failed to init TLS channel: err=" << err;
+            return;
+        }
+
+        if (err = mTLSChannel.SetTLSConfig(cSMCertType); !err.IsNone()) {
+            LOG_ERR() << "Failed to set TLS config: err=" << err;
+            return;
+        }
+
+        channel = &mTLSChannel;
+#endif
+
+        if (err = PBHandler::Init("SM secure", *channel); !err.IsNone()) {
             LOG_ERR() << "Failed to init PB handler: err=" << err;
             return;
         }
