@@ -312,6 +312,13 @@ void SMClient::OnConnect()
 
     LOG_INF() << "On connect notification";
 
+    auto [version, configErr] = mResourceManager->GetNodeConfigVersion();
+
+    if (auto err = SendNodeConfigStatus(version, configErr); !err.IsNone()) {
+        LOG_ERR() << "Failed to send node config status: err=" << err;
+        return;
+    }
+
     for (auto& subscriber : mConnectionSubscribers) {
         subscriber->OnConnect();
     }
@@ -614,13 +621,6 @@ void SMClient::UpdatePBHandlerState()
 
         if (err = Start(); !err.IsNone()) {
             LOG_ERR() << "Failed to start PB handler: err=" << err;
-            return;
-        }
-
-        auto [version, configErr] = mResourceManager->GetNodeConfigVersion();
-
-        if (err = SendNodeConfigStatus(version, configErr); !err.IsNone()) {
-            LOG_ERR() << "Failed to send node config status: err=" << err;
             return;
         }
     }
