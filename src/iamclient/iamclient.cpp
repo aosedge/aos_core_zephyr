@@ -212,6 +212,8 @@ Error IAMClient::SetupChannel()
         if (err = mTLSChannel.SetTLSConfig(cIAMCertType); !err.IsNone()) {
             return AOS_ERROR_WRAP(err);
         }
+
+        channel = &mTLSChannel;
 #endif
 
         if (err = PBHandler::Init("IAM secure", *channel); !err.IsNone()) {
