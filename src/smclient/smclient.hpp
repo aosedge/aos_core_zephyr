@@ -16,6 +16,9 @@
 #include "clocksync/clocksync.hpp"
 #include "communication/channelmanager.hpp"
 #include "downloader/downloader.hpp"
+#ifndef CONFIG_ZTEST
+#include "communication/tlschannel.hpp"
+#endif
 
 #include "openhandler.hpp"
 
@@ -45,12 +48,19 @@ public:
      * @param downloader downloader instance.
      * @param clockSync clock sync instance.
      * @param channelManager channel manager instance.
+     * @param certHandler certificate handler.
+     * @param certLoader certificate loader
      * @return Error.
      */
     Error Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvider, sm::launcher::LauncherItf& launcher,
         sm::resourcemanager::ResourceManagerItf& resourceManager, aos::monitoring::ResourceMonitorItf& resourceMonitor,
         downloader::DownloadReceiverItf& downloader, clocksync::ClockSyncItf& clockSync,
-        communication::ChannelManagerItf& channelManager);
+        communication::ChannelManagerItf& channelManager
+#ifndef CONFIG_ZTEST
+        ,
+        iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader
+#endif
+    );
 
     /**
      * Destructor.
@@ -134,6 +144,9 @@ private:
     static constexpr auto cOpenPort                 = CONFIG_AOS_SM_OPEN_PORT;
     static constexpr auto cSecurePort               = CONFIG_AOS_SM_SECURE_PORT;
     static constexpr auto cMaxConnectionSubscribers = 2;
+#ifndef CONFIG_ZTEST
+    static constexpr auto cSMCertType = "sm";
+#endif
 
     void  OnConnect() override;
     void  OnDisconnect() override;
@@ -160,6 +173,12 @@ private:
     Mutex mMutex;
     bool  mClockSynced = false;
     bool  mProvisioned = false;
+
+#ifndef CONFIG_ZTEST
+    iam::certhandler::CertHandlerItf* mCertHandler {};
+    cryptoutils::CertLoaderItf*       mCertLoader {};
+    communication::TLSChannel         mTLSChannel;
+#endif
 
     StaticArray<ConnectionSubscriberItf*, cMaxConnectionSubscribers> mConnectionSubscribers;
 

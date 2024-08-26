@@ -189,8 +189,8 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mSMClient.Init(
-            mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader, mClockSync, mChannelManager);
+    if (auto err = mSMClient.Init(mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader,
+            mClockSync, mChannelManager, mCertHandler, mCertLoader);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
