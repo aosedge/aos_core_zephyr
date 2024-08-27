@@ -41,7 +41,7 @@ manifest:
 
     - name: zephyr-optee-client
       remote: xen-troops
-      revision: "soafee_1.1_wip"
+      revision: "master"
 
     - name: zephyr-xrun
       remote: xen-troops
