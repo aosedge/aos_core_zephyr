@@ -4,7 +4,7 @@
 
 int mount_fs()
 {
-    int ret = 0;
+    int ret = 0; // cppcheck-suppress unreadVariable
 
 #if defined(CONFIG_FILE_SYSTEM_LITTLEFS)
     ret = littlefs_mount();
