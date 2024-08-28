@@ -118,11 +118,11 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
         return err;
     }
 
-    if (err = clockSync.Subscribe(*this); err.IsNone()) {
+    if (err = clockSync.Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (err = mNodeInfoProvider->SubscribeNodeStatusChanged(*this); err.IsNone()) {
+    if (err = mNodeInfoProvider->SubscribeNodeStatusChanged(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
