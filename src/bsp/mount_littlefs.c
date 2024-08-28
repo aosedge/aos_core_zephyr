@@ -12,6 +12,7 @@ static struct fs_mount_t mp = {
 
 int littlefs_mount()
 {
+    /*
     static const char* disk_mount_pt = CONFIG_AOS_DISK_MOUNT_POINT;
     static const char* disk_pdrv     = CONFIG_MMC_VOLUME_NAME;
 
@@ -21,4 +22,5 @@ int littlefs_mount()
     mp.mnt_point   = disk_mount_pt;
 
     return fs_mount(&mp);
+    */
 }
