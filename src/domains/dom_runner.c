@@ -21,7 +21,7 @@ extern struct xen_domain_cfg domd_cfg;
 
 int create_domains(void)
 {
-    int rc = 0;
+    int rc = 0; // cppcheck-suppress unreadVariable
 
 #ifdef CONFIG_DOMD_ENABLE
     rc = domain_create(&domd_cfg, DOMID_DOMD);
