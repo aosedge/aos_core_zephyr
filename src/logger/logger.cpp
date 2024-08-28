@@ -7,6 +7,10 @@
 
 #include <zephyr/logging/log.h>
 
+#ifdef CONFIG_NATIVE_APPLICATION
+#include <aos/common/tools/thread.hpp>
+#endif
+
 #include "logger.hpp"
 
 namespace aos::zephyr::logger {
@@ -112,6 +116,12 @@ void Logger::Init()
 
 void Logger::LogCallback(const char* module, LogLevel level, const String& message)
 {
+#ifdef CONFIG_NATIVE_APPLICATION
+    static Mutex sMutex;
+
+    LockGuard lock(sMutex);
+#endif
+
     String logModule(module);
 
     if (logModule == cLogModuleApp) {
