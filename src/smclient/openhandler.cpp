@@ -26,7 +26,7 @@ Error OpenHandler::Init(communication::ChannelItf& channel, clocksync::ClockSync
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = Start(); err.IsNone()) {
+    if (auto err = Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
