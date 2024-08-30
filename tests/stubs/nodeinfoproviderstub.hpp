@@ -70,6 +70,14 @@ public:
 
     void SetNodeInfo(const aos::NodeInfo& nodeInfo) { mNodeInfo = nodeInfo; }
 
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        mNodeInfo = {};
+        mObservers.clear();
+    }
+
 private:
     aos::NodeInfo                                                   mNodeInfo;
     mutable std::mutex                                              mMutex;
