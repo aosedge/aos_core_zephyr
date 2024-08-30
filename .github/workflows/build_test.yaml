@@ -52,28 +52,33 @@ jobs:
           touch src/prebuilt/rootca.pem
 
       - name: Build ${{ matrix.platform }}
-        if: "!startsWith(matrix.platform, 'native')"
+        if: ${{ !startsWith(matrix.platform, 'native') && matrix.platform != 'rpi_5' }}
         run: |
           west build -b ${{ matrix.platform }} -p always -S xen_dom0
 
       - name: Build ${{ matrix.platform }}
-        if: startsWith(matrix.platform, 'native')
+        if: ${{ matrix.platform == 'rpi_5' }}
+        run: |
+          west build -b ${{ matrix.platform }} -p always
+
+      - name: Build ${{ matrix.platform }}
+        if: ${{ startsWith(matrix.platform, 'native') }}
         run: |
           west build -b ${{ matrix.platform }} -p always
 
       - name: Test ${{ matrix.platform }}
-        if: matrix.platform == 'native_posix'
+        if: ${{ matrix.platform == 'native_posix' }}
         run: |
           west twister -c -v -p ${{ matrix.platform }} -T tests
 
       - name: Test ${{ matrix.platform }}
-        if: matrix.platform == 'native_posix_64'
+        if: ${{ matrix.platform == 'native_posix_64' }}
         run: |
           west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests
           gcovr twister-out/${{ matrix.platform }}/ -f src/ --xml-pretty > ./coverage.xml
 
       - name: Upload codecov report
-        if: startsWith(matrix.platform, 'native_posix_64')
+        if: ${{ startsWith(matrix.platform, 'native_posix_64') }}
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
