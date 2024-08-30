@@ -260,6 +260,7 @@ ZTEST_SUITE(
         smclientFixture->mLauncher.Clear();
         smclientFixture->mDownloader.Clear();
         smclientFixture->mClockSync.Clear();
+        smclientFixture->mNodeInfoProvider.Clear();
         smclientFixture->mSMClient.reset(new smclient::SMClient);
     },
     [](void* fixture) { static_cast<smclient_fixture*>(fixture)->mSMClient.reset(); },
