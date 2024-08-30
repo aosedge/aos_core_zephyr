@@ -9,6 +9,7 @@
 #define SOCKET_HPP_
 
 #include <aos/common/tools/string.hpp>
+#include <aos/common/tools/thread.hpp>
 
 #include "transport.hpp"
 
@@ -40,7 +41,7 @@ public:
      *
      * @return bool.
      */
-    bool IsOpened() const override { return mOpened; };
+    bool IsOpened() const override;
 
     /**
      * Closes the pipes.
@@ -75,6 +76,7 @@ private:
     int                      mServerPort {-1};
     int                      mSocketFd {-1};
     bool                     mOpened {};
+    mutable Mutex            mMutex;
 };
 
 } // namespace aos::zephyr::communication
