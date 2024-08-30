@@ -18,7 +18,7 @@ Channel::Channel(CommunicationItf* communication, int port)
 
 Error Channel::Connect()
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Connect channel: port=" << mPort;
 
@@ -26,12 +26,14 @@ Error Channel::Connect()
         return err;
     }
 
+    mClose = false;
+
     return ErrorEnum::eNone;
 }
 
 Error Channel::Close()
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Close channel: port=" << mPort;
 
@@ -56,7 +58,10 @@ int Channel::Read(void* buffer, size_t size)
 
         mCondVar.NotifyAll();
 
-        mCondVar.Wait(lock, [this] { return !mReadReady || mClose; });
+        auto err = mCondVar.Wait(lock, [this] { return !mReadReady || mClose; });
+        if (!err.IsNone()) {
+            return err.Errno();
+        }
 
         if (mClose) {
             return -ECONNRESET;
@@ -70,6 +75,10 @@ int Channel::Read(void* buffer, size_t size)
 
 int Channel::Write(const void* buffer, size_t size)
 {
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Write channel: port=" << mPort << " size=" << size;
+
     return mCommunication->Write(mPort, buffer, size);
 }
 
@@ -96,7 +105,7 @@ Error Channel::WaitRead(void** buffer, size_t* size)
 
 Error Channel::ReadDone(size_t size)
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Read done: port=" << mPort << " size=" << size;
 
@@ -110,6 +119,8 @@ Error Channel::ReadDone(size_t size)
 
 bool Channel::IsConnected() const
 {
+    LockGuard lock {mMutex};
+
     return mCommunication->IsConnected();
 }
 
