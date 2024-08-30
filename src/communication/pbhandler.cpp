@@ -5,8 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "pbhandler.hpp"
+#include <aos/common/tools/timer.hpp>
+
 #include "log.hpp"
+#include "pbhandler.hpp"
 
 namespace aos::zephyr::communication {
 
@@ -124,6 +126,8 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
 
         if (auto err = mChannel->Connect(); !err.IsNone()) {
             LOG_ERR() << "Failed to connect: name=" << mName << ", err=" << err;
+            sleep(cReconnectPeriod);
+
             continue;
         }
 
@@ -167,6 +171,8 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
         }
 
         OnDisconnect();
+
+        sleep(cReconnectPeriod);
     }
 }
 
