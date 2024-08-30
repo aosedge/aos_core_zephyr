@@ -95,20 +95,15 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
         return ErrorEnum::eNone;
     }
 
-    auto sendNodeInfo = true;
-
     if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned || status == NodeStatusEnum::eUnprovisioned) {
-        sendNodeInfo   = false;
         mSwitchChannel = true;
         mCondVar.NotifyOne();
     }
 
     mNodeInfo.mStatus = status;
 
-    if (sendNodeInfo) {
-        if (auto err = SendNodeInfo(); !err.IsNone()) {
-            return err;
-        }
+    if (auto err = SendNodeInfo(); !err.IsNone()) {
+        return err;
     }
 
     return ErrorEnum::eNone;
