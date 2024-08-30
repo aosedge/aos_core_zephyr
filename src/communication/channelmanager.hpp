@@ -117,7 +117,7 @@ public:
     bool IsConnected() const override;
 
 private:
-    static constexpr int    cMaxChannels       = 3;
+    static constexpr int    cMaxChannels       = 4;
     static constexpr auto   cChanAllocatorSize = cMaxChannels * sizeof(Channel);
     static constexpr auto   cReconnectPeriod   = 2 * Time::cSeconds;
     static constexpr size_t cReadBufferSize    = 65 * 1024; // 65KB
