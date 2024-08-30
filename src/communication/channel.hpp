@@ -171,7 +171,7 @@ private:
     bool                mClose {};
     uint8_t*            mBuffer {};
     size_t              mBufferLen {};
-    Mutex               mMutex;
+    mutable Mutex       mMutex;
     ConditionalVariable mCondVar;
 };
 
