@@ -156,10 +156,9 @@ Error ChannelManager::Run()
             }
 
             if (auto err = TryConnect(); !err.IsNone()) {
-                LOG_ERR() << "Failed to connect: err=" << err.Message();
 
                 if (err = WaitTimeout(); !err.IsNone()) {
-                    return err;
+                    LOG_ERR() << "Failed to wait timeout: err=" << err;
                 }
 
                 continue;
@@ -171,10 +170,12 @@ Error ChannelManager::Run()
                 LOG_ERR() << "Failed to handle read: err=" << err.Message();
             }
 
+            mTransport->Close();
+
             CloseChannels();
 
             if (auto err = WaitTimeout(); !err.IsNone()) {
-                return err;
+                LOG_ERR() << "Failed to wait timeout: err=" << err;
             }
         }
     });
@@ -184,8 +185,9 @@ Error ChannelManager::WaitTimeout()
 {
     aos::UniqueLock lock {mMutex};
 
-    if (auto err = mCondVar.Wait(lock, cReconnectPeriod, [this] { return mClose; }); !err.IsNone()) {
-        return err;
+    if (auto err = mCondVar.Wait(lock, cReconnectPeriod, [this] { return mClose; });
+        !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
+        return AOS_ERROR_WRAP(err);
     }
 
     return ErrorEnum::eNone;
