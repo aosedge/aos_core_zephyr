@@ -31,6 +31,8 @@ Error Socket::Init(const String& serverAddress, int serverPort)
 
 Error Socket::Open()
 {
+    LockGuard lock {mMutex};
+
     LOG_INF() << "Connecting socket to: address=" << mServerAddress << ", port=" << mServerPort;
 
     mSocketFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -49,8 +51,11 @@ Error Socket::Open()
     }
 
     if (connect(mSocketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        LOG_ERR() << "Failed to connect to server: address=" << mServerAddress.CStr() << ", port=" << mServerPort;
+
         close(mSocketFd);
         mSocketFd = -1;
+
         return Error(ErrorEnum::eRuntime, "failed to connect to server");
     }
 
@@ -63,6 +68,8 @@ Error Socket::Open()
 
 Error Socket::Close()
 {
+    LockGuard lock {mMutex};
+
     if (mSocketFd != -1) {
         close(mSocketFd);
         mSocketFd = -1;
@@ -71,6 +78,13 @@ Error Socket::Close()
     mOpened = false;
 
     return ErrorEnum::eNone;
+}
+
+bool Socket::IsOpened() const
+{
+    LockGuard lock {mMutex};
+
+    return mOpened;
 }
 
 int Socket::Read(void* data, size_t size)
@@ -98,9 +112,6 @@ int Socket::ReadFromSocket(int fd, void* data, size_t size)
     while (readBytes < static_cast<ssize_t>(size)) {
         ssize_t len = recv(fd, static_cast<uint8_t*>(data) + readBytes, size - readBytes, 0);
         if (len < 0) {
-            if (errno == EINTR)
-                continue;
-
             return -errno;
         }
 
@@ -124,10 +135,13 @@ int Socket::WriteToSocket(int fd, const void* data, size_t size)
     while (writtenBytes < static_cast<ssize_t>(size)) {
         ssize_t len = send(fd, static_cast<const uint8_t*>(data) + writtenBytes, size - writtenBytes, 0);
         if (len < 0) {
-            if (errno == EINTR)
-                continue;
+            return -errno;
+        }
 
-            return -1;
+        if (len == 0) {
+            LOG_DBG() << "Connection closed by peer";
+
+            return -ECONNRESET;
         }
 
         writtenBytes += len;
