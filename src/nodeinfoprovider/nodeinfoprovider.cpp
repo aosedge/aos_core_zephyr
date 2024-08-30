@@ -42,6 +42,18 @@ Error NodeInfoProvider::Init()
         return AOS_ERROR_WRAP(ret);
     }
 
+#ifdef CONFIG_NATIVE_APPLICATION
+    CPUInfo cpuInfo {};
+    cpuInfo.mModelName  = "Cortex-A53";
+    cpuInfo.mNumCores   = 1;
+    cpuInfo.mNumThreads = 2;
+    cpuInfo.mArch       = "armv8-a";
+    cpuInfo.mArchFamily = "armv8";
+    cpuInfo.mMaxDMIPS   = 1000;
+
+    mNodeInfo.mCPUs.PushBack(cpuInfo);
+#endif
+
     mNodeInfo.mName     = cNodeName;
     mNodeInfo.mTotalRAM = xstat.tot_mem;
     mNodeInfo.mNodeType = cNodeType;
