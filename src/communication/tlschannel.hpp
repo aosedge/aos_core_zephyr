@@ -31,12 +31,13 @@ public:
     /**
      * Initializes secure channel.
      *
+     * @param name TLS channel name.
      * @param certHandler certificate handler.
      * @param certLoader certificate loader.
      * @param channel virtual channel.
      */
-    Error Init(
-        iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel);
+    Error Init(const String& name, iam::certhandler::CertHandlerItf& certHandler,
+        cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel);
 
     /**
      * Set TLS config.
@@ -84,7 +85,8 @@ public:
     int Write(const void* data, size_t size) override;
 
 private:
-    static constexpr auto cPers = "tls_vchannel_client";
+    static constexpr auto cPers    = "tls_vchannel_client";
+    static constexpr auto cNameLen = 64;
 
     static int TLSWrite(void* ctx, const unsigned char* buf, size_t len);
     static int TLSRead(void* ctx, unsigned char* buf, size_t len);
@@ -94,6 +96,7 @@ private:
     void                               Cleanup();
     Error                              SetupSSLConfig(const String& certType);
 
+    StaticString<cNameLen>                       mName;
     mbedtls_entropy_context                      mEntropy {};
     mbedtls_ctr_drbg_context                     mCtrDrbg {};
     mbedtls_x509_crt                             mCertChain {};

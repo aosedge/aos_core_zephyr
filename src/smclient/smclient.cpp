@@ -601,7 +601,7 @@ void SMClient::UpdatePBHandlerState()
         }
 
 #ifndef CONFIG_ZTEST
-        if (err = mTLSChannel.Init(*mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
+        if (err = mTLSChannel.Init("sm", *mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
             LOG_ERR() << "Failed to init TLS channel: err=" << err;
             return;
         }
