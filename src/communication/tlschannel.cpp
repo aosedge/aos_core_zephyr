@@ -16,6 +16,7 @@ extern "C" {
 #include <aos/common/cryptoutils.hpp>
 #include <aos/iam/certhandler.hpp>
 
+#include "log.hpp"
 #include "tlschannel.hpp"
 
 extern unsigned char __aos_root_ca_start[];
@@ -32,18 +33,23 @@ TLSChannel::~TLSChannel()
     Cleanup();
 }
 
-Error TLSChannel::Init(
-    iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel)
+Error TLSChannel::Init(const String& name, iam::certhandler::CertHandlerItf& certHandler,
+    cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel)
 {
+    mName        = name;
     mChannel     = &channel;
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
+
+    LOG_DBG() << "Init TLS channel: name=" << mName;
 
     return ErrorEnum::eNone;
 }
 
 Error TLSChannel::SetTLSConfig(const String& certType)
 {
+    LOG_DBG() << "Set TLS config: name=" << mName << ", certType=" << certType;
+
     if (certType == mCertType) {
         return ErrorEnum::eNone;
     }
@@ -68,6 +74,8 @@ Error TLSChannel::SetTLSConfig(const String& certType)
 
 Error TLSChannel::Connect()
 {
+    LOG_DBG() << "Connect TLS channel: name=" << mName;
+
     if (mCertType.IsEmpty()) {
         return mChannel->Connect();
     }
@@ -82,6 +90,8 @@ Error TLSChannel::Connect()
 
 Error TLSChannel::Close()
 {
+    LOG_DBG() << "Close TLS channel: name=" << mName;
+
     return mChannel->Close();
 }
 
