@@ -200,7 +200,7 @@ Error IAMClient::SetupChannel()
         mCurrentPort = cSecurePort;
 
 #ifndef CONFIG_ZTEST
-        if (err = mTLSChannel.Init(*mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
+        if (err = mTLSChannel.Init("iam", *mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
             return AOS_ERROR_WRAP(err);
         }
 

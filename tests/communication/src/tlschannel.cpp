@@ -243,7 +243,7 @@ ZTEST_F(tlschannel, test_TLSChannelConnect)
 
     communication::TLSChannel channel;
 
-    auto err = channel.Init(certHandler, certLoader, vChannel);
+    auto err = channel.Init("test", certHandler, certLoader, vChannel);
     zassert_equal(err, aos::ErrorEnum::eNone, "test failed");
 
     err = channel.SetTLSConfig("client");
