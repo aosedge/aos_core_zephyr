@@ -32,20 +32,20 @@ TLSChannel::~TLSChannel()
     Cleanup();
 }
 
-aos::Error TLSChannel::Init(aos::iam::certhandler::CertHandlerItf& certHandler,
-    aos::cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel)
+Error TLSChannel::Init(
+    iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel)
 {
     mChannel     = &channel;
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error TLSChannel::SetTLSConfig(const aos::String& certType)
+Error TLSChannel::SetTLSConfig(const String& certType)
 {
     if (certType == mCertType) {
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
     mCertType = certType;
@@ -58,15 +58,15 @@ aos::Error TLSChannel::SetTLSConfig(const aos::String& certType)
             return err;
         }
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
     Cleanup();
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error TLSChannel::Connect()
+Error TLSChannel::Connect()
 {
     if (mCertType.IsEmpty()) {
         return mChannel->Connect();
@@ -80,7 +80,7 @@ aos::Error TLSChannel::Connect()
     return mbedtls_ssl_get_verify_result(&mSSL);
 }
 
-aos::Error TLSChannel::Close()
+Error TLSChannel::Close()
 {
     return mChannel->Close();
 }
@@ -112,7 +112,7 @@ int TLSChannel::Write(const void* data, size_t size)
  * Private
  **********************************************************************************************************************/
 
-aos::RetWithError<mbedtls_svc_key_id_t> TLSChannel::SetupOpaqueKey(mbedtls_pk_context& pk)
+RetWithError<mbedtls_svc_key_id_t> TLSChannel::SetupOpaqueKey(mbedtls_pk_context& pk)
 {
     auto statusAddKey = AosPsaAddKey(*mPrivKey);
     if (!statusAddKey.mError.IsNone()) {
@@ -126,10 +126,10 @@ aos::RetWithError<mbedtls_svc_key_id_t> TLSChannel::SetupOpaqueKey(mbedtls_pk_co
         return {statusAddKey.mValue.mKeyID, AOS_ERROR_WRAP(ret)};
     }
 
-    return {statusAddKey.mValue.mKeyID, aos::ErrorEnum::eNone};
+    return {statusAddKey.mValue.mKeyID, ErrorEnum::eNone};
 }
 
-aos::Error TLSChannel::TLSConnect()
+Error TLSChannel::TLSConnect()
 {
     mbedtls_ssl_session_reset(&mSSL);
 
@@ -158,7 +158,7 @@ void TLSChannel::Cleanup()
     }
 }
 
-aos::Error TLSChannel::SetupSSLConfig(const aos::String& certType)
+Error TLSChannel::SetupSSLConfig(const String& certType)
 {
     mbedtls_x509_crt_init(&mCertChain);
     mbedtls_x509_crt_init(&mCACert);
@@ -168,9 +168,9 @@ aos::Error TLSChannel::SetupSSLConfig(const aos::String& certType)
     mbedtls_ssl_config_init(&mConf);
     mbedtls_ssl_init(&mSSL);
 
-    aos::iam::certhandler::CertInfo certInfo;
+    iam::certhandler::CertInfo certInfo;
 
-    auto err = mCertHandler->GetCertificate(certType, aos::Array<uint8_t>(), aos::Array<uint8_t>(), certInfo);
+    auto err = mCertHandler->GetCertificate(certType, Array<uint8_t>(), Array<uint8_t>(), certInfo);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
