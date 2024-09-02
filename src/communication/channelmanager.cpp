@@ -101,8 +101,6 @@ Error ChannelManager::Close()
 
 int ChannelManager::Write(uint32_t port, const void* data, size_t size)
 {
-    LOG_DBG() << "Write channel: port=" << port << " size=" << size;
-
     auto header = PrepareHeader(port, aos::Array<uint8_t>(reinterpret_cast<const uint8_t*>(data), size));
     if (!header.mError.IsNone()) {
         LOG_ERR() << "Failed to prepare header: err=" << header.mError.Message();
@@ -150,12 +148,15 @@ Error ChannelManager::Run()
         while (true) {
             {
                 aos::UniqueLock lock {mMutex};
+
                 if (mClose) {
                     return aos::Error(aos::ErrorEnum::eNone);
                 }
             }
 
             if (auto err = TryConnect(); !err.IsNone()) {
+                LOG_ERR() << "Transport connect error: err=" << err;
+                LOG_DBG() << "Reconnect in " << cReconnectPeriod / 1000000 << " ms";
 
                 if (err = WaitTimeout(); !err.IsNone()) {
                     LOG_ERR() << "Failed to wait timeout: err=" << err;
@@ -167,7 +168,7 @@ Error ChannelManager::Run()
             mCondVar.NotifyAll();
 
             if (auto err = HandleRead(); !err.IsNone()) {
-                LOG_ERR() << "Failed to handle read: err=" << err.Message();
+                LOG_ERR() << "Failed to handle read: err=" << err;
             }
 
             mTransport->Close();
@@ -212,7 +213,7 @@ Error ChannelManager::HandleRead()
         }
 
         if (auto err = ProcessData(header); !err.IsNone()) {
-            LOG_ERR() << "Failed to process data: err=" << err.Message();
+            LOG_ERR() << "Failed to process data: err=" << err;
         }
     }
 }
