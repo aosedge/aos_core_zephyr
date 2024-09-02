@@ -33,4 +33,12 @@ config AOS_SM_SECURE_PORT
 	int "Aos SM secure port"
 	default 2
 
+config AOS_PBHANDLER_THREAD_STACK_SIZE
+	int "Aos PB handler stack size"
+	default 16384
+
+config AOS_LAUNCHER_THREAD_STACK_SIZE
+	int "Aos launcher stack size"
+	default 16384
+
 source "Kconfig"
