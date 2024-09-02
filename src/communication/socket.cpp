@@ -51,8 +51,6 @@ Error Socket::Open()
     }
 
     if (connect(mSocketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        LOG_ERR() << "Failed to connect to server: address=" << mServerAddress.CStr() << ", port=" << mServerPort;
-
         close(mSocketFd);
         mSocketFd = -1;
 
@@ -89,15 +87,11 @@ bool Socket::IsOpened() const
 
 int Socket::Read(void* data, size_t size)
 {
-    LOG_DBG() << "Read from server: size=" << size;
-
     return ReadFromSocket(mSocketFd, data, size);
 }
 
 int Socket::Write(const void* data, size_t size)
 {
-    LOG_DBG() << "Write to server: size=" << size;
-
     return WriteToSocket(mSocketFd, data, size);
 }
 
@@ -124,8 +118,6 @@ int Socket::ReadFromSocket(int fd, void* data, size_t size)
         readBytes += len;
     }
 
-    LOG_DBG() << "Read from socket: readBytes=" << readBytes;
-
     return readBytes;
 }
 
@@ -146,8 +138,6 @@ int Socket::WriteToSocket(int fd, const void* data, size_t size)
 
         writtenBytes += len;
     }
-
-    LOG_DBG() << "Written to socket: writtenBytes=" << writtenBytes;
 
     return writtenBytes;
 }
