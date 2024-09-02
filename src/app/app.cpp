@@ -40,6 +40,10 @@ Error App::Init()
         return err;
     }
 
+    if (auto err = InitCommunication(); !err.IsNone()) {
+        return err;
+    }
+
     return ErrorEnum::eNone;
 }
 
@@ -163,10 +167,6 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = InitCommunication(); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
     if (auto err = mDownloader.Init(mSMClient); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -180,18 +180,6 @@ Error App::InitZephyr()
     }
 
     if (auto err = mStorage.Init(); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    if (auto err
-        = mIAMClient.Init(mClockSync, mNodeInfoProvider, mProvisionManager, mChannelManager, mCertHandler, mCertLoader);
-        !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    if (auto err = mSMClient.Init(mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader,
-            mClockSync, mChannelManager, mCertHandler, mCertLoader);
-        !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -213,6 +201,18 @@ Error App::InitCommunication()
 #endif
 
     if (auto err = mChannelManager.Init(mTransport); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err
+        = mIAMClient.Init(mClockSync, mNodeInfoProvider, mProvisionManager, mChannelManager, mCertHandler, mCertLoader);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mSMClient.Init(mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader,
+            mClockSync, mChannelManager, mCertHandler, mCertLoader);
+        !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
