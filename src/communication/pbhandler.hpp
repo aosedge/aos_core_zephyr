@@ -97,8 +97,6 @@ protected:
     virtual Error ReceiveMessage(const Array<uint8_t>& data) = 0;
 
 private:
-    static constexpr auto cReconnectPeriod = 2;
-
     void Run();
 
     StaticString<64>                                               mName;
