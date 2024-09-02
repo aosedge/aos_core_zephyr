@@ -176,6 +176,10 @@ ZTEST_F(iamclient, test_FinishProvisioning)
     err = SendIAMIncomingMessage(channel, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
 
+    // node info is sent prior to finish provisioning response
+    nodeInfo.mStatus = aos::NodeStatusEnum::eProvisioned;
+    ReceiveNodeInfo(channel, nodeInfo);
+
     // Receive finish provisioning response
 
     iamanager_v5_IAMOutgoingMessages outgoingMessage;
@@ -227,6 +231,10 @@ ZTEST_F(iamclient, test_Deprovision)
 
     err = SendIAMIncomingMessage(channel, incomingMessage);
     zassert_true(err.IsNone(), "Error sending message: %s", utils::ErrorToCStr(err));
+
+    // node info is sent prior to deprovision response
+    nodeInfo.mStatus = aos::NodeStatusEnum::eUnprovisioned;
+    ReceiveNodeInfo(channel, nodeInfo);
 
     // Receive deprovision response
 
