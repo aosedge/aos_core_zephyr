@@ -47,6 +47,10 @@ config AOS_NODE_STATUS_FILE
 	string "Path to provisioning state file."
 	default "/lfs/aos/.nodestatus"
 
+config AOS_NODE_ID_FILE
+	string "Path to node id file."
+	default "/lfs/aos/node-id"
+
 config AOS_PKCS11_MODULE_PIN_FILE
 	string "Path to PKCS11 module PIN file."
 	default "/lfs/aos/.pkcs11pin"
