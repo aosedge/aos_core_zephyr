@@ -124,7 +124,6 @@ private:
     bool                mSwitchChannel = false;
     int                 mCurrentPort   = 0;
     bool                mClose         = false;
-    bool                mConnected     = false;
 
     StaticAllocator<sizeof(iamanager_v5_IAMIncomingMessages) + sizeof(iamanager_v5_IAMOutgoingMessages) * 2> mAllocator;
 };
