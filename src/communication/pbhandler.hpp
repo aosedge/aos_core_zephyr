@@ -103,8 +103,8 @@ private:
 
     StaticString<64>                                               mName;
     ChannelItf*                                                    mChannel;
-    ConditionalVariable                                            mCondVar;
     mutable Mutex                                                  mMutex;
+    ConditionalVariable                                            mCondVar;
     Thread<>                                                       mThread;
     bool                                                           mStarted = false;
     aos::StaticBuffer<cSendBufferSize + sizeof(AosProtobufHeader)> mSendBuffer;
