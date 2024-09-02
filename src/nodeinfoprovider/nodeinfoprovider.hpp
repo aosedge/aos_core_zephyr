@@ -69,9 +69,7 @@ private:
     static constexpr auto cNodeRunner               = "xrun";
     static constexpr auto cAosComponents            = "iam,sm";
     static constexpr auto cMaxNodeStatusSubscribers = 4;
-#ifdef CONFIG_NATIVE_APPLICATION
-    static constexpr auto cNodeIDFile = "/etc/machine-id";
-#endif
+    static constexpr auto cNodeIDFile               = CONFIG_AOS_NODE_ID_FILE;
 
     Error                    InitNodeID();
     Error                    InitAttributes();
