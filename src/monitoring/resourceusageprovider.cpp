@@ -8,7 +8,11 @@
 #include <xstat.h>
 
 #include <sys/stat.h>
+#ifdef CONFIG_NATIVE_APPLICATION
+#include <sys/statvfs.h>
+#else
 #include <zephyr/fs/fs.h>
+#endif
 
 #include "log.hpp"
 #include "resourceusageprovider.hpp"
@@ -58,13 +62,19 @@ Error ResourceUsageProvider::GetNodeMonitoringData(
     mPrevTime        = curTime;
 
     for (size_t i = 0; i < monitoringData.mDisk.Size(); ++i) {
+#ifdef CONFIG_NATIVE_APPLICATION
+        struct statvfs sbuf;
+
+        if (ret = statvfs(monitoringData.mDisk[i].mPath.CStr(), &sbuf); ret != 0) {
+            return ret;
+        }
+#else
         struct fs_statvfs sbuf;
 
-        ret = fs_statvfs(monitoringData.mDisk[i].mPath.CStr(), &sbuf);
-        if (ret != 0) {
+        if (ret = fs_statvfs(monitoringData.mDisk[i].mPath.CStr(), &sbuf); ret != 0) {
             return AOS_ERROR_WRAP(ret);
         }
-
+#endif
         monitoringData.mDisk[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_bsize;
 
         LOG_DBG() << "Disk: " << monitoringData.mDisk[i].mName
