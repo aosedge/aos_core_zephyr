@@ -71,7 +71,7 @@ Error NodeInfoProvider::GetNodeInfo(NodeInfo& nodeInfo) const
 {
     LockGuard lock {mMutex};
 
-    LOG_DBG() << "Get node info: status=" << nodeInfo.mStatus;
+    LOG_DBG() << "Get node info: status=" << mNodeInfo.mStatus;
 
     nodeInfo = mNodeInfo;
 
