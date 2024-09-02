@@ -7,10 +7,10 @@
 
 #include <sys/stat.h>
 #include <zephyr/drivers/hwinfo.h>
-#ifndef CONFIG_NATIVE_APPLICATION
-#include <zephyr/fs/fs.h>
-#else
+#ifdef CONFIG_NATIVE_APPLICATION
 #include <sys/statvfs.h>
+#else
+#include <zephyr/fs/fs.h>
 #endif
 
 #include <xstat.h>
