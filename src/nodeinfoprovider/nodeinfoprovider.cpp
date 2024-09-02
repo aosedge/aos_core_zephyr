@@ -48,6 +48,8 @@ Error NodeInfoProvider::Init()
     mNodeInfo.mNodeType = cNodeType;
     mNodeInfo.mMaxDMIPS = cMaxDMIPS;
 
+    mNodeInfo.mCPUs.PushBack(CPUInfo {});
+
     Error err;
 
     if (Tie(mNodeInfo.mStatus, err) = ReadNodeStatus(); !err.IsNone()) {
