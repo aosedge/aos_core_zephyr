@@ -138,8 +138,9 @@ void IAMClient::OnConnect()
 
     LOG_DBG() << "Channel connected: port=" << mCurrentPort;
 
-    mConnected = true;
-    mCondVar.NotifyOne();
+    if (auto err = SendNodeInfo(); !err.IsNone()) {
+        LOG_ERR() << "Can't send node info: err=" << err;
+    }
 }
 
 void IAMClient::OnDisconnect()
@@ -147,9 +148,6 @@ void IAMClient::OnDisconnect()
     LockGuard lock {mMutex};
 
     LOG_DBG() << "Channel disconnected: port=" << mCurrentPort;
-
-    mConnected = false;
-    mCondVar.NotifyOne();
 }
 
 Error IAMClient::ReleaseChannel()
@@ -233,17 +231,7 @@ bool IAMClient::WaitChannelSwitch(UniqueLock& lock)
 
 bool IAMClient::WaitClockSynced(UniqueLock& lock)
 {
-    if (mNodeInfo.mStatus != NodeStatusEnum::eUnprovisioned) {
-        mCondVar.Wait(lock, [this]() { return mClockSynced || mClose; });
-        mClockSynced = false;
-    }
-
-    return !mClose;
-}
-
-bool IAMClient::WaitChannelConnected(UniqueLock& lock)
-{
-    mCondVar.Wait(lock, [this]() { return mConnected || mClose; });
+    mCondVar.Wait(lock, [this]() { return mClockSynced || mClose; });
 
     return !mClose;
 }
@@ -271,16 +259,6 @@ void IAMClient::HandleChannels()
             usleep(cReconnectInterval / 1000);
 
             continue;
-        }
-
-        if (!WaitChannelConnected(lock)) {
-            continue;
-        }
-
-        if (auto err = SendNodeInfo(); !err.IsNone()) {
-            LOG_ERR() << "Can't send node info: err=" << err;
-
-            mSwitchChannel = true;
         }
 
         if (!WaitChannelSwitch(lock)) {
