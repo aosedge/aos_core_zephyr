@@ -113,6 +113,10 @@ Error PBHandler<cReceiveBufferSize, cSendBufferSize>::SendMessage(const void* me
 template <size_t cReceiveBufferSize, size_t cSendBufferSize>
 void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
 {
+#if AOS_CONFIG_THREAD_STACK_USAGE
+    LOG_DBG() << "Stack usage: name=" << mName << ", size=" << mThread.GetStackUsage();
+#endif
+
     while (true) {
         {
             LockGuard lock {mMutex};
@@ -124,6 +128,7 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
 
         if (auto err = mChannel->Connect(); !err.IsNone()) {
             LOG_ERR() << "Failed to connect: name=" << mName << ", err=" << err;
+
             continue;
         }
 
@@ -132,6 +137,10 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
         AosProtobufHeader header;
 
         while (true) {
+#if AOS_CONFIG_THREAD_STACK_USAGE
+            LOG_DBG() << "Stack usage: name=" << mName << ", size=" << mThread.GetStackUsage();
+#endif
+
             auto ret = mChannel->Read(&header, sizeof(header));
             if (ret < 0) {
                 LOG_ERR() << "Failed to read channel: name=" << mName << ", ret=" << ret << ", err=" << strerror(errno);

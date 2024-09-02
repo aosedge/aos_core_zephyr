@@ -45,6 +45,18 @@
  */
 #define AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB "libckteec"
 
+#else
+
+/**
+ * Set default thread stack size.
+ */
+#define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 32768
+
+/**
+ * Configures thread stack guard size.
+ */
+#define AOS_CONFIG_THREAD_STACK_GUARD_SIZE   4096
+
 #endif // CONFIG_NATIVE_APPLICATION
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
@@ -71,5 +83,16 @@
  * Set Aos services dir.
  */
 #define AOS_CONFIG_SERVICEMANAGER_SERVICES_DIR CONFIG_AOS_SERVICES_DIR
+
+/**
+ * Set launcher thread stack size.
+ */
+
+#define AOS_CONFIG_LAUNCHER_THREAD_STACK_SIZE CONFIG_AOS_LAUNCHER_THREAD_STACK_SIZE
+
+/**
+ * Configures thread stack usage logging.
+ */
+#define AOS_CONFIG_THREAD_STACK_USAGE 1
 
 #endif

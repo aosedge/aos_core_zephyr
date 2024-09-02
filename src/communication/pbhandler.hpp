@@ -97,13 +97,15 @@ protected:
     virtual Error ReceiveMessage(const Array<uint8_t>& data) = 0;
 
 private:
+    static constexpr auto cThreadStackSize = CONFIG_AOS_PBHANDLER_THREAD_STACK_SIZE;
+
     void Run();
 
     StaticString<64>                                               mName;
     ChannelItf*                                                    mChannel;
     mutable Mutex                                                  mMutex;
     ConditionalVariable                                            mCondVar;
-    Thread<>                                                       mThread;
+    Thread<cDefaultFunctionMaxSize, cThreadStackSize>              mThread;
     bool                                                           mStarted = false;
     aos::StaticBuffer<cSendBufferSize + sizeof(AosProtobufHeader)> mSendBuffer;
     aos::StaticBuffer<cReceiveBufferSize>                          mReceiveBuffer;

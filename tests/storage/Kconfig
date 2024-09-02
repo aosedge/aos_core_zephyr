@@ -17,4 +17,8 @@ config AOS_SERVICES_DIR
 	string "Aos services dir"
 	default "services"
 
+config AOS_LAUNCHER_THREAD_STACK_SIZE
+	int "Aos launcher stack size"
+	default 16384
+
 source "Kconfig"
