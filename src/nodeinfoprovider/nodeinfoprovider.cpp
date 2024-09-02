@@ -16,6 +16,7 @@
 #include <xstat.h>
 
 #include <aos/common/tools/fs.hpp>
+#include <aos/common/tools/uuid.hpp>
 
 #include "utils/utils.hpp"
 
@@ -132,27 +133,29 @@ Error NodeInfoProvider::UnsubscribeNodeStatusChanged(iam::nodeinfoprovider::Node
 
 Error NodeInfoProvider::InitNodeID()
 {
-#ifndef CONFIG_NATIVE_APPLICATION
-    char buffer[cNodeIDLen + 1] {};
+    if (auto err = FS::ReadFileToString(cNodeIDFile, mNodeInfo.mNodeID); !err.IsNone()) {
+        LOG_WRN() << "Failed to read node id: path=" << cNodeIDFile << ", err=" << err;
+    } else if (mNodeInfo.mNodeID.IsEmpty()) {
+        LOG_WRN() << "Node id is empty: path=" << cNodeIDFile;
+    } else {
+        mNodeInfo.mNodeID.Trim("\r\n");
 
-    auto ret = hwinfo_get_device_id(reinterpret_cast<uint8_t*>(buffer), sizeof(buffer) - 1);
+        LOG_DBG() << "Read node id: id=" << mNodeInfo.mNodeID << ", path=" << cNodeIDFile;
 
-    if (ret == -ENOSYS) {
-        LOG_WRN() << "hwinfo_get_device_id is not supported";
-
-        return ErrorEnum::eNotSupported;
-    } else if (ret < 0) {
-        return AOS_ERROR_WRAP(ret);
+        return ErrorEnum::eNone;
     }
 
-    mNodeInfo.mNodeID = utils::StringFromCStr(buffer);
-#else
-    if (auto err = FS::ReadFileToString(cNodeIDFile, mNodeInfo.mNodeID); !err.IsNone()) {
+    LOG_DBG() << "Generate node id";
+
+    auto uuidStr = uuid::UUIDToString(uuid::CreateUUID());
+
+    if (auto err = FS::WriteStringToFile(cNodeIDFile, uuidStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    mNodeInfo.mNodeID.Trim("\r\n");
-#endif
+    mNodeInfo.mNodeID = uuidStr;
+
+    LOG_DBG() << "Store node id: id=" << uuidStr << ", path=" << cNodeIDFile;
 
     return ErrorEnum::eNone;
 }

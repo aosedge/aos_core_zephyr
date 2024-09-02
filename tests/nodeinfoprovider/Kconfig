@@ -25,4 +25,8 @@ config AOS_NODE_STATUS_FILE
 	string "Path to provisioning state file."
 	default ".aos/.nodestatus"
 
+config AOS_NODE_ID_FILE
+	string "Path to node id file."
+	default ".aos/.nodeid"
+
 source "Kconfig"
