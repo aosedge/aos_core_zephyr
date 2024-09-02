@@ -50,24 +50,17 @@ Error TLSChannel::SetTLSConfig(const String& certType)
 {
     LOG_DBG() << "Set TLS config: name=" << mName << ", certType=" << certType;
 
-    if (certType == mCertType) {
+    Cleanup();
+
+    if (certType.IsEmpty()) {
         return ErrorEnum::eNone;
+    }
+
+    if (auto err = SetupSSLConfig(certType); !err.IsNone()) {
+        return err;
     }
 
     mCertType = certType;
-
-    if (certType != "") {
-        auto err = SetupSSLConfig(certType);
-        if (!err.IsNone()) {
-            Cleanup();
-
-            return err;
-        }
-
-        return ErrorEnum::eNone;
-    }
-
-    Cleanup();
 
     return ErrorEnum::eNone;
 }
@@ -187,7 +180,7 @@ Error TLSChannel::SetupSSLConfig(const String& certType)
 
     auto retCert = mCertLoader->LoadCertsChainByURL(certInfo.mCertURL);
     if (!retCert.mError.IsNone()) {
-        return retCert.mError;
+        return AOS_ERROR_WRAP(retCert.mError);
     }
 
     for (auto& cert : *retCert.mValue) {
@@ -205,14 +198,14 @@ Error TLSChannel::SetupSSLConfig(const String& certType)
 
     auto retKey = mCertLoader->LoadPrivKeyByURL(certInfo.mKeyURL);
     if (!retKey.mError.IsNone()) {
-        return retKey.mError;
+        return AOS_ERROR_WRAP(retKey.mError);
     }
 
     mPrivKey = retKey.mValue;
 
     auto retOpaqueKey = SetupOpaqueKey(mPrivKeyCtx);
     if (!retOpaqueKey.mError.IsNone()) {
-        return retOpaqueKey.mError;
+        return AOS_ERROR_WRAP(retOpaqueKey.mError);
     }
 
     mKeyID = retOpaqueKey.mValue;
@@ -244,7 +237,11 @@ Error TLSChannel::SetupSSLConfig(const String& certType)
     mbedtls_ssl_conf_dbg(&mConf, zephyr_mbedtls_debug, nullptr);
 #endif
 
-    return AOS_ERROR_WRAP(mbedtls_ssl_setup(&mSSL, &mConf));
+    if (ret = mbedtls_ssl_setup(&mSSL, &mConf); ret != 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
+
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
