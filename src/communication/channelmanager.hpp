@@ -70,6 +70,13 @@ public:
     Error Init(TransportItf& transport);
 
     /**
+     * Starts channel manager.
+     *
+     * @return Error.
+     */
+    Error Start();
+
+    /**
      * Create channel with dedicated port.
      *
      * @param port port to bind channel.
