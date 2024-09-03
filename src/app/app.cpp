@@ -51,6 +51,10 @@ Error App::Start()
 {
     LOG_INF() << "Start application";
 
+    if (auto err = mChannelManager.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mIAMClient.Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }

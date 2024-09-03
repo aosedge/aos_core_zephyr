@@ -27,6 +27,13 @@ Error ChannelManager::Init(TransportItf& transport)
 
     mTransport = &transport;
 
+    return ErrorEnum::eNone;
+}
+
+Error ChannelManager::Start()
+{
+    LOG_DBG() << "Start channel manager";
+
     return Run();
 }
 
