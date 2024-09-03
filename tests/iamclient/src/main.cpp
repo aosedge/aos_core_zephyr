@@ -65,6 +65,9 @@ static void InitIAMClient(iamclient_fixture* fixture, const aos::NodeInfo& nodeI
         fixture->mClockSync, fixture->mNodeInfoProvider, fixture->mProvisionManager, fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize IAM client: %s", utils::ErrorToCStr(err));
 
+    err = fixture->mIAMClient->Start();
+    zassert_true(err.IsNone(), "Can't start IAM client: %s", utils::ErrorToCStr(err));
+
     fixture->mIAMClient->OnClockSynced();
 }
 
@@ -99,7 +102,14 @@ ZTEST_SUITE(
         return fixture;
     },
     [](void* fixture) { static_cast<iamclient_fixture*>(fixture)->mIAMClient.reset(new iamclient::IAMClient); },
-    [](void* fixture) { static_cast<iamclient_fixture*>(fixture)->mIAMClient.reset(); },
+    [](void* fixture) {
+        auto& iamClientFixture = static_cast<iamclient_fixture*>(fixture)->mIAMClient;
+
+        auto err = iamClientFixture->Stop();
+        zassert_true(err.IsNone(), "Can't stop IAM client: %s", utils::ErrorToCStr(err));
+
+        iamClientFixture.reset();
+    },
     [](void* fixture) { delete static_cast<iamclient_fixture*>(fixture); });
 
 /***********************************************************************************************************************
