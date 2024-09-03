@@ -127,7 +127,15 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
         }
 
         if (auto err = mChannel->Connect(); !err.IsNone()) {
+            aos::UniqueLock lock {mMutex};
+
             LOG_ERR() << "Failed to connect: name=" << mName << ", err=" << err;
+            LOG_DBG() << "Reconnect in " << cReconnectPeriod / 1000000 << " ms";
+
+            if (err = mCondVar.Wait(lock, cReconnectPeriod, [this] { return !mStarted; });
+                !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
+                LOG_ERR() << "Failed to wait reconnect: name=" << mName << ", err=" << err;
+            }
 
             continue;
         }
