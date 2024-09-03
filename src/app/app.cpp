@@ -51,6 +51,10 @@ Error App::Start()
 {
     LOG_INF() << "Start application";
 
+    if (auto err = mIAMClient.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mSMClient.Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -61,6 +65,10 @@ Error App::Start()
 App::~App()
 {
     LOG_INF() << "Stop application";
+
+    if (auto err = mIAMClient.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop IAM client: err=" << err;
+    }
 
     if (auto err = mSMClient.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop SM client: err=" << err;

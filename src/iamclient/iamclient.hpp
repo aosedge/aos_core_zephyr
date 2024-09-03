@@ -52,6 +52,20 @@ public:
     );
 
     /**
+     * Starts IAM client.
+     *
+     * @return Error.
+     */
+    Error Start();
+
+    /**
+     * Stops IAM client.
+     *
+     * @return Error.
+     */
+    Error Stop();
+
+    /**
      * Notifies subscriber clock is synced.
      */
     void OnClockSynced() override;
@@ -69,11 +83,6 @@ public:
      * @return Error
      */
     Error OnNodeStatusChanged(const String& nodeID, const NodeStatus& status) override;
-
-    /**
-     * Destructor.
-     */
-    ~IAMClient();
 
 private:
     static constexpr auto cOpenPort          = CONFIG_AOS_IAM_OPEN_PORT;

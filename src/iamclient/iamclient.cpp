@@ -39,11 +39,18 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
     mCertLoader  = &certLoader;
 #endif
 
-    if (auto err = clockSync.Subscribe(*this); !err.IsNone()) {
+    return ErrorEnum::eNone;
+}
+
+Error IAMClient::Start()
+{
+    LOG_DBG() << "Start IAM client";
+
+    if (auto err = mClockSync->Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = nodeInfoProvider.SubscribeNodeStatusChanged(*this); !err.IsNone()) {
+    if (auto err = mNodeInfoProvider->SubscribeNodeStatusChanged(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -51,16 +58,39 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
         return AOS_ERROR_WRAP(err);
     }
 
+    if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned) {
+        LOG_INF() << "Node is unprovisioned";
+    }
+
     auto err = mThread.Run([this](void*) { HandleChannels(); });
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned) {
-        LOG_INF() << "Node is unprovisioned";
+    return ErrorEnum::eNone;
+}
+
+Error IAMClient::Stop()
+{
+    LOG_DBG() << "Stop IAM client";
+
+    if (auto err = communication::PBHandler<iamanager_v5_IAMIncomingMessages_size,
+            iamanager_v5_IAMOutgoingMessages_size>::Stop();
+        !err.IsNone()) {
+        LOG_ERR() << "Can't stop IAM handler: err=" << err;
     }
 
-    return ErrorEnum::eNone;
+    mClockSync->Unsubscribe(*this);
+    mNodeInfoProvider->UnsubscribeNodeStatusChanged(*this);
+
+    {
+        LockGuard lock {mMutex};
+
+        mClose = true;
+        mCondVar.NotifyOne();
+    }
+
+    return mThread.Join();
 }
 
 void IAMClient::OnClockSynced()
@@ -109,25 +139,6 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
     return ErrorEnum::eNone;
 }
 
-IAMClient::~IAMClient()
-{
-    if (auto err = Stop(); !err.IsNone()) {
-        LOG_ERR() << "Can't stop IAM handler: err=" << err;
-    }
-
-    mClockSync->Unsubscribe(*this);
-    mNodeInfoProvider->UnsubscribeNodeStatusChanged(*this);
-
-    {
-        LockGuard lock {mMutex};
-
-        mClose = true;
-        mCondVar.NotifyOne();
-    }
-
-    mThread.Join();
-}
-
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -160,7 +171,9 @@ Error IAMClient::ReleaseChannel()
 
     LOG_DBG() << "Release channel: port=" << mCurrentPort;
 
-    if (auto stopErr = Stop(); !stopErr.IsNone() && err.IsNone()) {
+    if (auto stopErr = communication::PBHandler<iamanager_v5_IAMIncomingMessages_size,
+            iamanager_v5_IAMOutgoingMessages_size>::Stop();
+        !stopErr.IsNone() && err.IsNone()) {
         err = AOS_ERROR_WRAP(stopErr);
     }
 
@@ -214,7 +227,9 @@ Error IAMClient::SetupChannel()
         }
     }
 
-    if (err = Start(); !err.IsNone()) {
+    if (err = communication::PBHandler<iamanager_v5_IAMIncomingMessages_size,
+            iamanager_v5_IAMOutgoingMessages_size>::Start();
+        !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
