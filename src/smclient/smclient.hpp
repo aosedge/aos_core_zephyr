@@ -63,9 +63,18 @@ public:
     );
 
     /**
-     * Destructor.
+     * Starts SM client.
+     *
+     * @return Error.
      */
-    ~SMClient();
+    Error Start();
+
+    /**
+     * Stops SM client.
+     *
+     * @return Error.
+     */
+    Error Stop();
 
     /**
      * Sends instances run status.
@@ -168,6 +177,7 @@ private:
     sm::resourcemanager::ResourceManagerItf*    mResourceManager {};
     aos::monitoring::ResourceMonitorItf*        mResourceMonitor {};
     downloader::DownloadReceiverItf*            mDownloader {};
+    clocksync::ClockSyncItf*                    mClockSync {};
     communication::ChannelManagerItf*           mChannelManager {};
 
     Mutex mMutex;
