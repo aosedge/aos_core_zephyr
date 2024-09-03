@@ -52,6 +52,18 @@ public:
     Error Init();
 
     /**
+     * Starts application.
+     *
+     * @return Error
+     */
+    Error Start();
+
+    /**
+     * Destructor.
+     */
+    ~App();
+
+    /**
      * Returns Aos application instance.
      * @return App&
      */

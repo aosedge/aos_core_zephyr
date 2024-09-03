@@ -93,6 +93,9 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
         fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync, fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
+    err = fixture->mSMClient->Start();
+    zassert_true(err.IsNone(), "Can't start SM client: %s", utils::ErrorToCStr(err));
+
     fixture->mSMClient->OnClockSynced();
 
     auto channel = fixture->mChannelManager.GetChannel(port);
@@ -263,7 +266,14 @@ ZTEST_SUITE(
         smclientFixture->mNodeInfoProvider.Clear();
         smclientFixture->mSMClient.reset(new smclient::SMClient);
     },
-    [](void* fixture) { static_cast<smclient_fixture*>(fixture)->mSMClient.reset(); },
+    [](void* fixture) {
+        auto smclientFixture = static_cast<smclient_fixture*>(fixture);
+
+        auto err = smclientFixture->mSMClient->Stop();
+        zassert_true(err.IsNone(), "Can't stop SM client: %s", utils::ErrorToCStr(err));
+
+        smclientFixture->mSMClient.reset();
+    },
     [](void* fixture) { delete static_cast<smclient_fixture*>(fixture); });
 
 /***********************************************************************************************************************
