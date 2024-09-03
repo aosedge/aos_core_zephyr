@@ -95,11 +95,28 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     mResourceManager  = &resourceManager;
     mResourceMonitor  = &resourceMonitor;
     mDownloader       = &downloader;
+    mClockSync        = &clockSync;
     mChannelManager   = &channelManager;
 #ifndef CONFIG_ZTEST
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
 #endif
+
+    auto [openChannel, err] = mChannelManager->CreateChannel(cOpenPort);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (err = mOpenHandler.Init(*openChannel, *mClockSync); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error SMClient::Start()
+{
+    LOG_DBG() << "Start SM client";
 
     auto nodeInfo = MakeUnique<NodeInfo>(&mAllocator);
 
@@ -109,30 +126,29 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
 
     mProvisioned = nodeInfo->mStatus != NodeStatusEnum::eUnprovisioned;
 
-    auto [openChannel, err] = mChannelManager->CreateChannel(cOpenPort);
-    if (!err.IsNone()) {
+    if (auto err = mClockSync->Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (err = mOpenHandler.Init(*openChannel, clockSync); !err.IsNone()) {
-        return err;
-    }
-
-    if (err = clockSync.Subscribe(*this); !err.IsNone()) {
+    if (auto err = mNodeInfoProvider->SubscribeNodeStatusChanged(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (err = mNodeInfoProvider->SubscribeNodeStatusChanged(*this); !err.IsNone()) {
+    if (auto err = mOpenHandler.Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
     return ErrorEnum::eNone;
 }
 
-SMClient::~SMClient()
+Error SMClient::Stop()
 {
+    LOG_DBG() << "Stop SM client";
+
     if (IsStarted()) {
-        if (auto err = Stop(); !err.IsNone()) {
+        if (auto err = communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
+                servicemanager_v4_SMOutgoingMessages_size>::Stop();
+            !err.IsNone()) {
             LOG_ERR() << "Failed to stop PB handler: err=" << err;
         }
 
@@ -154,6 +170,8 @@ SMClient::~SMClient()
     LockGuard lock {mMutex};
 
     mConnectionSubscribers.Clear();
+
+    return ErrorEnum::eNone;
 }
 
 Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
@@ -619,7 +637,9 @@ void SMClient::UpdatePBHandlerState()
             return;
         }
 
-        if (err = Start(); !err.IsNone()) {
+        if (err = communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
+                servicemanager_v4_SMOutgoingMessages_size>::Start();
+            !err.IsNone()) {
             LOG_ERR() << "Failed to start PB handler: err=" << err;
             return;
         }

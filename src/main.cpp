@@ -54,5 +54,8 @@ int main(void)
     auto err = app.Init();
     __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
 
+    err = app.Start();
+    __ASSERT(err.IsNone(), "Error starting application: %s", utils::ErrorToCStr(err));
+
     return 0;
 }

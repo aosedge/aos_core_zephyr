@@ -47,6 +47,26 @@ Error App::Init()
     return ErrorEnum::eNone;
 }
 
+Error App::Start()
+{
+    LOG_INF() << "Start application";
+
+    if (auto err = mSMClient.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+App::~App()
+{
+    LOG_INF() << "Stop application";
+
+    if (auto err = mSMClient.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop SM client: err=" << err;
+    }
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
