@@ -98,6 +98,7 @@ protected:
 
 private:
     static constexpr auto cThreadStackSize = CONFIG_AOS_PBHANDLER_THREAD_STACK_SIZE;
+    static constexpr auto cReconnectPeriod = 2 * Time::cSeconds;
 
     void Run();
 
