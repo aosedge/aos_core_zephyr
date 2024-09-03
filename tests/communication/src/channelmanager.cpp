@@ -63,6 +63,9 @@ ZTEST(channelmanager, test_message_exchange)
     auto err = channelManager.Init(transport);
     zassert_true(err.IsNone(), "Channel manager initialization failed");
 
+    err = channelManager.Start();
+    zassert_true(err.IsNone(), "Channel manager start failed");
+
     auto ret = channelManager.CreateChannel(8080);
     zassert_true(ret.mError.IsNone(), "Channel creation failed", ret.mError.Message());
     zassert_true(ret.mValue != nullptr, "Channel creation failed");
@@ -111,6 +114,9 @@ ZTEST(channelmanager, test_read_message)
     auto err = channelManager.Init(transport);
     zassert_true(err.IsNone(), "Channel manager initialization failed");
 
+    err = channelManager.Start();
+    zassert_true(err.IsNone(), "Channel manager start failed");
+
     auto ret = channelManager.CreateChannel(8080);
     zassert_true(ret.mError.IsNone(), "Channel creation failed", ret.mError.Message());
     zassert_true(ret.mValue != nullptr, "Channel creation failed");
@@ -149,6 +155,9 @@ ZTEST(channelmanager, test_read_message_in_chunks)
 
     auto err = channelManager.Init(transport);
     zassert_true(err.IsNone(), "Channel manager initialization failed");
+
+    err = channelManager.Start();
+    zassert_true(err.IsNone(), "Channel manager start failed");
 
     auto ret = channelManager.CreateChannel(8080);
     zassert_true(ret.mError.IsNone(), "Channel creation failed", ret.mError.Message());
