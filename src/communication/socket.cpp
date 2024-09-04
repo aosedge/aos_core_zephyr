@@ -69,7 +69,14 @@ Error Socket::Close()
     LockGuard lock {mMutex};
 
     if (mSocketFd != -1) {
-        close(mSocketFd);
+        if (auto ret = shutdown(mSocketFd, SHUT_RDWR); ret != 0) {
+            LOG_ERR() << "Failed to shutdown socket: err=" << ret;
+        }
+
+        if (auto ret = close(mSocketFd); ret != 0) {
+            LOG_ERR() << "Failed to close socket: err=" << ret;
+        }
+
         mSocketFd = -1;
     }
 
