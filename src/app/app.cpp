@@ -51,6 +51,10 @@ Error App::Start()
 {
     LOG_INF() << "Start application";
 
+    if (auto err = mLauncher.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mResourceMonitor.Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -73,6 +77,10 @@ Error App::Start()
 App::~App()
 {
     LOG_INF() << "Stop application";
+
+    if (auto err = mLauncher.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop launcher: err=" << err;
+    }
 
     if (auto err = mResourceMonitor.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop resource monitor: err=" << err;
