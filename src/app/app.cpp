@@ -74,7 +74,7 @@ Error App::Start()
     return ErrorEnum::eNone;
 }
 
-App::~App()
+Error App::Stop()
 {
     LOG_INF() << "Stop application";
 
@@ -97,6 +97,8 @@ App::~App()
     if (auto err = mSMClient.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop SM client: err=" << err;
     }
+
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************

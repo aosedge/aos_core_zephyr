@@ -51,6 +51,19 @@ int main(void)
 
     auto& app = aos::zephyr::app::App::Get();
 
+    atexit([]() {
+        auto err = aos::zephyr::app::App::Get().Stop();
+        if (!err.IsNone()) {
+            printk("Error stopping application: %s\n", utils::ErrorToCStr(err));
+
+            _exit(1);
+        }
+
+        printk("Application stopped\n");
+
+        _exit(0);
+    });
+
     auto err = app.Init();
     __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
 
