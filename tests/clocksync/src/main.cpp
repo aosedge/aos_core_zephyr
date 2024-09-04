@@ -59,7 +59,15 @@ ZTEST_SUITE(
 
         f->mSender.Clear();
     },
-    nullptr, [](void* fixture) { delete static_cast<clocksync_fixture*>(fixture); });
+    nullptr,
+    [](void* fixture) {
+        auto f = static_cast<clocksync_fixture*>(fixture);
+
+        auto err = f->mClockSync.Stop();
+        zassert_true(err.IsNone(), "Can't stop clock sync: %s", utils::ErrorToCStr(err));
+
+        delete f;
+    });
 
 /***********************************************************************************************************************
  * Tests
