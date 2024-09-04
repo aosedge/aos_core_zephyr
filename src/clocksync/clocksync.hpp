@@ -94,11 +94,6 @@ public:
 class ClockSync : public ClockSyncItf {
 public:
     /**
-     * Destructor.
-     */
-    ~ClockSync();
-
-    /**
      * Initializes clock sync instance.
      *
      * @param sender sender.
@@ -112,6 +107,13 @@ public:
      * @return Error.
      */
     Error Start() override;
+
+    /**
+     * Stops clock sync.
+     *
+     * @return Error.
+     */
+    Error Stop();
 
     /**
      * Synchronizes system clock.

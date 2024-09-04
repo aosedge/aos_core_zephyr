@@ -86,6 +86,10 @@ App::~App()
         LOG_ERR() << "Failed to stop resource monitor: err=" << err;
     }
 
+    if (auto err = mClockSync.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop clock sync: err=" << err;
+    }
+
     if (auto err = mIAMClient.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop IAM client: err=" << err;
     }

@@ -81,6 +81,20 @@ Error ClockSync::Start()
     return ErrorEnum::eNone;
 }
 
+Error ClockSync::Stop()
+{
+    {
+        LockGuard lock {mMutex};
+
+        LOG_DBG() << "Stop";
+
+        mClose = true;
+        mCondVar.NotifyOne();
+    }
+
+    return mThread.Join();
+}
+
 Error ClockSync::Sync(const Time& time)
 {
     LockGuard lock {mMutex};
@@ -124,18 +138,6 @@ void ClockSync::Unsubscribe(ClockSyncSubscriberItf& subscriber)
     if (it.mError.IsNone()) {
         mConnectionSubscribers.Remove(it.mValue);
     }
-}
-
-ClockSync::~ClockSync()
-{
-    {
-        LockGuard lock {mMutex};
-
-        mClose = true;
-        mCondVar.NotifyOne();
-    }
-
-    mThread.Join();
 }
 
 /***********************************************************************************************************************
