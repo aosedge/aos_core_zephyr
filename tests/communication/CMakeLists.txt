@@ -90,8 +90,8 @@ set(mbedtls_source_dir "${APPLICATION_SOURCE_DIR}/../../../modules/crypto/mbedtl
 set(aoscore_source_dir "${APPLICATION_SOURCE_DIR}/../../../aos_core_lib_cpp")
 
 set_source_files_properties(
-    ${mbedtls_source_dir}/library/psa_crypto_driver_wrappers_no_static.c ${mbedtls_source_dir}/library/psa_crypto.c
-    TARGET_DIRECTORY mbedTLS PROPERTIES HEADER_FILE_ONLY ON
+    ${mbedtls_source_dir}/library/psa_crypto_driver_wrappers_no_static.c TARGET_DIRECTORY mbedTLS
+    PROPERTIES HEADER_FILE_ONLY ON
 )
 
 target_include_directories(mbedTLSCrypto PRIVATE ${mbedtls_source_dir}/library)
@@ -99,7 +99,6 @@ target_include_directories(mbedTLSCrypto PRIVATE ${mbedtls_source_dir}/library)
 target_sources(
     mbedTLSCrypto
     PRIVATE ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto_driver_wrappers_no_static.c
-            ${aoscore_source_dir}/src/common/crypto/mbedtls/drivers/psa_crypto.c
             ${aoscore_source_dir}/src/common/crypto/mbedtls/driverwrapper.cpp ${mbedtls_source_dir}/library/pk_ecc.c
 )
 
