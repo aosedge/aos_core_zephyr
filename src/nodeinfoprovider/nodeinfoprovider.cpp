@@ -7,17 +7,13 @@
 
 #include <sys/stat.h>
 #include <zephyr/drivers/hwinfo.h>
-#ifdef CONFIG_NATIVE_APPLICATION
-#include <sys/statvfs.h>
-#else
-#include <zephyr/fs/fs.h>
-#endif
 
 #include <xstat.h>
 
 #include <aos/common/tools/fs.hpp>
 #include <aos/common/tools/uuid.hpp>
 
+#include "utils/partition.hpp"
 #include "utils/utils.hpp"
 
 #include "log.hpp"
@@ -180,6 +176,7 @@ Error NodeInfoProvider::InitPartitionInfo()
 {
     LOG_DBG() << "Init partition info";
 
+    Error         err;
     PartitionInfo partitionInfo;
 
     partitionInfo.mName = cDiskPartitionName;
@@ -187,25 +184,15 @@ Error NodeInfoProvider::InitPartitionInfo()
     partitionInfo.mTypes.EmplaceBack("services");
     partitionInfo.mTypes.EmplaceBack("layers");
 
-    if (auto err = mNodeInfo.mPartitions.PushBack(partitionInfo); !err.IsNone()) {
+    if (err = mNodeInfo.mPartitions.PushBack(partitionInfo); !err.IsNone()) {
         return err;
     }
 
     for (auto& partition : mNodeInfo.mPartitions) {
-#ifdef CONFIG_NATIVE_APPLICATION
-        struct statvfs sbuf;
-
-        if (auto ret = statvfs(partition.mPath.CStr(), &sbuf); ret != 0) {
-            return ret;
+        Tie(partition.mTotalSize, err) = utils::CalculatePartitionSize(partition.mPath);
+        if (!err.IsNone()) {
+            return err;
         }
-#else
-        struct fs_statvfs sbuf;
-
-        if (auto ret = fs_statvfs(partition.mPath.CStr(), &sbuf); ret != 0) {
-            return ret;
-        }
-#endif
-        partition.mTotalSize = sbuf.f_bsize * sbuf.f_blocks;
 
         LOG_DBG() << "Init partition info: name=" << partition.mName << ", totalSize=" << partition.mTotalSize;
     }

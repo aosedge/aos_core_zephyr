@@ -92,6 +92,7 @@ target_sources(
             src/smclient/smclient.cpp
             src/storage/storage.cpp
             src/utils/checksum.cpp
+            src/utils/partition.cpp
             src/utils/utils.cpp
 )
 
