@@ -75,7 +75,7 @@ Error ResourceUsageProvider::GetNodeMonitoringData(
             return AOS_ERROR_WRAP(ret);
         }
 #endif
-        monitoringData.mDisk[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_bsize;
+        monitoringData.mDisk[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_frsize;
 
         LOG_DBG() << "Disk: " << monitoringData.mDisk[i].mName
                   << ", used size(K): " << (monitoringData.mDisk[i].mUsedSize / 1024);
