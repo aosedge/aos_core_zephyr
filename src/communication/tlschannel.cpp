@@ -50,13 +50,9 @@ Error TLSChannel::SetTLSConfig(const String& certType)
 {
     LOG_DBG() << "Set TLS config: name=" << mName << ", certType=" << certType;
 
-    Cleanup();
-
-    if (certType.IsEmpty()) {
-        return ErrorEnum::eNone;
-    }
-
     if (auto err = SetupSSLConfig(certType); !err.IsNone()) {
+        Cleanup();
+
         return err;
     }
 
