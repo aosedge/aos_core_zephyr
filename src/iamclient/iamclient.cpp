@@ -270,8 +270,12 @@ void IAMClient::HandleChannels()
 
         if (auto err = SetupChannel(); !err.IsNone()) {
             LOG_ERR() << "Can't setup channel: err=" << err;
+            LOG_DBG() << "Reconnect in " << cReconnectInterval / 1000000 << " ms";
 
-            usleep(cReconnectInterval / 1000);
+            if (err = mCondVar.Wait(lock, cReconnectInterval, [this] { return mClose; });
+                !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
+                LOG_ERR() << "Failed to wait reconnect: err=" << err;
+            }
 
             continue;
         }
