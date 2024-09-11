@@ -153,6 +153,7 @@ private:
     static constexpr auto cOpenPort                 = CONFIG_AOS_SM_OPEN_PORT;
     static constexpr auto cSecurePort               = CONFIG_AOS_SM_SECURE_PORT;
     static constexpr auto cMaxConnectionSubscribers = 2;
+    static constexpr auto cReconnectInterval        = 5 * Time::cSeconds;
 #ifndef CONFIG_ZTEST
     static constexpr auto cSMCertType = "sm";
 #endif
@@ -161,7 +162,9 @@ private:
     void  OnDisconnect() override;
     Error ReceiveMessage(const Array<uint8_t>& data) override;
 
-    void  UpdatePBHandlerState();
+    Error ReleaseChannel();
+    Error SetupChannel();
+    void  HandleChannel();
     Error SendNodeConfigStatus(const String& version, const Error& configErr);
     Error ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus);
     Error ProcessCheckNodeConfig(const servicemanager_v4_CheckNodeConfig& pbCheckNodeConfig);
@@ -180,9 +183,12 @@ private:
     clocksync::ClockSyncItf*                    mClockSync {};
     communication::ChannelManagerItf*           mChannelManager {};
 
-    Mutex mMutex;
-    bool  mClockSynced = false;
-    bool  mProvisioned = false;
+    Mutex               mMutex;
+    Thread<>            mThread;
+    ConditionalVariable mCondVar;
+    bool                mClockSynced = false;
+    bool                mProvisioned = false;
+    bool                mClose       = false;
 
 #ifndef CONFIG_ZTEST
     iam::certhandler::CertHandlerItf* mCertHandler {};
