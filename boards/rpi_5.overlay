@@ -12,21 +12,20 @@
 	#address-cells = <2>;
 	#size-cells = <1>;
 
-       chosen {
-               zephyr,console = &xen_consoleio_hvc;
-               zephyr,shell-uart = &xen_consoleio_hvc;
-       };
+	chosen {
+		zephyr,console = &xen_consoleio_hvc;
+		zephyr,shell-uart = &xen_consoleio_hvc;
+	};
 
-       psci {
-       compatible = "arm,psci-1.0", "arm,psci-0.2", "arm,psci";
-               method = "hvc";
-       };
+	psci {
+		compatible = "arm,psci-1.0", "arm,psci-0.2", "arm,psci";
+		method = "hvc";
+	};
 
-       xen_consoleio_hvc: hvc {
-               compatible = "xen,hvc-consoleio";
-               status = "okay";
-       };
-
+	xen_consoleio_hvc: hvc {
+		compatible = "xen,hvc-consoleio";
+		status = "okay";
+	};
 
 	/*
 	 * This node may differs on different setups, please check
@@ -62,14 +61,13 @@
 		reg = <0x00 0x10000000 DT_SIZE_M(128)>;
 	};
 
-    firmware {
-	tee {
-	compatible = "linaro,optee-tz";
-	method = "smc";
-	status = "okay";
+	firmware {
+		tee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+			status = "okay";
+		};
 	};
-    };
-
 };
 
 &uart10 {
