@@ -213,6 +213,10 @@ Error App::InitZephyr()
     }
 #endif
 
+    if (auto err = mStorage.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -230,10 +234,6 @@ Error App::InitZephyr()
     }
 
     if (auto err = mRunner.Init(mLauncher); !err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    if (auto err = mStorage.Init(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
