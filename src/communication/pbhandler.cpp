@@ -113,10 +113,6 @@ Error PBHandler<cReceiveBufferSize, cSendBufferSize>::SendMessage(const void* me
 template <size_t cReceiveBufferSize, size_t cSendBufferSize>
 void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
 {
-#if AOS_CONFIG_THREAD_STACK_USAGE
-    LOG_DBG() << "Stack usage: name=" << mName << ", size=" << mThread.GetStackUsage();
-#endif
-
     while (true) {
         {
             LockGuard lock {mMutex};
