@@ -40,8 +40,7 @@ Error PBHandler<cReceiveBufferSize, cSendBufferSize>::Start()
         return Error(ErrorEnum::eWrongState, "PB handler already started");
     }
 
-    auto err = mThread.Run([this](void*) { Run(); });
-    if (!err.IsNone()) {
+    if (auto err = mThread.Run([this](void*) { Run(); }); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -157,7 +156,7 @@ void PBHandler<cReceiveBufferSize, cSendBufferSize>::Run()
             }
 
             if (header.mDataSize > mReceiveBuffer.Size()) {
-                LOG_ERR() << "Not enough mem in receive buffer: name=" << mName;
+                LOG_ERR() << "Not enough mem in receive buffer: name=" << mName << ", dataSize=" << header.mDataSize;
                 continue;
             }
 
