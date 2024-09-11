@@ -117,12 +117,19 @@ int ChannelManager::Write(uint32_t port, const void* data, size_t size)
 
     aos::UniqueLock lock {sWriteMutex};
 
-    if (auto ret = mTransport->Write(&header.mValue, sizeof(AosProtocolHeader));
-        ret < static_cast<int>(sizeof(AosProtocolHeader))) {
-        return ret;
+    if (auto err = WriteTransport(&header.mValue, sizeof(AosProtocolHeader)); !err.IsNone()) {
+        LOG_ERR() << "Failed to write header: err=" << err;
+
+        return -EIO;
     }
 
-    return mTransport->Write(data, size);
+    if (auto err = WriteTransport(data, size); !err.IsNone()) {
+        LOG_ERR() << "Failed to write header: err=" << err;
+
+        return -EIO;
+    }
+
+    return size;
 }
 
 bool ChannelManager::IsConnected() const
@@ -215,7 +222,15 @@ Error ChannelManager::HandleRead()
 
         AosProtocolHeader header;
 
-        if (auto err = ReadFromTransport(header); !err.IsNone()) {
+        if (auto err = ReadTransport(&header, sizeof(AosProtocolHeader)); !err.IsNone()) {
+            return err;
+        }
+
+        if (header.mDataSize > cReadBufferSize) {
+            return {ErrorEnum::eRuntime, "not enough memory in read buffer"};
+        }
+
+        if (auto err = ReadTransport(mTmpReadBuffer, header.mDataSize); !err.IsNone()) {
             return err;
         }
 
@@ -225,39 +240,11 @@ Error ChannelManager::HandleRead()
     }
 }
 
-Error ChannelManager::ReadFromTransport(AosProtocolHeader& header)
-{
-    if (auto ret = mTransport->Read(&header, sizeof(AosProtocolHeader));
-        ret < static_cast<int>(sizeof(AosProtocolHeader))) {
-        return {ret, "failed to read header"};
-    }
-
-    if (header.mDataSize > cReadBufferSize) {
-        return {ErrorEnum::eRuntime, "not enough memory in read buffer"};
-    }
-
-    LOG_DBG() << "Read channel: port=" << header.mPort << " size=" << header.mDataSize;
-
-    size_t totalRead = 0;
-
-    while (totalRead < header.mDataSize) {
-        size_t readSize = header.mDataSize - totalRead;
-
-        if (auto ret = mTransport->Read(mTmpReadBuffer + totalRead, readSize); ret < static_cast<int>(readSize)) {
-            return {ret, "failed to read data into local buffer"};
-        }
-
-        totalRead += readSize;
-    }
-
-    return ErrorEnum::eNone;
-}
-
 Error ChannelManager::ProcessData(const AosProtocolHeader& header)
 {
     UniqueLock lock {mMutex};
 
-    LOG_DBG() << "Read channel: port=" << header.mPort << " size=" << header.mDataSize;
+    LOG_DBG() << "Process data: port=" << header.mPort << " size=" << header.mDataSize;
 
     auto [channel, err] = mChannels.At(header.mPort);
     if (!err.IsNone()) {
@@ -274,8 +261,6 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
             return err;
         }
 
-        LOG_DBG() << "Request read channel: port=" << header.mPort << " size=" << size;
-
         size = aos::Min(size, static_cast<size_t>(header.mDataSize - processedSize));
 
         memcpy(buffer, mTmpReadBuffer + processedSize, size);
@@ -287,7 +272,47 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
         processedSize += size;
     }
 
-    LOG_DBG() << "Read channel done: port=" << header.mPort << " size=" << header.mDataSize;
+    return ErrorEnum::eNone;
+}
+
+Error ChannelManager::ReadTransport(void* buffer, size_t size)
+{
+    size_t read = 0;
+
+    LOG_DBG() << "Read transport: size=" << size;
+
+    while (read < size) {
+        auto ret = mTransport->Read(&reinterpret_cast<uint8_t*>(buffer)[read], size - read);
+        if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+
+        read += ret;
+    }
+
+    if (read != size) {
+        return AOS_ERROR_WRAP(Error(aos::ErrorEnum::eFailed, "read size mismatch"));
+    }
+
+    return aos::ErrorEnum::eNone;
+}
+
+Error ChannelManager::WriteTransport(const void* buffer, size_t size)
+{
+    size_t written = 0;
+
+    while (written < size) {
+        auto ret = mTransport->Write(&reinterpret_cast<const uint8_t*>(buffer)[written], size - written);
+        if (ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+
+        written += ret;
+    }
+
+    if (written != size) {
+        return AOS_ERROR_WRAP(Error(aos::ErrorEnum::eFailed, "write size mismatch"));
+    }
 
     return ErrorEnum::eNone;
 }
