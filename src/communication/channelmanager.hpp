@@ -134,8 +134,9 @@ private:
     void  CloseChannels();
     Error TryConnect();
     Error WaitTimeout();
-    Error ReadFromTransport(AosProtocolHeader& header);
     Error ProcessData(const AosProtocolHeader& header);
+    Error ReadTransport(void* buffer, size_t size);
+    Error WriteTransport(const void* buffer, size_t size);
 
     aos::RetWithError<AosProtocolHeader> PrepareHeader(uint32_t port, const aos::Array<uint8_t>& data);
 
