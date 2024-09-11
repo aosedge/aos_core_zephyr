@@ -98,7 +98,7 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
 
     fixture->mSMClient->OnClockSynced();
 
-    auto channel = fixture->mChannelManager.GetChannel(port);
+    auto channel = fixture->mChannelManager.GetChannel(port, cWaitTimeout);
     if (!channel.mError.IsNone()) {
         return {nullptr, channel.mError};
     }

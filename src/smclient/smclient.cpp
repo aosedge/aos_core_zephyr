@@ -138,24 +138,16 @@ Error SMClient::Start()
         return AOS_ERROR_WRAP(err);
     }
 
+    if (auto err = mThread.Run([this](void*) { HandleChannel(); }); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     return ErrorEnum::eNone;
 }
 
 Error SMClient::Stop()
 {
     LOG_DBG() << "Stop SM client";
-
-    if (IsStarted()) {
-        if (auto err = communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
-                servicemanager_v4_SMOutgoingMessages_size>::Stop();
-            !err.IsNone()) {
-            LOG_ERR() << "Failed to stop PB handler: err=" << err;
-        }
-
-        if (auto err = mChannelManager->DeleteChannel(cSecurePort); !err.IsNone()) {
-            LOG_ERR() << "Failed to delete channel: err=" << err;
-        }
-    }
 
     if (mOpenHandler.IsStarted()) {
         if (auto err = mOpenHandler.Stop(); !err.IsNone()) {
@@ -167,9 +159,16 @@ Error SMClient::Stop()
         }
     }
 
-    LockGuard lock {mMutex};
+    {
+        LockGuard lock {mMutex};
 
-    mConnectionSubscribers.Clear();
+        mConnectionSubscribers.Clear();
+
+        mClose = true;
+        mCondVar.NotifyOne();
+    }
+
+    mThread.Join();
 
     return ErrorEnum::eNone;
 }
@@ -278,13 +277,10 @@ Error SMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& stat
 {
     LOG_DBG() << "Node status changed: status=" << status;
 
-    {
-        LockGuard lock {mMutex};
+    LockGuard lock {mMutex};
 
-        mProvisioned = status != NodeStatusEnum::eUnprovisioned;
-    }
-
-    UpdatePBHandlerState();
+    mProvisioned = status != NodeStatusEnum::eUnprovisioned;
+    mCondVar.NotifyOne();
 
     return ErrorEnum::eNone;
 }
@@ -293,26 +289,20 @@ void SMClient::OnClockSynced()
 {
     LOG_DBG() << "Clock synced";
 
-    {
-        LockGuard lock {mMutex};
+    LockGuard lock {mMutex};
 
-        mClockSynced = true;
-    }
-
-    UpdatePBHandlerState();
+    mClockSynced = true;
+    mCondVar.NotifyOne();
 }
 
 void SMClient::OnClockUnsynced()
 {
     LOG_DBG() << "Clock unsynced";
 
-    {
-        LockGuard lock {mMutex};
+    LockGuard lock {mMutex};
 
-        mClockSynced = false;
-    }
-
-    UpdatePBHandlerState();
+    mClockSynced = false;
+    mCondVar.NotifyOne();
 }
 
 Error SMClient::SendClockSyncRequest()
@@ -594,67 +584,85 @@ Error SMClient::SendNodeConfigStatus(const String& version, const Error& configE
     return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
-void SMClient::UpdatePBHandlerState()
+Error SMClient::SetupChannel()
 {
-    auto start = false;
-    auto stop  = false;
-
-    {
-        LockGuard lock {mMutex};
-
-        if (mClockSynced && mProvisioned && !IsStarted()) {
-            start = true;
-        }
-
-        if ((!mClockSynced || !mProvisioned) && IsStarted()) {
-            stop = true;
-        }
+    auto [channel, err] = mChannelManager->CreateChannel(cSecurePort);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
-
-    if (start) {
-        auto [channel, err] = mChannelManager->CreateChannel(cSecurePort);
-        if (!err.IsNone()) {
-            LOG_ERR() << "Failed to create channel: err=" << err;
-            return;
-        }
 
 #ifndef CONFIG_ZTEST
-        if (err = mTLSChannel.Init("sm", *mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
-            LOG_ERR() << "Failed to init TLS channel: err=" << err;
-            return;
-        }
-
-        if (err = mTLSChannel.SetTLSConfig(cSMCertType); !err.IsNone()) {
-            LOG_ERR() << "Failed to set TLS config: err=" << err;
-            return;
-        }
-
-        channel = &mTLSChannel;
-#endif
-
-        if (err = PBHandler::Init("SM secure", *channel); !err.IsNone()) {
-            LOG_ERR() << "Failed to init PB handler: err=" << err;
-            return;
-        }
-
-        if (err = communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
-                servicemanager_v4_SMOutgoingMessages_size>::Start();
-            !err.IsNone()) {
-            LOG_ERR() << "Failed to start PB handler: err=" << err;
-            return;
-        }
+    if (err = mTLSChannel.Init("sm", *mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (stop) {
-        if (auto err = Stop(); !err.IsNone()) {
-            LOG_ERR() << "Failed to stop PB handler: err=" << err;
+    if (err = mTLSChannel.SetTLSConfig(cSMCertType); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    channel = &mTLSChannel;
+#endif
+
+    if (err = PBHandler::Init("SM secure", *channel); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (err = communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
+            servicemanager_v4_SMOutgoingMessages_size>::Start();
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error SMClient::ReleaseChannel()
+{
+    if (!IsStarted()) {
+        return ErrorEnum::eNone;
+    }
+
+    if (auto err = communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
+            servicemanager_v4_SMOutgoingMessages_size>::Stop();
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mChannelManager->DeleteChannel(cSecurePort); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+void SMClient::HandleChannel()
+{
+    while (true) {
+        if (auto err = ReleaseChannel(); !err.IsNone()) {
+            LOG_ERR() << "Can't release channel: err=" << err;
+        }
+
+        UniqueLock lock {mMutex};
+
+        mCondVar.Wait(lock, [this]() { return (mClockSynced && mProvisioned) || mClose; });
+
+        if (mClose) {
             return;
         }
 
-        if (auto err = mChannelManager->DeleteChannel(cSecurePort); !err.IsNone()) {
-            LOG_ERR() << "Failed to delete channel: err=" << err;
-            return;
+        if (auto err = SetupChannel(); !err.IsNone()) {
+            LOG_ERR() << "Can't setup channel: err=" << err;
+            LOG_DBG() << "Reconnect in " << cReconnectInterval / 1000000 << " ms";
+
+            if (err = mCondVar.Wait(lock, cReconnectInterval, [this] { return mClose; });
+                !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
+                LOG_ERR() << "Failed to wait reconnect: err=" << err;
+            }
+
+            continue;
         }
+
+        mCondVar.Wait(lock, [this]() { return !mClockSynced || !mProvisioned || mClose; });
     }
 }
 
