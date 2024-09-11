@@ -178,8 +178,6 @@ Error NodeInfoProvider::InitAttributes()
 
 Error NodeInfoProvider::InitPartitionInfo()
 {
-    LOG_DBG() << "Init partition info";
-
     PartitionInfo partitionInfo;
 
     partitionInfo.mName = cDiskPartitionName;
@@ -205,7 +203,7 @@ Error NodeInfoProvider::InitPartitionInfo()
             return ret;
         }
 #endif
-        partition.mTotalSize = sbuf.f_bsize * sbuf.f_blocks;
+        partition.mTotalSize = sbuf.f_frsize * sbuf.f_blocks;
 
         LOG_DBG() << "Init partition info: name=" << partition.mName << ", totalSize=" << partition.mTotalSize;
     }
