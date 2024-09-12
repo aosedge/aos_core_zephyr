@@ -68,6 +68,13 @@
 			status = "okay";
 		};
 	};
+
+	ramdisk0 {
+		compatible = "zephyr,ram-disk";
+		disk-name = "RAM";
+		sector-size = <512>;
+		sector-count = <128>;
+	};
 };
 
 &uart10 {
