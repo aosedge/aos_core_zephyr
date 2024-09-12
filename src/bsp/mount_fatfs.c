@@ -8,21 +8,30 @@
 
 #include "mount.h"
 
-#define DISK_DRIVE_NAME CONFIG_SDMMC_VOLUME_NAME
+#define DISK_DRIVE_NAME   CONFIG_SDMMC_VOLUME_NAME
+#define DISK_TMP_MOUNT_PT "/2:"
 
-static FATFS fat_fs;
+static FATFS fat_fs_aos;
+static FATFS fat_fs_tmp;
 
 /* mounting info */
-static struct fs_mount_t mp = {
-    .type    = FS_FATFS,
-    .fs_data = &fat_fs,
+static struct fs_mount_t mp_aos = {
+    .type      = FS_FATFS,
+    .fs_data   = &fat_fs_aos,
+    .mnt_point = CONFIG_AOS_DISK_MOUNT_POINT,
+};
+
+static struct fs_mount_t mp_tmp = {
+    .type      = FS_FATFS,
+    .fs_data   = &fat_fs_tmp,
+    .mnt_point = DISK_TMP_MOUNT_PT,
 };
 
 #if defined(CONFIG_FS_MULTI_PARTITION)
 PARTITION VolToPart[FF_VOLUMES] = {
-    [0] = {3, 1}, /* "0:" ==> 1st partition on the pd#0 */
-    [1] = {3, 2}, /* "1:" ==> 2nd partition on the pd#0 */
-    [2] = {0, -1}, /* "2:" ==> 3rd partition on the pd#0 */
+    [0] = {3, 1}, /* "0:" ==> 1st partition on the pd#3 (SD) */
+    [1] = {3, 2}, /* "1:" ==> 2nd partition on the pd#3 (SD) */
+    [2] = {0, 0}, /* "2:" ==> 1rd partition on the pd#0 (RAM) */
     [3] = {0, -1},
     [4] = {0, -1},
     [5] = {0, -1},
@@ -35,43 +44,37 @@ int fatfs_mount()
 {
     printk("Mounting fatfs...");
 
-    uint32_t block_count;
-    uint32_t block_size;
-
     int ret = disk_access_init(DISK_DRIVE_NAME);
     if (ret) {
-        printk("[fatfs] access init failed (%d)\n", ret);
+        printk("[fatfs] Access init failed (%d)\n", ret);
 
         return ret;
     }
 
-    ret = disk_access_ioctl(DISK_DRIVE_NAME, DISK_IOCTL_GET_SECTOR_COUNT, &block_count);
+    ret = fs_mount(&mp_aos);
     if (ret) {
-        printk("[fatfs] get sector count failed (%d)\n", ret);
+        printk("[fatfs] Aos disk mount failed (%d)\n", ret);
 
         return ret;
     }
 
-    ret = disk_access_ioctl(DISK_DRIVE_NAME, DISK_IOCTL_GET_SECTOR_SIZE, &block_size);
+    printk("[fatfs] Aos disk mounted at %s\n", CONFIG_AOS_DISK_MOUNT_POINT);
+
+    ret = fs_mount(&mp_tmp);
     if (ret) {
-        printk("[fatfs] get sector size failed (%d)\n", ret);
+        printk("[fatfs] TMP disk mount failed (%d)\n", ret);
 
         return ret;
     }
 
-    mp.mnt_point = CONFIG_AOS_DISK_MOUNT_POINT;
+    printk("[fatfs] TMP disk mounted at %s\n", DISK_TMP_MOUNT_PT);
 
-    ret = fs_mount(&mp);
+    ret = fs_mkdir(DISK_TMP_MOUNT_PT "/tmp");
     if (ret) {
-        printk("[fatfs] mount failed (%d)\n", ret);
+        printk("[fatfs] TMP folder create failed (%d)\n", ret);
 
         return ret;
     }
-
-    uint64_t memory_size_mb = (uint64_t)block_count * block_size;
-
-    printk("[fatfs] Mounted %s, block count=%u, Sector size=%u, Memory Size(MB)=%u\n", CONFIG_AOS_DISK_MOUNT_POINT,
-        block_count, block_size, (uint32_t)(memory_size_mb >> 20));
 
     return 0;
 }
