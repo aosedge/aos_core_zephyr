@@ -151,4 +151,8 @@ config DOMU_DTB_PATH
 config TA_DEPLOY_DIR
 	string "Location of optee TA's deploy dir"
 
+module = AOS_CORE
+module-str = Aos core
+source "subsys/logging/Kconfig.template.log_config"
+
 source "Kconfig"

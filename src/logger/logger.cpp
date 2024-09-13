@@ -7,7 +7,7 @@
 
 #include <zephyr/logging/log.h>
 
-#ifdef CONFIG_NATIVE_APPLICATION
+#if CONFIG_NATIVE_APPLICATION
 #include <aos/common/tools/thread.hpp>
 #endif
 
@@ -16,28 +16,10 @@
 namespace aos::zephyr::logger {
 
 /***********************************************************************************************************************
- * Consts
+ * Static
  **********************************************************************************************************************/
 
-static const String cLogModuleApp              = "app";
-static const String cLogModuleClockSync        = "clocksync";
-static const String cLogModuleCommunication    = "communication";
-static const String cLogModuleDownloader       = "downloader";
-static const String cLogModuleIAMClient        = "iamclient";
-static const String cLogModuleNodeInfoProvider = "nodeinfoprovider";
-static const String cLogModuleOCISpec          = "ocispec";
-static const String cLogModuleProvisionManager = "provisionmanager";
-static const String cLogModuleResourceManager  = "resourcemanager";
-static const String cLogModuleRunner           = "runner";
-static const String cLogModuleSMClient         = "smclient";
-static const String cLogModuleStorage          = "storage";
-
-static const String cLogModuleCerthandler    = "certhandler";
-static const String cLogModuleCrypto         = "crypto";
-static const String cLogModuleLauncher       = "launcher";
-static const String cLogModuleMonitoring     = "monitoring";
-static const String cLogModulePKCS11         = "pkcs11";
-static const String cLogModuleServiceManager = "servicemanager";
+StaticMap<String, void (*)(LogLevel, const String&), Logger::cMaxLogModules> Logger::sLogCallbacks;
 
 /***********************************************************************************************************************
  * Log module callbacks
@@ -46,7 +28,7 @@ static const String cLogModuleServiceManager = "servicemanager";
 #define LOG_CALLBACK(name)                                                                                             \
     namespace log_##name                                                                                               \
     {                                                                                                                  \
-        LOG_MODULE_REGISTER(name, CONFIG_LOG_DEFAULT_LEVEL);                                                           \
+        LOG_MODULE_REGISTER(name, CONFIG_AOS_CORE_LOG_LEVEL);                                                          \
                                                                                                                        \
         static void LogCallback(LogLevel level, const String& message)                                                 \
         {                                                                                                              \
@@ -105,13 +87,42 @@ LOG_CALLBACK(servicemanager);
  * Public
  **********************************************************************************************************************/
 
-void Logger::Init()
+Error Logger::Init()
 {
     Log::SetCallback(LogCallback);
+
+    sLogCallbacks.Set("app", &log_app::LogCallback);
+    sLogCallbacks.Set("certhandler", &log_certhandler::LogCallback);
+    sLogCallbacks.Set("clocksync", &log_clocksync::LogCallback);
+    sLogCallbacks.Set("communication", &log_communication::LogCallback);
+    sLogCallbacks.Set("crypto", &log_crypto::LogCallback);
+    sLogCallbacks.Set("downloader", &log_downloader::LogCallback);
+    sLogCallbacks.Set("iamclient", &log_iamclient::LogCallback);
+    sLogCallbacks.Set("launcher", &log_launcher::LogCallback);
+    sLogCallbacks.Set("monitoring", &log_monitoring::LogCallback);
+    sLogCallbacks.Set("nodeinfoprovider", &log_nodeinfoprovider::LogCallback);
+    sLogCallbacks.Set("ocispec", &log_ocispec::LogCallback);
+    sLogCallbacks.Set("pkcs11", &log_pkcs11::LogCallback);
+    sLogCallbacks.Set("provisionmanager", &log_provisionmanager::LogCallback);
+    sLogCallbacks.Set("resourcemanager", &log_resourcemanager::LogCallback);
+    sLogCallbacks.Set("runner", &log_runner::LogCallback);
+    sLogCallbacks.Set("servicemanager", &log_servicemanager::LogCallback);
+    sLogCallbacks.Set("smclient", &log_smclient::LogCallback);
+    sLogCallbacks.Set("storage", &log_storage::LogCallback);
+
+#if CONFIG_LOG_RUNTIME_FILTERING
+    for (auto& [module, _] : sLogCallbacks) {
+        if (auto err = SetLogLevel(module, cRuntimeLogLevel); !err.IsNone()) {
+            return err;
+        }
+    }
+#endif
+
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
- * Public
+ * Private
  **********************************************************************************************************************/
 
 void Logger::LogCallback(const String& module, LogLevel level, const String& message)
@@ -122,48 +133,38 @@ void Logger::LogCallback(const String& module, LogLevel level, const String& mes
     LockGuard lock(sMutex);
 #endif
 
-    String logModule(module);
-
-    if (logModule == cLogModuleApp) {
-        log_app::LogCallback(level, message);
-    } else if (logModule == cLogModuleCommunication) {
-        log_communication::LogCallback(level, message);
-    } else if (logModule == cLogModuleClockSync) {
-        log_clocksync::LogCallback(level, message);
-    } else if (logModule == cLogModuleDownloader) {
-        log_downloader::LogCallback(level, message);
-    } else if (logModule == cLogModuleOCISpec) {
-        log_ocispec::LogCallback(level, message);
-    } else if (logModule == cLogModuleProvisionManager) {
-        log_provisionmanager::LogCallback(level, message);
-    } else if (logModule == cLogModuleResourceManager) {
-        log_resourcemanager::LogCallback(level, message);
-    } else if (logModule == cLogModuleRunner) {
-        log_runner::LogCallback(level, message);
-    } else if (logModule == cLogModuleSMClient) {
-        log_smclient::LogCallback(level, message);
-    } else if (logModule == cLogModuleIAMClient) {
-        log_iamclient::LogCallback(level, message);
-    } else if (logModule == cLogModuleStorage) {
-        log_storage::LogCallback(level, message);
-    } else if (logModule == cLogModuleNodeInfoProvider) {
-        log_nodeinfoprovider::LogCallback(level, message);
-    } else if (logModule == cLogModuleCerthandler) {
-        log_certhandler::LogCallback(level, message);
-    } else if (logModule == cLogModuleCrypto) {
-        log_crypto::LogCallback(level, message);
-    } else if (logModule == cLogModuleLauncher) {
-        log_launcher::LogCallback(level, message);
-    } else if (logModule == cLogModuleMonitoring) {
-        log_monitoring::LogCallback(level, message);
-    } else if (logModule == cLogModuleServiceManager) {
-        log_servicemanager::LogCallback(level, message);
-    } else if (logModule == cLogModulePKCS11) {
-        log_pkcs11::LogCallback(level, message);
-    } else {
-        LOG_MODULE_WRN(cLogModuleCommunication.CStr())
-            << "Log from unknown module received: module=" << module << ", level=" << level << ", message=" << message;
+    auto [callback, err] = sLogCallbacks.At(module);
+    if (!err.IsNone()) {
+        LOG_MODULE_WRN("app") << "Log from unknown module received: module=" << module << ", level=" << level
+                              << ", message=" << message;
+        return;
     }
+
+    callback(level, message);
 }
+
+#if CONFIG_LOG_RUNTIME_FILTERING
+Error Logger::SetLogLevel(const String& module, int level)
+{
+    auto sourceID = log_source_id_get(module.CStr());
+    if (sourceID < 0) {
+        return AOS_ERROR_WRAP(ErrorEnum::eNotFound);
+    }
+
+    for (int i = 0; i < log_backend_count_get(); i++) {
+        auto backend = log_backend_get(i);
+
+        if (!log_backend_is_active(backend)) {
+            continue;
+        }
+
+        if (auto ret = log_filter_set(backend, Z_LOG_LOCAL_DOMAIN_ID, sourceID, level); ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+    }
+
+    return ErrorEnum::eNone;
+}
+#endif
 
 } // namespace aos::zephyr::logger
