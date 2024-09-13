@@ -47,7 +47,8 @@ int main(void)
     __ASSERT(ret == 0, "Error creating domains: %s [%d]", strerror(ret), ret);
 #endif
 
-    logger::Logger::Init();
+    auto err = logger::Logger::Init();
+    __ASSERT(err.IsNone(), "Error initializing logger: %s", utils::ErrorToCStr(err));
 
     auto& app = aos::zephyr::app::App::Get();
 
@@ -64,7 +65,7 @@ int main(void)
         _exit(0);
     });
 
-    auto err = app.Init();
+    err = app.Init();
     __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
 
     err = app.Start();
