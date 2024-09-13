@@ -115,11 +115,11 @@ config AOS_SOCKET_SERVER_PORT
 
 config AOS_PBHANDLER_THREAD_STACK_SIZE
 	int "Aos PB handler stack size"
-	default 16384
+	default 32768
 
 config AOS_LAUNCHER_THREAD_STACK_SIZE
 	int "Aos launcher stack size"
-	default 16384
+	default 32768
 
 config DOMD_ENABLE
 	bool "Enable Domain-D creation"
