@@ -8,7 +8,12 @@
 #ifndef LOGGER_HPP_
 #define LOGGER_HPP_
 
+#if CONFIG_LOG_RUNTIME_FILTERING
+#include <zephyr/logging/log_ctrl.h>
+#endif
+
 #include <aos/common/tools/log.hpp>
+#include <aos/common/tools/map.hpp>
 
 namespace aos::zephyr::logger {
 
@@ -19,11 +24,23 @@ class Logger {
 public:
     /**
      * Inits logging system.
+     *
+     * return Error.
      */
-    static void Init();
+    static Error Init();
 
 private:
+    static constexpr auto cMaxLogModules = 32;
+#if CONFIG_LOG_RUNTIME_FILTERING
+    static constexpr auto cRuntimeLogLevel = LOG_LEVEL_INF;
+#endif
+
     static void LogCallback(const String& module, LogLevel level, const String& message);
+#if CONFIG_LOG_RUNTIME_FILTERING
+    static Error SetLogLevel(const String& module, int level);
+#endif
+
+    static StaticMap<String, void (*)(LogLevel, const String&), cMaxLogModules> sLogCallbacks;
 };
 
 } // namespace aos::zephyr::logger
