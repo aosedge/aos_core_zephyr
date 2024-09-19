@@ -29,11 +29,11 @@ manifest:
 
     - name: aos_core_lib_cpp
       remote: aosedge
-      revision: "feature_dynamic_nodes"
+      revision: "develop"
 
     - name: aos_core_api
       remote: aosedge
-      revision: "feature_dynamic_nodes"
+      revision: "develop"
 
     - name: zephyr-xenlib
       remote: xen-troops
