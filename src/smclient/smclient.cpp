@@ -30,17 +30,17 @@ static google_protobuf_Timestamp TimestampToPB(const Time& time)
 static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
     servicemanager_v4_MonitoringData& pbMonitoringData)
 {
-    pbMonitoringData.cpu           = monitoringData.mCPU + 0.5;
-    pbMonitoringData.ram           = monitoringData.mRAM;
-    pbMonitoringData.download      = monitoringData.mDownload;
-    pbMonitoringData.upload        = monitoringData.mUpload;
-    pbMonitoringData.disk_count    = monitoringData.mDisk.Size();
-    pbMonitoringData.has_timestamp = true;
-    pbMonitoringData.timestamp     = TimestampToPB(timestamp);
+    pbMonitoringData.cpu              = monitoringData.mCPU + 0.5;
+    pbMonitoringData.ram              = monitoringData.mRAM;
+    pbMonitoringData.download         = monitoringData.mDownload;
+    pbMonitoringData.upload           = monitoringData.mUpload;
+    pbMonitoringData.partitions_count = monitoringData.mDisk.Size();
+    pbMonitoringData.has_timestamp    = true;
+    pbMonitoringData.timestamp        = TimestampToPB(timestamp);
 
     for (size_t i = 0; i < monitoringData.mDisk.Size(); i++) {
-        utils::StringFromCStr(pbMonitoringData.disk[i].name) = monitoringData.mDisk[i].mName;
-        pbMonitoringData.disk[i].used_size                   = monitoringData.mDisk[i].mUsedSize;
+        utils::StringFromCStr(pbMonitoringData.partitions[i].name) = monitoringData.mDisk[i].mName;
+        pbMonitoringData.partitions[i].used_size                   = monitoringData.mDisk[i].mUsedSize;
     }
 }
 
