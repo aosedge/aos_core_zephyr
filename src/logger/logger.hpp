@@ -23,7 +23,7 @@ public:
     static void Init();
 
 private:
-    static void LogCallback(const char* module, LogLevel level, const String& message);
+    static void LogCallback(const String& module, LogLevel level, const String& message);
 };
 
 } // namespace aos::zephyr::logger
