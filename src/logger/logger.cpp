@@ -114,7 +114,7 @@ void Logger::Init()
  * Public
  **********************************************************************************************************************/
 
-void Logger::LogCallback(const char* module, LogLevel level, const String& message)
+void Logger::LogCallback(const String& module, LogLevel level, const String& message)
 {
 #ifdef CONFIG_NATIVE_APPLICATION
     static Mutex sMutex;
