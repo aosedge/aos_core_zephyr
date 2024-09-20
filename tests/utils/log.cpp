@@ -11,7 +11,7 @@
 
 #include "log.hpp"
 
-void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message)
+void TestLogCallback(const aos::String& module, aos::LogLevel level, const aos::String& message)
 {
     static std::mutex mutex;
     static auto       startTime = std::chrono::steady_clock::now();
@@ -44,5 +44,5 @@ void TestLogCallback(const char* module, aos::LogLevel level, const aos::String&
         break;
     }
 
-    printk("%0.3f (%s) [%s] %s\n", now, module, levelStr, message.CStr());
+    printk("%0.3f (%s) [%s] %s\n", now, module.CStr(), levelStr, message.CStr());
 }

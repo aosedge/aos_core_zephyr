@@ -10,6 +10,6 @@
 
 #include <aos/common/tools/log.hpp>
 
-void TestLogCallback(const char* module, aos::LogLevel level, const aos::String& message);
+void TestLogCallback(const aos::String& module, aos::LogLevel level, const aos::String& message);
 
 #endif
