@@ -115,11 +115,11 @@ static void PBToMonitoringData(
 {
     aosMonitoring.mRAM = pbMonitoring.ram;
     aosMonitoring.mCPU = pbMonitoring.cpu;
-    aosMonitoring.mDisk.Resize(pbMonitoring.partitions_count);
+    aosMonitoring.mPartitions.Resize(pbMonitoring.partitions_count);
 
     for (size_t i = 0; i < pbMonitoring.partitions_count; i++) {
-        aosMonitoring.mDisk[i].mName     = utils::StringFromCStr(pbMonitoring.partitions[i].name);
-        aosMonitoring.mDisk[i].mUsedSize = pbMonitoring.partitions[i].used_size;
+        aosMonitoring.mPartitions[i].mName     = utils::StringFromCStr(pbMonitoring.partitions[i].name);
+        aosMonitoring.mPartitions[i].mUsedSize = pbMonitoring.partitions[i].used_size;
     }
 
     aosMonitoring.mDownload = pbMonitoring.download;
