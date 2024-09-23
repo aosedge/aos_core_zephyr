@@ -61,24 +61,24 @@ Error ResourceUsageProvider::GetNodeMonitoringData(
     mPrevNodeCPUTime = domain.cpu_ns;
     mPrevTime        = curTime;
 
-    for (size_t i = 0; i < monitoringData.mDisk.Size(); ++i) {
+    for (size_t i = 0; i < monitoringData.mPartitions.Size(); ++i) {
 #ifdef CONFIG_NATIVE_APPLICATION
         struct statvfs sbuf;
 
-        if (ret = statvfs(monitoringData.mDisk[i].mPath.CStr(), &sbuf); ret != 0) {
+        if (ret = statvfs(monitoringData.mPartitions[i].mPath.CStr(), &sbuf); ret != 0) {
             return ret;
         }
 #else
         struct fs_statvfs sbuf;
 
-        if (ret = fs_statvfs(monitoringData.mDisk[i].mPath.CStr(), &sbuf); ret != 0) {
+        if (ret = fs_statvfs(monitoringData.mPartitions[i].mPath.CStr(), &sbuf); ret != 0) {
             return AOS_ERROR_WRAP(ret);
         }
 #endif
-        monitoringData.mDisk[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_frsize;
+        monitoringData.mPartitions[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_frsize;
 
-        LOG_DBG() << "Disk: " << monitoringData.mDisk[i].mName
-                  << ", used size(K): " << (monitoringData.mDisk[i].mUsedSize / 1024);
+        LOG_DBG() << "Partition: " << monitoringData.mPartitions[i].mName
+                  << ", used size(K): " << (monitoringData.mPartitions[i].mUsedSize / 1024);
     }
 
     return ErrorEnum::eNone;
