@@ -34,13 +34,13 @@ static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData,
     pbMonitoringData.ram              = monitoringData.mRAM;
     pbMonitoringData.download         = monitoringData.mDownload;
     pbMonitoringData.upload           = monitoringData.mUpload;
-    pbMonitoringData.partitions_count = monitoringData.mDisk.Size();
+    pbMonitoringData.partitions_count = monitoringData.mPartitions.Size();
     pbMonitoringData.has_timestamp    = true;
     pbMonitoringData.timestamp        = TimestampToPB(timestamp);
 
-    for (size_t i = 0; i < monitoringData.mDisk.Size(); i++) {
-        utils::StringFromCStr(pbMonitoringData.partitions[i].name) = monitoringData.mDisk[i].mName;
-        pbMonitoringData.partitions[i].used_size                   = monitoringData.mDisk[i].mUsedSize;
+    for (size_t i = 0; i < monitoringData.mPartitions.Size(); i++) {
+        utils::StringFromCStr(pbMonitoringData.partitions[i].name) = monitoringData.mPartitions[i].mName;
+        pbMonitoringData.partitions[i].used_size                   = monitoringData.mPartitions[i].mUsedSize;
     }
 }
 
