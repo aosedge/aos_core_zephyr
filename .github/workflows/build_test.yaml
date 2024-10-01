@@ -69,12 +69,12 @@ jobs:
       - name: Test ${{ matrix.platform }}
         if: ${{ matrix.platform == 'native_posix' }}
         run: |
-          west twister -c -v -p ${{ matrix.platform }} -T tests
+          west twister -c -v -p ${{ matrix.platform }} -T tests -v
 
       - name: Test ${{ matrix.platform }}
         if: ${{ matrix.platform == 'native_posix_64' }}
         run: |
-          west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests
+          west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests -v
           gcovr twister-out/${{ matrix.platform }}/ -f src/ --xml-pretty > ./coverage.xml
 
       - name: Upload codecov report
