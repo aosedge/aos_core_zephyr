@@ -39,11 +39,9 @@ public:
     Error ParseNodeConfig(const String& json, sm::resourcemanager::NodeConfig& config) const override;
 
 private:
-    static constexpr size_t cJsonMaxContentLen = 1024;
-
-    mutable Mutex                               mMutex;
-    mutable StaticString<cJsonMaxContentLen>    mJSONBuffer;
-    mutable StaticAllocator<sizeof(NodeConfig)> mAllocator;
+    mutable Mutex                                                      mMutex;
+    mutable StaticString<aos::sm::resourcemanager::cNodeConfigJSONLen> mJSONBuffer;
+    mutable StaticAllocator<sizeof(NodeConfig)>                        mAllocator;
 };
 
 /**
