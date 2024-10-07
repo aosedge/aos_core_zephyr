@@ -105,7 +105,7 @@ struct VMHWConfigIOMEM {
 struct VMHWConfig {
     const char*     deviceTree;
     uint32_t        vcpus;
-    json_obj_token  memKB;
+    uint64_t        memKB;
     const char*     dtdevs[oci::cMaxDTDevsCount];
     size_t          dtdevsLen;
     VMHWConfigIOMEM iomems[oci::cMaxIOMEMsCount];
