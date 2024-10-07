@@ -94,9 +94,9 @@ struct VMKernel {
  * Contains information about IOMEMs.
  */
 struct VMHWConfigIOMEM {
-    json_obj_token firstGFN;
-    json_obj_token firstMFN;
-    json_obj_token nrMFNs;
+    uint64_t firstGFN;
+    uint64_t firstMFN;
+    uint64_t nrMFNs;
 };
 
 /**
