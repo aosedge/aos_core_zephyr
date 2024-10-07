@@ -273,7 +273,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     aos::oci::ImageManifest fullManifest = {1, "mediaType1", {"mediaType2", "digest2"}, {}, &fullAosService};
 
-    for (auto i = 0; i < aos::cMaxNumLayers; i++) {
+    for (size_t i = 0; i < aos::cMaxNumLayers; i++) {
         fullManifest.mLayers.PushBack({"layerType", "layerDigest", i});
     }
 
