@@ -37,4 +37,4 @@ zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp ../../src/ocispec/ocispec.cpp)
+target_sources(app PRIVATE src/main.cpp ../../src/ocispec/ocispec.cpp ../utils/log.cpp)

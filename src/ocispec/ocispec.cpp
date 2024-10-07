@@ -69,7 +69,7 @@ static const struct json_obj_descr VMHWConfigIOMEMDescr[] = {
 static const struct json_obj_descr VMHWConfigDescr[] = {
     JSON_OBJ_DESCR_PRIM(VMHWConfig, deviceTree, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(VMHWConfig, vcpus, JSON_TOK_NUMBER),
-    JSON_OBJ_DESCR_PRIM(VMHWConfig, memKB, JSON_TOK_FLOAT),
+    JSON_OBJ_DESCR_PRIM(VMHWConfig, memKB, JSON_TOK_UINT64),
     JSON_OBJ_DESCR_ARRAY(VMHWConfig, dtdevs, oci::cMaxDTDevsCount, dtdevsLen, JSON_TOK_STRING),
     JSON_OBJ_DESCR_OBJ_ARRAY(
         VMHWConfig, iomems, oci::cMaxIOMEMsCount, iomemsLen, VMHWConfigIOMEMDescr, ARRAY_SIZE(VMHWConfigIOMEMDescr)),
@@ -407,20 +407,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
 
         runtimeSpec.mVM->mHWConfig.mDeviceTree = jsonRuntimeSpec->vm.hwConfig.deviceTree;
         runtimeSpec.mVM->mHWConfig.mVCPUs      = jsonRuntimeSpec->vm.hwConfig.vcpus;
-
-        uint64_t memKB = 0;
-
-        if (jsonRuntimeSpec->vm.hwConfig.memKB.start) {
-            auto result = String(jsonRuntimeSpec->vm.hwConfig.memKB.start, jsonRuntimeSpec->vm.hwConfig.memKB.length)
-                              .ToUint64();
-            if (!result.mError.IsNone()) {
-                return AOS_ERROR_WRAP(result.mError);
-            }
-
-            memKB = result.mValue;
-        }
-
-        runtimeSpec.mVM->mHWConfig.mMemKB = memKB;
+        runtimeSpec.mVM->mHWConfig.mMemKB      = jsonRuntimeSpec->vm.hwConfig.memKB;
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.dtdevsLen; i++) {
             runtimeSpec.mVM->mHWConfig.mDTDevs.PushBack(jsonRuntimeSpec->vm.hwConfig.dtdevs[i]);
@@ -503,15 +490,7 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
 
         jsonRuntimeSpec->vm.hwConfig.deviceTree = runtimeSpec.mVM->mHWConfig.mDeviceTree.CStr();
         jsonRuntimeSpec->vm.hwConfig.vcpus      = runtimeSpec.mVM->mHWConfig.mVCPUs;
-
-        auto memKB = new (&mAllocator) StaticString<20>;
-
-        auto err = memKB->Convert(runtimeSpec.mVM->mHWConfig.mMemKB);
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
-
-        jsonRuntimeSpec->vm.hwConfig.memKB = {const_cast<char*>(memKB->CStr()), memKB->Size()};
+        jsonRuntimeSpec->vm.hwConfig.memKB      = runtimeSpec.mVM->mHWConfig.mMemKB;
 
         jsonRuntimeSpec->vm.hwConfig.dtdevsLen = runtimeSpec.mVM->mHWConfig.mDTDevs.Size();
 
@@ -526,7 +505,7 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
 
             auto firstGFN = new (&mAllocator) StaticString<20>;
 
-            err = firstGFN->Convert(iomem.mFirstGFN);
+            auto err = firstGFN->Convert(iomem.mFirstGFN);
             if (!err.IsNone()) {
                 return AOS_ERROR_WRAP(err);
             }
