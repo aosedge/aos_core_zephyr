@@ -24,7 +24,7 @@ namespace aos::zephyr::ocispec {
 const struct json_obj_descr ContentDescriptorDescr[] = {
     JSON_OBJ_DESCR_PRIM(ContentDescriptor, mediaType, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(ContentDescriptor, digest, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_PRIM(ContentDescriptor, size, JSON_TOK_FLOAT),
+    JSON_OBJ_DESCR_PRIM(ContentDescriptor, size, JSON_TOK_UINT64),
 };
 
 const struct json_obj_descr ImageManifestDescr[] = {
@@ -125,35 +125,20 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
 
     // config
 
-    int64_t size = 0;
-
-    if (jsonImageManifest->config.size.start) {
-        auto configSize = String(jsonImageManifest->config.size.start, jsonImageManifest->config.size.length).ToInt64();
-        if (!configSize.mError.IsNone()) {
-            return AOS_ERROR_WRAP(configSize.mError);
-        }
-
-        size = configSize.mValue;
-    }
-
-    manifest.mConfig = {jsonImageManifest->config.mediaType, jsonImageManifest->config.digest, size};
+    manifest.mConfig = {
+        jsonImageManifest->config.mediaType,
+        jsonImageManifest->config.digest,
+        jsonImageManifest->config.size,
+    };
 
     // layers
 
     for (size_t i = 0; i < jsonImageManifest->layersLen; i++) {
-        size = 0;
-
-        if (jsonImageManifest->layers[i].size.start) {
-            auto layerSize
-                = String(jsonImageManifest->layers[i].size.start, jsonImageManifest->layers[i].size.length).ToInt64();
-            if (!layerSize.mError.IsNone()) {
-                return AOS_ERROR_WRAP(layerSize.mError);
-            }
-
-            size = layerSize.mValue;
-        }
-
-        manifest.mLayers.PushBack({jsonImageManifest->layers[i].mediaType, jsonImageManifest->layers[i].digest, size});
+        manifest.mLayers.PushBack({
+            jsonImageManifest->layers[i].mediaType,
+            jsonImageManifest->layers[i].digest,
+            jsonImageManifest->layers[i].size,
+        });
     }
 
     // aosService
@@ -163,19 +148,11 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
             return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
         }
 
-        size = 0;
-
-        if (jsonImageManifest->aosService.size.start) {
-            auto serviceSize
-                = String(jsonImageManifest->aosService.size.start, jsonImageManifest->aosService.size.length).ToInt64();
-            if (!serviceSize.mError.IsNone()) {
-                return AOS_ERROR_WRAP(serviceSize.mError);
-            }
-
-            size = serviceSize.mValue;
-        }
-
-        *manifest.mAosService = {jsonImageManifest->aosService.mediaType, jsonImageManifest->aosService.digest, size};
+        *manifest.mAosService = {
+            jsonImageManifest->aosService.mediaType,
+            jsonImageManifest->aosService.digest,
+            jsonImageManifest->aosService.size,
+        };
     }
 
     return ErrorEnum::eNone;
@@ -201,44 +178,23 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
 
     // config
 
-    auto configSize = new (&mAllocator) StaticString<20>;
-
-    auto err = configSize->Convert(manifest.mConfig.mSize);
-    if (!err.IsNone()) {
-        return AOS_ERROR_WRAP(err);
-    }
-
-    jsonImageManifest->config = {manifest.mConfig.mMediaType.CStr(), manifest.mConfig.mDigest.CStr(),
-        {const_cast<char*>(configSize->CStr()), configSize->Size()}};
+    jsonImageManifest->config
+        = {manifest.mConfig.mMediaType.CStr(), manifest.mConfig.mDigest.CStr(), manifest.mConfig.mSize};
 
     // layers
 
     jsonImageManifest->layersLen = manifest.mLayers.Size();
 
     for (size_t i = 0; i < jsonImageManifest->layersLen; i++) {
-        auto layerSize = new (&mAllocator) StaticString<20>;
-
-        err = layerSize->Convert(manifest.mLayers[i].mSize);
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
-
-        jsonImageManifest->layers[i] = {manifest.mLayers[i].mMediaType.CStr(), manifest.mLayers[i].mDigest.CStr(),
-            {const_cast<char*>(layerSize->CStr()), layerSize->Size()}};
+        jsonImageManifest->layers[i]
+            = {manifest.mLayers[i].mMediaType.CStr(), manifest.mLayers[i].mDigest.CStr(), manifest.mLayers[i].mSize};
     }
 
     // aosService
 
     if (manifest.mAosService) {
-        auto serviceSize = new (&mAllocator) StaticString<20>;
-
-        err = serviceSize->Convert(manifest.mAosService->mSize);
-        if (!err.IsNone()) {
-            return AOS_ERROR_WRAP(err);
-        }
-
-        jsonImageManifest->aosService = {manifest.mAosService->mMediaType.CStr(), manifest.mAosService->mDigest.CStr(),
-            {const_cast<char*>(serviceSize->CStr()), serviceSize->Size()}};
+        jsonImageManifest->aosService = {
+            manifest.mAosService->mMediaType.CStr(), manifest.mAosService->mDigest.CStr(), manifest.mAosService->mSize};
     }
 
     auto ret = json_obj_encode_buf(ImageManifestDescr, ARRAY_SIZE(ImageManifestDescr), jsonImageManifest,
@@ -247,7 +203,7 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
         return AOS_ERROR_WRAP(ret);
     }
 
-    err = mJsonFileContent.Resize(strlen(mJsonFileContent.CStr()));
+    auto err = mJsonFileContent.Resize(strlen(mJsonFileContent.CStr()));
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }

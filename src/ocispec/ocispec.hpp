@@ -23,9 +23,9 @@ namespace aos::zephyr::ocispec {
  */
 
 struct ContentDescriptor {
-    const char*    mediaType;
-    const char*    digest;
-    json_obj_token size;
+    const char* mediaType;
+    const char* digest;
+    uint64_t    size;
 };
 
 /**
