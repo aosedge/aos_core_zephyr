@@ -61,9 +61,9 @@ static const struct json_obj_descr VMKernelDescr[] = {
 };
 
 static const struct json_obj_descr VMHWConfigIOMEMDescr[] = {
-    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, firstGFN, JSON_TOK_FLOAT),
-    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, firstMFN, JSON_TOK_FLOAT),
-    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, nrMFNs, JSON_TOK_FLOAT),
+    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, firstGFN, JSON_TOK_UINT64),
+    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, firstMFN, JSON_TOK_UINT64),
+    JSON_OBJ_DESCR_PRIM(VMHWConfigIOMEM, nrMFNs, JSON_TOK_UINT64),
 };
 
 static const struct json_obj_descr VMHWConfigDescr[] = {
@@ -415,34 +415,11 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
             oci::VMHWConfigIOMEM ioMem {};
-            auto                 jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
+            auto&                jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
 
-            if (jsonIOMem.firstGFN.start) {
-                auto result = String(jsonIOMem.firstGFN.start, jsonIOMem.firstGFN.length).ToUint64();
-                if (!result.mError.IsNone()) {
-                    return AOS_ERROR_WRAP(result.mError);
-                }
-
-                ioMem.mFirstGFN = result.mValue;
-            }
-
-            if (jsonIOMem.firstMFN.start) {
-                auto result = String(jsonIOMem.firstMFN.start, jsonIOMem.firstMFN.length).ToUint64();
-                if (!result.mError.IsNone()) {
-                    return AOS_ERROR_WRAP(result.mError);
-                }
-
-                ioMem.mFirstMFN = result.mValue;
-            }
-
-            if (jsonIOMem.nrMFNs.start) {
-                auto result = String(jsonIOMem.nrMFNs.start, jsonIOMem.nrMFNs.length).ToUint64();
-                if (!result.mError.IsNone()) {
-                    return AOS_ERROR_WRAP(result.mError);
-                }
-
-                ioMem.mNrMFNs = result.mValue;
-            }
+            ioMem.mFirstGFN = jsonIOMem.firstGFN;
+            ioMem.mFirstMFN = jsonIOMem.firstMFN;
+            ioMem.mNrMFNs   = jsonIOMem.nrMFNs;
 
             runtimeSpec.mVM->mHWConfig.mIOMEMs.PushBack(ioMem);
         }
@@ -501,33 +478,12 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
         jsonRuntimeSpec->vm.hwConfig.iomemsLen = runtimeSpec.mVM->mHWConfig.mIOMEMs.Size();
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
-            auto iomem = runtimeSpec.mVM->mHWConfig.mIOMEMs[i];
-
-            auto firstGFN = new (&mAllocator) StaticString<20>;
-
-            auto err = firstGFN->Convert(iomem.mFirstGFN);
-            if (!err.IsNone()) {
-                return AOS_ERROR_WRAP(err);
-            }
-
-            auto firstMFN = new (&mAllocator) StaticString<20>;
-
-            err = firstMFN->Convert(iomem.mFirstMFN);
-            if (!err.IsNone()) {
-                return AOS_ERROR_WRAP(err);
-            }
-
-            auto nrMFNs = new (&mAllocator) StaticString<20>;
-
-            err = nrMFNs->Convert(iomem.mNrMFNs);
-            if (!err.IsNone()) {
-                return AOS_ERROR_WRAP(err);
-            }
+            auto& iomem = runtimeSpec.mVM->mHWConfig.mIOMEMs[i];
 
             jsonRuntimeSpec->vm.hwConfig.iomems[i] = {
-                {const_cast<char*>(firstGFN->CStr()), firstGFN->Size()},
-                {const_cast<char*>(firstMFN->CStr()), firstMFN->Size()},
-                {const_cast<char*>(nrMFNs->CStr()), nrMFNs->Size()},
+                iomem.mFirstGFN,
+                iomem.mFirstMFN,
+                iomem.mNrMFNs,
             };
         }
 
