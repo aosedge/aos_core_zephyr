@@ -50,6 +50,10 @@ Error TLSChannel::SetTLSConfig(const String& certType)
 {
     LOG_DBG() << "Set TLS config: name=" << mName << ", certType=" << certType;
 
+    if (!mCertType.IsEmpty()) {
+        Cleanup();
+    }
+
     if (auto err = SetupSSLConfig(certType); !err.IsNone()) {
         Cleanup();
 
@@ -155,6 +159,8 @@ void TLSChannel::Cleanup()
     if (mKeyID != 0) {
         AosPsaRemoveKey(mKeyID);
     }
+
+    mCertType.Clear();
 }
 
 Error TLSChannel::SetupSSLConfig(const String& certType)
