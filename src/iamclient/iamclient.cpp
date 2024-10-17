@@ -83,6 +83,12 @@ Error IAMClient::Stop()
     mClockSync->Unsubscribe(*this);
     mNodeInfoProvider->UnsubscribeNodeStatusChanged(*this);
 
+#ifndef CONFIG_ZTEST
+    if (auto err = mCertHandler->UnsubscribeCertChanged(*this); !err.IsNone()) {
+        LOG_ERR() << "Can't unsubscribe cert changed: err=" << err;
+    }
+#endif
+
     {
         LockGuard lock {mMutex};
 
@@ -126,7 +132,7 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
     }
 
     if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned || status == NodeStatusEnum::eUnprovisioned) {
-        mSwitchChannel = true;
+        mReconnect = true;
         mCondVar.NotifyOne();
     }
 
@@ -137,6 +143,16 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
     }
 
     return ErrorEnum::eNone;
+}
+
+void IAMClient::OnCertChanged(const iam::certhandler::CertInfo& info)
+{
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Cert changed event received";
+
+    mReconnect = true;
+    mCondVar.NotifyOne();
 }
 
 /***********************************************************************************************************************
@@ -181,6 +197,12 @@ Error IAMClient::ReleaseChannel()
         err = AOS_ERROR_WRAP(deleteErr);
     }
 
+#ifndef CONFIG_ZTEST
+    if (auto unsubscribeErr = mCertHandler->UnsubscribeCertChanged(*this); !unsubscribeErr.IsNone() && err.IsNone()) {
+        err = AOS_ERROR_WRAP(Error(err, "can't unsubscribe from cert changed event"));
+    }
+#endif
+
     return err;
 }
 
@@ -211,6 +233,10 @@ Error IAMClient::SetupChannel()
         mCurrentPort = cSecurePort;
 
 #ifndef CONFIG_ZTEST
+        if (err = mCertHandler->SubscribeCertChanged(cIAMCertType, *this); !err.IsNone()) {
+            return AOS_ERROR_WRAP(Error(err, "can't subscribe on cert changed event"));
+        }
+
         if (err = mTLSChannel.Init("iam", *mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
             return AOS_ERROR_WRAP(err);
         }
@@ -236,10 +262,10 @@ Error IAMClient::SetupChannel()
     return ErrorEnum::eNone;
 }
 
-bool IAMClient::WaitChannelSwitch(UniqueLock& lock)
+bool IAMClient::WaitReconnect(UniqueLock& lock)
 {
-    mCondVar.Wait(lock, [this]() { return mSwitchChannel || mClose; });
-    mSwitchChannel = false;
+    mCondVar.Wait(lock, [this]() { return mReconnect || mClose; });
+    mReconnect = false;
 
     return !mClose;
 }
@@ -280,7 +306,7 @@ void IAMClient::HandleChannels()
             continue;
         }
 
-        if (!WaitChannelSwitch(lock)) {
+        if (!WaitReconnect(lock)) {
             continue;
         }
     }
