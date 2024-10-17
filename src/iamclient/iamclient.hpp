@@ -30,6 +30,7 @@ class IAMClient
     : public communication::PBHandler<iamanager_v5_IAMIncomingMessages_size, iamanager_v5_IAMOutgoingMessages_size>,
       public clocksync::ClockSyncSubscriberItf,
       public iam::nodeinfoprovider::NodeStatusObserverItf,
+      private aos::iam::certhandler::CertReceiverItf,
       private NonCopyable {
 public:
     /**
@@ -84,6 +85,13 @@ public:
      */
     Error OnNodeStatusChanged(const String& nodeID, const NodeStatus& status) override;
 
+    /**
+     * Processes certificate updates.
+     *
+     * @param info certificate info.
+     */
+    void OnCertChanged(const aos::iam::certhandler::CertInfo& info) override;
+
 private:
     static constexpr auto cOpenPort          = CONFIG_AOS_IAM_OPEN_PORT;
     static constexpr auto cSecurePort        = CONFIG_AOS_IAM_SECURE_PORT;
@@ -98,7 +106,7 @@ private:
 
     Error ReleaseChannel();
     Error SetupChannel();
-    bool  WaitChannelSwitch(UniqueLock& lock);
+    bool  WaitReconnect(UniqueLock& lock);
     bool  WaitClockSynced(UniqueLock& lock);
     bool  WaitChannelConnected(UniqueLock& lock);
     void  HandleChannels();
@@ -129,10 +137,10 @@ private:
     Mutex               mMutex;
     Thread<>            mThread;
     ConditionalVariable mCondVar;
-    bool                mClockSynced   = false;
-    bool                mSwitchChannel = false;
-    int                 mCurrentPort   = 0;
-    bool                mClose         = false;
+    bool                mClockSynced = false;
+    bool                mReconnect   = false;
+    int                 mCurrentPort = 0;
+    bool                mClose       = false;
 
     StaticAllocator<sizeof(iamanager_v5_IAMIncomingMessages) + sizeof(iamanager_v5_IAMOutgoingMessages) * 2> mAllocator;
 };
