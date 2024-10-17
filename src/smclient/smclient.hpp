@@ -10,6 +10,7 @@
 
 #include <aos/common/connectionsubsc.hpp>
 #include <aos/common/monitoring/monitoring.hpp>
+#include <aos/iam/certhandler.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/resourcemanager.hpp>
 
@@ -36,6 +37,7 @@ class SMClient : public communication::PBHandler<servicemanager_v4_SMIncomingMes
                  public ConnectionPublisherItf,
                  public clocksync::ClockSyncSenderItf,
                  public clocksync::ClockSyncSubscriberItf,
+                 private aos::iam::certhandler::CertReceiverItf,
                  private NonCopyable {
 public:
     /**
@@ -149,6 +151,13 @@ public:
      */
     void OnClockUnsynced() override;
 
+    /**
+     * Processes certificate updates.
+     *
+     * @param info certificate info.
+     */
+    void OnCertChanged(const aos::iam::certhandler::CertInfo& info) override;
+
 private:
     static constexpr auto cOpenPort                 = CONFIG_AOS_SM_OPEN_PORT;
     static constexpr auto cSecurePort               = CONFIG_AOS_SM_SECURE_PORT;
@@ -186,9 +195,10 @@ private:
     Mutex               mMutex;
     Thread<>            mThread;
     ConditionalVariable mCondVar;
-    bool                mClockSynced = false;
-    bool                mProvisioned = false;
-    bool                mClose       = false;
+    bool                mClockSynced        = false;
+    bool                mProvisioned        = false;
+    bool                mCertificateChanged = false;
+    bool                mClose              = false;
 
 #ifndef CONFIG_ZTEST
     iam::certhandler::CertHandlerItf* mCertHandler {};
