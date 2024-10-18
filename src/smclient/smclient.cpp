@@ -305,6 +305,16 @@ void SMClient::OnClockUnsynced()
     mCondVar.NotifyOne();
 }
 
+void SMClient::OnCertChanged(const iam::certhandler::CertInfo& info)
+{
+    LockGuard lock {mMutex};
+
+    LOG_DBG() << "Cert changed event received";
+
+    mCertificateChanged = true;
+    mCondVar.NotifyOne();
+}
+
 Error SMClient::SendClockSyncRequest()
 {
     return mOpenHandler.SendClockSyncRequest();
@@ -592,6 +602,10 @@ Error SMClient::SetupChannel()
     }
 
 #ifndef CONFIG_ZTEST
+    if (err = mCertHandler->SubscribeCertChanged(cSMCertType, *this); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "can't subscribe on cert changed event"));
+    }
+
     if (err = mTLSChannel.Init("sm", *mCertHandler, *mCertLoader, *channel); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -618,6 +632,12 @@ Error SMClient::SetupChannel()
 
 Error SMClient::ReleaseChannel()
 {
+    {
+        LockGuard lock {mMutex};
+
+        mCertificateChanged = false;
+    }
+
     if (!IsStarted()) {
         return ErrorEnum::eNone;
     }
@@ -631,6 +651,12 @@ Error SMClient::ReleaseChannel()
     if (auto err = mChannelManager->DeleteChannel(cSecurePort); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
+
+#ifndef CONFIG_ZTEST
+    if (auto err = mCertHandler->UnsubscribeCertChanged(*this); !err.IsNone()) {
+        return AOS_ERROR_WRAP(Error(err, "can't unsubscribe from cert changed event"));
+    }
+#endif
 
     return ErrorEnum::eNone;
 }
@@ -662,7 +688,7 @@ void SMClient::HandleChannel()
             continue;
         }
 
-        mCondVar.Wait(lock, [this]() { return !mClockSynced || !mProvisioned || mClose; });
+        mCondVar.Wait(lock, [this]() { return !mClockSynced || !mProvisioned || mClose || mCertificateChanged; });
     }
 }
 
