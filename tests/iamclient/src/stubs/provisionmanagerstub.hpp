@@ -48,6 +48,22 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
+    aos::Error SubscribeCertChanged(
+        const aos::String& certType, aos::iam::certhandler::CertReceiverItf& certReceiver) override
+    {
+        (void)certType;
+        (void)certReceiver;
+
+        return aos::ErrorEnum::eNone;
+    }
+
+    aos::Error UnsubscribeCertChanged(aos::iam::certhandler::CertReceiverItf& certReceiver) override
+    {
+        (void)certReceiver;
+
+        return aos::ErrorEnum::eNone;
+    }
+
     aos::Error FinishProvisioning(const aos::String& password) override
     {
         mPassword = password;
