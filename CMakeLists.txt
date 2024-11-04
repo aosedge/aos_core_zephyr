@@ -231,8 +231,8 @@ ExternalProject_Add(
                -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
                -DWITH_MBEDTLS=OFF
     SOURCE_DIR ${aoscore_source_dir}
-    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a
-                     ${aoscore_build_dir}/lib/libaoscommoncpp.a
+    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossm.a ${aoscore_build_dir}/lib/libaosiam.a
+                     ${aoscore_build_dir}/lib/libaoscommon.a
     DEPENDS zephyr_interface
 )
 
@@ -244,7 +244,7 @@ add_library(aossm STATIC IMPORTED GLOBAL)
 
 add_dependencies(aossm aoscore)
 
-set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaossmcpp.a)
+set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaossm.a)
 set_target_properties(aossm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aossm)
@@ -255,7 +255,7 @@ add_library(aosiam STATIC IMPORTED GLOBAL)
 
 add_dependencies(aosiam aoscore)
 
-set_target_properties(aosiam PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaosiamcpp.a)
+set_target_properties(aosiam PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaosiam.a)
 set_target_properties(aosiam PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aosiam)
@@ -266,7 +266,7 @@ add_library(aoscommon STATIC IMPORTED GLOBAL)
 
 add_dependencies(aoscommon aoscore)
 
-set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommoncpp.a)
+set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommon.a)
 set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aoscommon)
