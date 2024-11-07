@@ -48,7 +48,7 @@ public:
         iam::provisionmanager::ProvisionManagerItf& provisionManager, communication::ChannelManagerItf& channelManager
 #ifndef CONFIG_ZTEST
         ,
-        iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader
+        iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader
 #endif
     );
 
@@ -129,7 +129,7 @@ private:
     communication::ChannelManagerItf*           mChannelManager {};
 #ifndef CONFIG_ZTEST
     iam::certhandler::CertHandlerItf* mCertHandler {};
-    cryptoutils::CertLoaderItf*       mCertLoader {};
+    crypto::CertLoaderItf*            mCertLoader {};
     communication::TLSChannel         mTLSChannel;
 #endif
 

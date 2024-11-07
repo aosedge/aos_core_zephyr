@@ -112,7 +112,7 @@ Error ResourceUsageProvider::GetInstanceMonitoringData(
 
         monitoringData.mRAM = domain.cur_mem;
 
-        auto findInstanceCPUTime = mPrevInstanceCPUTime.Find([&instanceID](const InstanceCPUData& instanceCpuData) {
+        auto findInstanceCPUTime = mPrevInstanceCPUTime.FindIf([&instanceID](const InstanceCPUData& instanceCpuData) {
             return instanceCpuData.mInstanceID == instanceID;
         });
 

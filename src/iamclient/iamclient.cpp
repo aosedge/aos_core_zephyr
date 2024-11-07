@@ -24,7 +24,7 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
     iam::provisionmanager::ProvisionManagerItf& provisionManager, communication::ChannelManagerItf& channelManager
 #ifndef CONFIG_ZTEST
     ,
-    iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader
+    iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader
 #endif
 )
 {
