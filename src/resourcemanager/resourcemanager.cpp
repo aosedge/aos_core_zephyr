@@ -23,10 +23,10 @@ namespace {
  */
 struct Device {
     const char* name;
-    const char* hostDevices[aos::cMaxNumHostDevices];
+    const char* hostDevices[cMaxNumHostDevices];
     size_t      hostDevicesLen;
     int         sharedCount;
-    const char* groups[aos::cMaxNumGroups];
+    const char* groups[cMaxNumGroups];
     size_t      groupsLen;
 };
 
@@ -37,7 +37,7 @@ struct FSMount {
     const char* destination;
     const char* source;
     const char* type;
-    const char* options[aos::cFSMountMaxNumOptions];
+    const char* options[cFSMountMaxNumOptions];
     size_t      optionsLen;
 };
 
@@ -54,13 +54,13 @@ struct Host {
  */
 struct Resource {
     const char* name;
-    const char* groups[aos::cMaxNumGroups];
+    const char* groups[cMaxNumGroups];
     size_t      groupsLen;
-    FSMount     mounts[aos::cMaxNumFSMounts];
+    FSMount     mounts[cMaxNumFSMounts];
     size_t      mountsLen;
-    const char* env[aos::cMaxNumEnvVariables];
+    const char* env[cMaxNumEnvVariables];
     size_t      envLen;
-    Host        hosts[aos::cMaxNumHosts];
+    Host        hosts[cMaxNumHosts];
     size_t      hostsLen;
 };
 
@@ -72,12 +72,12 @@ struct NodeConfig {
     const char* version;
     // cppcheck-suppress unusedStructMember
     const char* nodeType;
-    Device      devices[aos::cMaxNumDevices];
+    Device      devices[cMaxNumDevices];
     size_t      devicesLen;
-    Resource    resources[aos::cMaxNumNodeResources];
+    Resource    resources[cMaxNumNodeResources];
     size_t      resourcesLen;
     // cppcheck-suppress unusedStructMember
-    const char* labels[aos::cMaxNumNodeLabels];
+    const char* labels[cMaxNumNodeLabels];
     // cppcheck-suppress unusedStructMember
     size_t labelsLen;
     // cppcheck-suppress unusedStructMember
@@ -91,9 +91,9 @@ struct NodeConfig {
  */
 static const struct json_obj_descr cDeviceDescr[] = {
     JSON_OBJ_DESCR_PRIM(Device, name, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(Device, hostDevices, aos::cMaxNumHostDevices, hostDevicesLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(Device, hostDevices, cMaxNumHostDevices, hostDevicesLen, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(Device, sharedCount, JSON_TOK_NUMBER),
-    JSON_OBJ_DESCR_ARRAY(Device, groups, aos::cMaxNumGroups, groupsLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(Device, groups, cMaxNumGroups, groupsLen, JSON_TOK_STRING),
 };
 
 /**
@@ -103,7 +103,7 @@ static const struct json_obj_descr cFSMountDescr[] = {
     JSON_OBJ_DESCR_PRIM(FSMount, destination, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(FSMount, source, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(FSMount, type, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(FSMount, options, aos::cFSMountMaxNumOptions, optionsLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_ARRAY(FSMount, options, cFSMountMaxNumOptions, optionsLen, JSON_TOK_STRING),
 };
 
 /**
@@ -119,11 +119,10 @@ static const struct json_obj_descr cHostDescr[] = {
  */
 static const struct json_obj_descr cResourceDescr[] = {
     JSON_OBJ_DESCR_PRIM(Resource, name, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_ARRAY(Resource, groups, aos::cMaxNumGroups, groupsLen, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_OBJ_ARRAY(
-        Resource, mounts, aos::cMaxNumFSMounts, mountsLen, cFSMountDescr, ARRAY_SIZE(cFSMountDescr)),
-    JSON_OBJ_DESCR_ARRAY(Resource, env, aos::cMaxNumEnvVariables, envLen, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_OBJ_ARRAY(Resource, hosts, aos::cMaxNumHosts, hostsLen, cHostDescr, ARRAY_SIZE(cHostDescr)),
+    JSON_OBJ_DESCR_ARRAY(Resource, groups, cMaxNumGroups, groupsLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJ_ARRAY(Resource, mounts, cMaxNumFSMounts, mountsLen, cFSMountDescr, ARRAY_SIZE(cFSMountDescr)),
+    JSON_OBJ_DESCR_ARRAY(Resource, env, cMaxNumEnvVariables, envLen, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJ_ARRAY(Resource, hosts, cMaxNumHosts, hostsLen, cHostDescr, ARRAY_SIZE(cHostDescr)),
 };
 
 /**
@@ -132,11 +131,10 @@ static const struct json_obj_descr cResourceDescr[] = {
 static const struct json_obj_descr cNodeConfigDescr[] = {
     JSON_OBJ_DESCR_PRIM(NodeConfig, version, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(NodeConfig, nodeType, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_OBJ_ARRAY(NodeConfig, devices, cMaxNumDevices, devicesLen, cDeviceDescr, ARRAY_SIZE(cDeviceDescr)),
     JSON_OBJ_DESCR_OBJ_ARRAY(
-        NodeConfig, devices, aos::cMaxNumDevices, devicesLen, cDeviceDescr, ARRAY_SIZE(cDeviceDescr)),
-    JSON_OBJ_DESCR_OBJ_ARRAY(
-        NodeConfig, resources, aos::cMaxNumNodeResources, resourcesLen, cResourceDescr, ARRAY_SIZE(cResourceDescr)),
-    JSON_OBJ_DESCR_ARRAY(NodeConfig, labels, aos::cMaxNumNodeLabels, labelsLen, JSON_TOK_STRING),
+        NodeConfig, resources, cMaxNumNodeResources, resourcesLen, cResourceDescr, ARRAY_SIZE(cResourceDescr)),
+    JSON_OBJ_DESCR_ARRAY(NodeConfig, labels, cMaxNumNodeLabels, labelsLen, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(NodeConfig, priority, JSON_TOK_NUMBER),
 };
 
@@ -270,7 +268,7 @@ static Error FillAosStruct(const NodeConfig& in, Array<ResourceInfo>& outResourc
         for (size_t j = 0; j < inResourceInfo.mountsLen; ++j) {
             const auto& parsedMount = inResourceInfo.mounts[j];
 
-            aos::FileSystemMount& mount = outResourceInfo.mMounts[j];
+            FileSystemMount& mount = outResourceInfo.mMounts[j];
 
             mount.mDestination = parsedMount.destination;
             mount.mType        = parsedMount.type;
