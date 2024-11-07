@@ -16,12 +16,12 @@
 #include <mbedtls/rsa.h>
 #include <psa/crypto.h>
 
-#include <aos/common/crypto.hpp>
-#include <aos/common/cryptoutils.hpp>
+#include <aos/common/crypto/crypto.hpp>
+#include <aos/common/crypto/utils.hpp>
 
 #include "rsaprivatekey.hpp"
 
-class CertLoaderStub : public aos::cryptoutils::CertLoaderItf {
+class CertLoaderStub : public aos::crypto::CertLoaderItf {
 public:
     aos::RetWithError<aos::SharedPtr<aos::crypto::x509::CertificateChain>> LoadCertsChainByURL(
         const aos::String& url) override

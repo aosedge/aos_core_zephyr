@@ -84,7 +84,7 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     communication::ChannelManagerItf& channelManager
 #ifndef CONFIG_ZTEST
     ,
-    iam::certhandler::CertHandlerItf& certHandler, cryptoutils::CertLoaderItf& certLoader
+    iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader
 #endif
 )
 {
@@ -268,9 +268,7 @@ void SMClient::Unsubscribe(ConnectionSubscriberItf& subscriber)
 {
     LockGuard lock(mMutex);
 
-    if (auto it = mConnectionSubscribers.Find(&subscriber); it.mError.IsNone()) {
-        mConnectionSubscribers.Remove(it.mValue);
-    }
+    mConnectionSubscribers.Remove(&subscriber);
 }
 
 Error SMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& status)

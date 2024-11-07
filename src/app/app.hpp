@@ -9,7 +9,7 @@
 #define APP_HPP_
 
 #include <aos/common/crypto/mbedtls/cryptoprovider.hpp>
-#include <aos/common/cryptoutils.hpp>
+#include <aos/common/crypto/utils.hpp>
 #include <aos/common/monitoring/resourcemonitor.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/noncopyable.hpp>
@@ -77,7 +77,7 @@ public:
     static App& Get() { return sApp; };
 
 private:
-    static constexpr auto cPKCS11ModuleLibrary    = AOS_CONFIG_CRYPTOUTILS_DEFAULT_PKCS11_LIB;
+    static constexpr auto cPKCS11ModuleLibrary    = AOS_CONFIG_CRYPTO_DEFAULT_PKCS11_LIB;
     static constexpr auto cPKCS11ModuleTokenLabel = "aoscore";
     static constexpr auto cPKCS11ModulePinFile    = CONFIG_AOS_PKCS11_MODULE_PIN_FILE;
     static constexpr auto cNodeType               = CONFIG_AOS_NODE_TYPE;
@@ -96,7 +96,7 @@ private:
     static App sApp;
 
     aos::crypto::MbedTLSCryptoProvider mCryptoProvider;
-    aos::cryptoutils::CertLoader       mCertLoader;
+    aos::crypto::CertLoader            mCertLoader;
     aos::monitoring::ResourceMonitor   mResourceMonitor;
     aos::pkcs11::PKCS11Manager         mPKCS11Manager;
 

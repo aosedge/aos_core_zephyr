@@ -134,10 +134,7 @@ void ClockSync::Unsubscribe(ClockSyncSubscriberItf& subscriber)
 {
     LockGuard lock {mMutex};
 
-    auto it = mConnectionSubscribers.Find(&subscriber);
-    if (it.mError.IsNone()) {
-        mConnectionSubscribers.Remove(it.mValue);
-    }
+    mConnectionSubscribers.Remove(&subscriber);
 }
 
 /***********************************************************************************************************************
