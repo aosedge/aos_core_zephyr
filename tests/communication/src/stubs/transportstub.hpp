@@ -17,14 +17,15 @@ public:
 
     void Write(const uint8_t* data, size_t size)
     {
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock {mMutex};
+
         mBuffer.insert(mBuffer.end(), data, data + size);
         mCondVar.notify_one();
     }
 
     size_t Read(uint8_t* data, size_t size)
     {
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::unique_lock<std::mutex> lock {mMutex};
 
         mCondVar.wait(lock, [this] { return !mBuffer.empty() || mClosed; });
         if (mClosed || mBuffer.empty()) {
@@ -32,17 +33,17 @@ public:
         }
 
         size_t bytesRead = std::min(size, mBuffer.size());
+
         std::copy(mBuffer.begin(), mBuffer.begin() + bytesRead, data);
         mBuffer.erase(mBuffer.begin(), mBuffer.begin() + bytesRead);
-
-        std::cout << "Read " << bytesRead << " bytes" << std::endl;
 
         return bytesRead;
     }
 
     void Close()
     {
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock {mMutex};
+
         mClosed = true;
         mCondVar.notify_all();
     }
@@ -73,6 +74,7 @@ public:
     Error Close() override
     {
         mIsOpened.store(false);
+
         return ErrorEnum::eNone;
     }
 
