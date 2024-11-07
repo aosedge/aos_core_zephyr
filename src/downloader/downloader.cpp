@@ -94,7 +94,7 @@ Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 
     LockGuard lock(mMutex);
 
-    auto downloadResult = mDownloadResults.Find(
+    auto downloadResult = mDownloadResults.FindIf(
         [&chunk](const DownloadResult& result) { return result.mRelativePath == chunk.mRelativePath; });
 
     if (!downloadResult.mError.IsNone()) {

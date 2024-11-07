@@ -13,7 +13,6 @@ extern "C" {
 #include <psa/crypto.h>
 
 #include <aos/common/crypto/mbedtls/driverwrapper.hpp>
-#include <aos/common/cryptoutils.hpp>
 #include <aos/iam/certhandler.hpp>
 
 #include "log.hpp"
@@ -34,7 +33,7 @@ TLSChannel::~TLSChannel()
 }
 
 Error TLSChannel::Init(const String& name, iam::certhandler::CertHandlerItf& certHandler,
-    cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel)
+    crypto::CertLoaderItf& certLoader, ChannelItf& channel)
 {
     mName        = name;
     mChannel     = &channel;

@@ -12,8 +12,7 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ssl.h>
 
-#include <aos/common/crypto.hpp>
-#include <aos/common/cryptoutils.hpp>
+#include <aos/common/crypto/utils.hpp>
 #include <aos/common/tools/string.hpp>
 #include <aos/iam/certhandler.hpp>
 
@@ -36,8 +35,8 @@ public:
      * @param certLoader certificate loader.
      * @param channel virtual channel.
      */
-    Error Init(const String& name, iam::certhandler::CertHandlerItf& certHandler,
-        cryptoutils::CertLoaderItf& certLoader, ChannelItf& channel);
+    Error Init(const String& name, iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader,
+        ChannelItf& channel);
 
     /**
      * Set TLS config.
@@ -108,7 +107,7 @@ private:
     SharedPtr<crypto::PrivateKeyItf>             mPrivKey {};
     ChannelItf*                                  mChannel {};
     iam::certhandler::CertHandlerItf*            mCertHandler {};
-    cryptoutils::CertLoaderItf*                  mCertLoader {};
+    crypto::CertLoaderItf*                       mCertLoader {};
     StaticString<iam::certhandler::cCertTypeLen> mCertType;
 };
 

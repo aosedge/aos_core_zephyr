@@ -19,7 +19,7 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
-    aos::RetWithError<aos::iam::provisionmanager::CertTypes> GetCertTypes() { return mCertTypes; }
+    aos::RetWithError<aos::iam::provisionmanager::CertTypes> GetCertTypes() const { return mCertTypes; }
 
     aos::Error CreateKey(
         const aos::String& certType, const aos::String& subject, const aos::String& password, aos::String& csr) override
@@ -43,7 +43,7 @@ public:
     }
 
     aos::Error GetCert(const aos::String& certType, const aos::Array<uint8_t>& issuer,
-        const aos::Array<uint8_t>& serial, aos::iam::certhandler::CertInfo& resCert) override
+        const aos::Array<uint8_t>& serial, aos::iam::certhandler::CertInfo& resCert) const override
     {
         return aos::ErrorEnum::eNone;
     }

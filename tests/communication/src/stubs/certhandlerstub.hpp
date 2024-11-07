@@ -15,7 +15,8 @@
 
 class CertHandlerStub : public aos::iam::certhandler::CertHandlerItf {
 public:
-    aos::Error GetCertTypes(aos::Array<aos::StaticString<aos::iam::certhandler::cCertTypeLen>>& certTypes) override
+    aos::Error GetCertTypes(
+        aos::Array<aos::StaticString<aos::iam::certhandler::cCertTypeLen>>& certTypes) const override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
