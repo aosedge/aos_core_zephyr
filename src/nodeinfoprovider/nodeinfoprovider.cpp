@@ -34,7 +34,7 @@ Error NodeInfoProvider::Init()
     LOG_DBG() << "Init node info provider";
 
     if (auto err = InitNodeID(); !err.IsNone() && !err.Is(ErrorEnum::eNotSupported)) {
-        return Error(AOS_ERROR_WRAP(err), "failed to init node id");
+        return AOS_ERROR_WRAP(Error(err, "failed to init node id"));
     }
 
     xenstat xstat {};
