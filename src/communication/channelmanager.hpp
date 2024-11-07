@@ -39,13 +39,6 @@ public:
     virtual Error DeleteChannel(uint32_t port) = 0;
 
     /**
-     * Closes communication channel.
-     *
-     * @return aos::Error.
-     */
-    virtual Error Close() = 0;
-
-    /**
      * Destructor.
      */
     virtual ~ChannelManagerItf() = default;
@@ -77,6 +70,13 @@ public:
     Error Start();
 
     /**
+     * Stops communication channel.
+     *
+     * @return aos::Error.
+     */
+    Error Stop();
+
+    /**
      * Create channel with dedicated port.
      *
      * @param port port to bind channel.
@@ -91,13 +91,6 @@ public:
      * @return aos::Error
      */
     Error DeleteChannel(uint32_t port) override;
-
-    /**
-     * Closes communication channel.
-     *
-     * @return aos::Error.
-     */
-    Error Close() override;
 
     /**
      * Connects to communication channel.
@@ -145,7 +138,7 @@ private:
     StaticMap<uint32_t, SharedPtr<Channel>, cMaxChannels> mChannels;
 
     aos::Thread<>       mThread;
-    aos::Mutex          mMutex;
+    mutable aos::Mutex  mMutex;
     bool                mClose {false};
     ConditionalVariable mCondVar;
     static Mutex        sWriteMutex;

@@ -32,14 +32,36 @@ Error ChannelManager::Init(TransportItf& transport)
 
 Error ChannelManager::Start()
 {
+    LockGuard lock {mMutex};
+
     LOG_DBG() << "Start channel manager";
 
     return Run();
 }
 
+Error ChannelManager::Stop()
+{
+    {
+        LOG_DBG() << "Stop channel manager";
+
+        LockGuard lock {mMutex};
+
+        if (mTransport->IsOpened()) {
+            if (auto err = mTransport->Close(); !err.IsNone()) {
+                LOG_ERR() << "Failed to close transport: err=" << err;
+            }
+        }
+
+        mClose = true;
+        mCondVar.NotifyAll();
+    }
+
+    return mThread.Join();
+}
+
 RetWithError<ChannelItf*> ChannelManager::CreateChannel(uint32_t port)
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     auto findChannel = mChannels.At(port);
     if (findChannel.mError.IsNone()) {
@@ -48,7 +70,7 @@ RetWithError<ChannelItf*> ChannelManager::CreateChannel(uint32_t port)
 
     LOG_DBG() << "Create channel: port=" << port;
 
-    auto channel = aos::MakeShared<Channel>(&mChanAllocator, static_cast<CommunicationItf*>(this), port);
+    auto channel = MakeShared<Channel>(&mChanAllocator, static_cast<CommunicationItf*>(this), port);
 
     if (auto err = mChannels.Set(port, channel); !err.IsNone()) {
         return {nullptr, err};
@@ -61,7 +83,7 @@ RetWithError<ChannelItf*> ChannelManager::CreateChannel(uint32_t port)
 
 Error ChannelManager::DeleteChannel(uint32_t port)
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Delete channel: port=" << port;
 
@@ -84,38 +106,16 @@ Error ChannelManager::Connect()
     return ErrorEnum::eNone;
 }
 
-Error ChannelManager::Close()
-{
-    {
-        UniqueLock lock {mMutex};
-
-        LOG_DBG() << "Close channel manager";
-
-        mClose = true;
-        mCondVar.NotifyAll();
-
-        if (!mTransport->IsOpened()) {
-            return ErrorEnum::eNone;
-        }
-
-        if (auto err = mTransport->Close(); !err.IsNone()) {
-            return err;
-        }
-    }
-
-    return mThread.Join();
-}
-
 int ChannelManager::Write(uint32_t port, const void* data, size_t size)
 {
-    auto header = PrepareHeader(port, aos::Array<uint8_t>(reinterpret_cast<const uint8_t*>(data), size));
+    auto header = PrepareHeader(port, Array<uint8_t>(reinterpret_cast<const uint8_t*>(data), size));
     if (!header.mError.IsNone()) {
         LOG_ERR() << "Failed to prepare header: err=" << header.mError.Message();
 
         return -EINVAL;
     }
 
-    aos::UniqueLock lock {sWriteMutex};
+    LockGuard lock {sWriteMutex};
 
     if (auto err = WriteTransport(&header.mValue, sizeof(AosProtocolHeader)); !err.IsNone()) {
         LOG_ERR() << "Failed to write header: err=" << err;
@@ -134,6 +134,8 @@ int ChannelManager::Write(uint32_t port, const void* data, size_t size)
 
 bool ChannelManager::IsConnected() const
 {
+    LockGuard lock {mMutex};
+
     return mTransport->IsOpened();
 }
 
@@ -143,7 +145,7 @@ bool ChannelManager::IsConnected() const
 
 Error ChannelManager::TryConnect()
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     if (mTransport->IsOpened()) {
         return ErrorEnum::eNone;
@@ -161,10 +163,10 @@ Error ChannelManager::Run()
     return mThread.Run([this](void*) {
         while (true) {
             {
-                aos::UniqueLock lock {mMutex};
+                LockGuard lock {mMutex};
 
                 if (mClose) {
-                    return aos::Error(aos::ErrorEnum::eNone);
+                    return ErrorEnum::eNone;
                 }
             }
 
@@ -198,7 +200,7 @@ Error ChannelManager::Run()
 
 Error ChannelManager::WaitTimeout()
 {
-    aos::UniqueLock lock {mMutex};
+    UniqueLock lock {mMutex};
 
     if (auto err = mCondVar.Wait(lock, cReconnectPeriod, [this] { return mClose; });
         !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
@@ -212,7 +214,7 @@ Error ChannelManager::HandleRead()
 {
     while (true) {
         {
-            aos::UniqueLock lock {mMutex};
+            UniqueLock lock {mMutex};
 
             mCondVar.Wait(lock, [this] { return mChannels.Size() > 0 || mClose; });
             if (mClose) {
@@ -242,7 +244,7 @@ Error ChannelManager::HandleRead()
 
 Error ChannelManager::ProcessData(const AosProtocolHeader& header)
 {
-    UniqueLock lock {mMutex};
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Process data: port=" << header.mPort << " size=" << header.mDataSize;
 
@@ -261,7 +263,7 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
             return err;
         }
 
-        size = aos::Min(size, static_cast<size_t>(header.mDataSize - processedSize));
+        size = Min(size, static_cast<size_t>(header.mDataSize - processedSize));
 
         memcpy(buffer, mTmpReadBuffer + processedSize, size);
 
@@ -291,10 +293,10 @@ Error ChannelManager::ReadTransport(void* buffer, size_t size)
     }
 
     if (read != size) {
-        return AOS_ERROR_WRAP(Error(aos::ErrorEnum::eFailed, "read size mismatch"));
+        return AOS_ERROR_WRAP(Error(ErrorEnum::eFailed, "read size mismatch"));
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 Error ChannelManager::WriteTransport(const void* buffer, size_t size)
@@ -311,7 +313,7 @@ Error ChannelManager::WriteTransport(const void* buffer, size_t size)
     }
 
     if (written != size) {
-        return AOS_ERROR_WRAP(Error(aos::ErrorEnum::eFailed, "write size mismatch"));
+        return AOS_ERROR_WRAP(Error(ErrorEnum::eFailed, "write size mismatch"));
     }
 
     return ErrorEnum::eNone;
@@ -327,18 +329,19 @@ void ChannelManager::CloseChannels()
     }
 }
 
-aos::RetWithError<AosProtocolHeader> ChannelManager::PrepareHeader(uint32_t port, const aos::Array<uint8_t>& data)
+RetWithError<AosProtocolHeader> ChannelManager::PrepareHeader(uint32_t port, const Array<uint8_t>& data)
 {
     AosProtocolHeader header;
+
     header.mPort     = port;
     header.mDataSize = data.Size();
 
-    auto ret = aos::zephyr::utils::CalculateSha256(data);
+    auto ret = zephyr::utils::CalculateSha256(data);
     if (!ret.mError.IsNone()) {
         return {header, AOS_ERROR_WRAP(ret.mError)};
     }
 
-    aos::Array<uint8_t>(reinterpret_cast<uint8_t*>(header.mCheckSum), aos::cSHA256Size) = ret.mValue;
+    Array<uint8_t>(reinterpret_cast<uint8_t*>(header.mCheckSum), cSHA256Size) = ret.mValue;
 
     return header;
 }

@@ -99,7 +99,7 @@ ZTEST(channelmanager, test_message_exchange)
     pipe1.Close();
     pipe2.Close();
 
-    channelManager.Close();
+    channelManager.Stop();
 }
 
 ZTEST(channelmanager, test_read_message)
@@ -141,7 +141,7 @@ ZTEST(channelmanager, test_read_message)
     pipe1.Close();
     pipe2.Close();
 
-    channelManager.Close();
+    channelManager.Stop();
 }
 
 ZTEST(channelmanager, test_read_message_in_chunks)
@@ -191,5 +191,5 @@ ZTEST(channelmanager, test_read_message_in_chunks)
     pipe1.Close();
     pipe2.Close();
 
-    channelManager.Close();
+    channelManager.Stop();
 }
