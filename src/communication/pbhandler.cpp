@@ -63,11 +63,10 @@ Error PBHandler<cReceiveBufferSize, cSendBufferSize>::Stop()
 
         mStarted = false;
         mChannel->Close();
+        mCondVar.NotifyOne();
     }
 
-    mThread.Join();
-
-    return ErrorEnum::eNone;
+    return mThread.Join();
 }
 
 template <size_t cReceiveBufferSize, size_t cSendBufferSize>
