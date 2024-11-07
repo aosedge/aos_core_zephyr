@@ -60,7 +60,7 @@ public:
         return mChannels[port].get();
     }
 
-    aos::Error Close() override
+    aos::Error Stop()
     {
         for (auto& [port, channel] : mChannels) {
             channel->Close();

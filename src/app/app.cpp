@@ -90,6 +90,10 @@ Error App::Stop()
         LOG_ERR() << "Failed to stop clock sync: err=" << err;
     }
 
+    if (auto err = mChannelManager.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop channel manager: err=" << err;
+    }
+
     if (auto err = mIAMClient.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop IAM client: err=" << err;
     }
