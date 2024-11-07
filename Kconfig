@@ -155,4 +155,8 @@ module = AOS_CORE
 module-str = Aos core
 source "subsys/logging/Kconfig.template.log_config"
 
+module = AOS_CORE_RUNTIME
+module-str = Aos core runtime
+source "subsys/logging/Kconfig.template.log_config"
+
 source "Kconfig"

@@ -32,7 +32,7 @@ public:
 private:
     static constexpr auto cMaxLogModules = 32;
 #if CONFIG_LOG_RUNTIME_FILTERING
-    static constexpr auto cRuntimeLogLevel = LOG_LEVEL_INF;
+    static constexpr auto cRuntimeLogLevel = CONFIG_AOS_CORE_RUNTIME_LOG_LEVEL;
 #endif
 
     static void LogCallback(const String& module, LogLevel level, const String& message);
