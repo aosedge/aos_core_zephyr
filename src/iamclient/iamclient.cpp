@@ -131,15 +131,20 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
         return ErrorEnum::eNone;
     }
 
+    auto sendNodeInfo = true;
+
     if (mNodeInfo.mStatus == NodeStatusEnum::eUnprovisioned || status == NodeStatusEnum::eUnprovisioned) {
-        mReconnect = true;
+        sendNodeInfo = false;
+        mReconnect   = true;
         mCondVar.NotifyOne();
     }
 
     mNodeInfo.mStatus = status;
 
-    if (auto err = SendNodeInfo(); !err.IsNone()) {
-        return err;
+    if (sendNodeInfo) {
+        if (auto err = SendNodeInfo(); !err.IsNone()) {
+            return err;
+        }
     }
 
     return ErrorEnum::eNone;
