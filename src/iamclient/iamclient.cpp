@@ -306,6 +306,10 @@ void IAMClient::HandleChannels()
             continue;
         }
 
+#if AOS_CONFIG_THREAD_STACK_USAGE
+        LOG_DBG() << "Stack usage: size=" << mThread.GetStackUsage();
+#endif
+
         if (!WaitReconnect(lock)) {
             continue;
         }
