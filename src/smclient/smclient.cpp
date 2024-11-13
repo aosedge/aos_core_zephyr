@@ -168,9 +168,7 @@ Error SMClient::Stop()
         mCondVar.NotifyOne();
     }
 
-    mThread.Join();
-
-    return ErrorEnum::eNone;
+    return mThread.Join();
 }
 
 Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
@@ -685,6 +683,10 @@ void SMClient::HandleChannel()
 
             continue;
         }
+
+#if AOS_CONFIG_THREAD_STACK_USAGE
+        LOG_DBG() << "Stack usage: size=" << mThread.GetStackUsage();
+#endif
 
         mCondVar.Wait(lock, [this]() { return !mClockSynced || !mProvisioned || mClose || mCertificateChanged; });
     }
