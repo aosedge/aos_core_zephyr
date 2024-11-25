@@ -152,8 +152,6 @@ Error IAMClient::OnNodeStatusChanged(const String& nodeID, const NodeStatus& sta
 
 void IAMClient::OnCertChanged(const iam::certhandler::CertInfo& info)
 {
-    LockGuard lock {mMutex};
-
     LOG_DBG() << "Cert changed event received";
 
     mReconnect = true;
