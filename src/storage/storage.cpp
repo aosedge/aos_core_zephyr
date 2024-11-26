@@ -279,6 +279,44 @@ Error Storage::GetCertInfo(const Array<uint8_t>& issuer, const Array<uint8_t>& s
     return ErrorEnum::eNone;
 }
 
+RetWithError<uint64_t> Storage::GetOperationVersion() const
+{
+    return RetWithError<uint64_t>(0);
+}
+
+Error Storage::SetOperationVersion(uint64_t version)
+{
+    (void)version;
+
+    return ErrorEnum::eNone;
+}
+
+Error Storage::GetOverrideEnvVars(cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) const
+{
+    (void)envVarsInstanceInfos;
+
+    return ErrorEnum::eNone;
+}
+
+Error Storage::SetOverrideEnvVars(const cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos)
+{
+    (void)envVarsInstanceInfos;
+
+    return ErrorEnum::eNone;
+}
+
+RetWithError<Time> Storage::GetOnlineTime() const
+{
+    return RetWithError<Time>(Time::Now());
+}
+
+Error Storage::SetOnlineTime(const Time& time)
+{
+    (void)time;
+
+    return ErrorEnum::eNone;
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -328,6 +366,8 @@ UniquePtr<Storage::ServiceData> Storage::ConvertServiceData(const sm::serviceman
 UniquePtr<sm::servicemanager::ServiceData> Storage::ConvertServiceData(const Storage::ServiceData& service)
 {
     UniquePtr<sm::servicemanager::ServiceData> serviceData = MakeUnique<sm::servicemanager::ServiceData>(&mAllocator);
+
+    *serviceData = sm::servicemanager::ServiceData {};
 
     serviceData->mServiceID  = service.mServiceID;
     serviceData->mProviderID = service.mProviderID;

@@ -116,7 +116,7 @@ ZTEST(storage, test_AddUpdateRemoveService)
 
     aos::StaticArray<aos::sm::servicemanager::ServiceData, 2> services;
 
-    aos::sm::servicemanager::ServiceData serviceData;
+    aos::sm::servicemanager::ServiceData serviceData {};
 
     serviceData.mServiceID  = "service_id";
     serviceData.mProviderID = "provider_id";
@@ -125,7 +125,7 @@ ZTEST(storage, test_AddUpdateRemoveService)
 
     services.PushBack(serviceData);
 
-    aos::sm::servicemanager::ServiceData serviceData2;
+    aos::sm::servicemanager::ServiceData serviceData2 {};
 
     serviceData2.mServiceID  = "service_id2";
     serviceData2.mProviderID = "provider_id2";
