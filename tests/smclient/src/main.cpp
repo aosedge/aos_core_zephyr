@@ -213,10 +213,10 @@ static void GenerateLayersInfo(aos::Array<aos::LayerInfo>& layers)
 
 static void GenerateInstancesInfo(aos::Array<aos::InstanceInfo>& instances)
 {
-    instances.EmplaceBack(aos::InstanceInfo {{"service1", "subject1", 1}, 1, 1, "storage1", "state1"});
-    instances.EmplaceBack(aos::InstanceInfo {{"service2", "subject2", 2}, 2, 2, "storage2", "state2"});
-    instances.EmplaceBack(aos::InstanceInfo {{"service3", "subject3", 3}, 3, 3, "storage3", "state3"});
-    instances.EmplaceBack(aos::InstanceInfo {{"service4", "subject4", 4}, 4, 4, "storage4", "state4"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service1", "subject1", 1}, {}, 1, 1, "storage1", "state1"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service2", "subject2", 2}, {}, 2, 2, "storage2", "state2"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service3", "subject3", 3}, {}, 3, 3, "storage3", "state3"});
+    instances.EmplaceBack(aos::InstanceInfo {{"service4", "subject4", 4}, {}, 4, 4, "storage4", "state4"});
 }
 
 static void GenerateInstancesRunStatus(aos::Array<aos::InstanceStatus>& status)
