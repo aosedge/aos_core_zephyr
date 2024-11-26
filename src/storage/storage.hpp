@@ -150,6 +150,52 @@ public:
      */
     Error RemoveAllCertsInfo(const String& certType) override;
 
+    /**
+     * Returns operation version.
+     *
+     * @return RetWithError<uint64_t>.
+     */
+    RetWithError<uint64_t> GetOperationVersion() const override;
+
+    /**
+     * Sets operation version.
+     *
+     * @param version operation version.
+     * @return Error.
+     */
+    Error SetOperationVersion(uint64_t version) override;
+
+    /**
+     * Returns instances's override environment variables array.
+     *
+     * @param envVarsInstanceInfos[out] instances's override environment variables array.
+     * @return Error.
+     */
+    Error GetOverrideEnvVars(cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) const override;
+
+    /**
+     * Sets instances's override environment variables array.
+     *
+     * @param envVarsInstanceInfos instances's override environment variables array.
+     * @return Error.
+     */
+    Error SetOverrideEnvVars(const cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) override;
+
+    /**
+     * Returns online time.
+     *
+     * @return RetWithError<Time>.
+     */
+    RetWithError<Time> GetOnlineTime() const override;
+
+    /**
+     * Sets online time.
+     *
+     * @param time online time.
+     * @return Error.
+     */
+    Error SetOnlineTime(const Time& time) override;
+
 private:
     constexpr static auto cStoragePath = CONFIG_AOS_STORAGE_DIR;
 
