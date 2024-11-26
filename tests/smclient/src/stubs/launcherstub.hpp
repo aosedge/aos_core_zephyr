@@ -32,6 +32,35 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
+    /**
+     * Overrides environment variables for specified instances.
+     *
+     * @param envVarsInfo environment variables info.
+     * @param statuses[out] environment variables statuses.
+     * @return Error
+     */
+    aos::Error OverrideEnvVars(const aos::Array<aos::cloudprotocol::EnvVarsInstanceInfo>& envVarsInfo,
+        aos::cloudprotocol::EnvVarsInstanceStatusArray&                                   statuses) override
+    {
+        (void)envVarsInfo;
+        (void)statuses;
+
+        return aos::ErrorEnum::eNone;
+    }
+
+    /**
+     * Sets cloud connection status.
+     *
+     * @param connected cloud connection status.
+     * @return Error
+     */
+    aos::Error SetCloudConnection(bool connected) override
+    {
+        (void)connected;
+
+        return aos::ErrorEnum::eNone;
+    }
+
     aos::Error WaitEvent(const std::chrono::duration<double> timeout)
     {
         std::unique_lock<std::mutex> lock(mMutex);
