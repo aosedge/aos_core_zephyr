@@ -21,8 +21,9 @@ extern struct xen_domain_cfg domd_cfg;
 
 int create_domains(void)
 {
-    int rc;
+    int rc = 0; // cppcheck-suppress unreadVariable
 
+#ifdef CONFIG_DOMD_ENABLE
     rc = domain_create(&domd_cfg, DOMID_DOMD);
     if (rc < 0) {
         LOG_ERR("Failed to start Domain-D, rc = %d", rc);
@@ -32,6 +33,7 @@ int create_domains(void)
         LOG_ERR("Failed to start Domain-D with specified domid");
         return rc;
     }
+#endif
 
 #ifdef CONFIG_DOMU_ENABLE
     rc = domu_start();

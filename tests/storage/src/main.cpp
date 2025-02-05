@@ -12,6 +12,9 @@
 #include <aos/common/types.hpp>
 
 #include "storage/storage.hpp"
+#include "utils/log.hpp"
+
+using namespace aos::zephyr;
 
 static const aos::Array<uint8_t> StringToDN(const char* str)
 {
@@ -20,16 +23,11 @@ static const aos::Array<uint8_t> StringToDN(const char* str)
 
 ZTEST_SUITE(storage, NULL, NULL, NULL, NULL, NULL);
 
-void TestLogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
-{
-    printk("[storage] %s \n", message.CStr());
-}
-
 ZTEST(storage, test_AddUpdateRemoveInstance)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    Storage storage;
+    storage::Storage storage;
 
     zassert_equal(storage.Init(), aos::ErrorEnum::eNone, "Failed to initialize storage");
 
@@ -112,29 +110,27 @@ ZTEST(storage, test_AddUpdateRemoveService)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    Storage storage;
+    storage::Storage storage;
 
     zassert_equal(storage.Init(), aos::ErrorEnum::eNone, "Failed to initialize storage");
 
     aos::StaticArray<aos::sm::servicemanager::ServiceData, 2> services;
 
-    aos::sm::servicemanager::ServiceData serviceData;
-    serviceData.mVersionInfo.mAosVersion    = 1;
-    serviceData.mVersionInfo.mVendorVersion = "vendor_version";
-    serviceData.mVersionInfo.mDescription   = "description";
-    serviceData.mServiceID                  = "service_id";
-    serviceData.mProviderID                 = "provider_id";
-    serviceData.mImagePath                  = "image_path";
+    aos::sm::servicemanager::ServiceData serviceData {};
+
+    serviceData.mServiceID  = "service_id";
+    serviceData.mProviderID = "provider_id";
+    serviceData.mVersion    = "1.0.0";
+    serviceData.mImagePath  = "image_path";
 
     services.PushBack(serviceData);
 
-    aos::sm::servicemanager::ServiceData serviceData2;
-    serviceData2.mVersionInfo.mAosVersion    = 2;
-    serviceData2.mVersionInfo.mVendorVersion = "vendor_version2";
-    serviceData2.mVersionInfo.mDescription   = "description2";
-    serviceData2.mServiceID                  = "service_id2";
-    serviceData2.mProviderID                 = "provider_id2";
-    serviceData2.mImagePath                  = "image_path2";
+    aos::sm::servicemanager::ServiceData serviceData2 {};
+
+    serviceData2.mServiceID  = "service_id2";
+    serviceData2.mProviderID = "provider_id2";
+    serviceData2.mVersion    = "2.0.0";
+    serviceData2.mImagePath  = "image_path2";
 
     services.PushBack(serviceData2);
 
@@ -164,6 +160,10 @@ ZTEST(storage, test_AddUpdateRemoveService)
     auto ret = storage.GetService(serviceID);
 
     zassert_equal(ret.mError, aos::ErrorEnum::eNone, "Failed to get service");
+
+    printk("serviceID: %s\n", serviceData.mVersion.CStr());
+    printk("serviceID: %s\n", ret.mValue.mVersion.CStr());
+
     zassert_equal(ret.mValue, serviceData, "Unexpected service");
 
     services[0].mImagePath = "image_path3";
@@ -183,8 +183,8 @@ ZTEST(storage, test_AddUpdateRemoveService)
     }
 
     for (const auto& service : services) {
-        zassert_equal(storage.RemoveService(service.mServiceID, service.mVersionInfo.mAosVersion),
-            aos::ErrorEnum::eNone, "Failed to remove service");
+        zassert_equal(storage.RemoveService(service.mServiceID, service.mVersion), aos::ErrorEnum::eNone,
+            "Failed to remove service");
     }
 
     services2.Clear();
@@ -197,7 +197,7 @@ ZTEST(storage, test_AddRemoveCertInfo)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    Storage storage;
+    storage::Storage storage;
 
     zassert_equal(storage.Init(), aos::ErrorEnum::eNone, "Failed to initialize storage");
 

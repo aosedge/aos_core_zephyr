@@ -13,6 +13,9 @@
 
 #include "app/app.hpp"
 #include "logger/logger.hpp"
+#include "utils/utils.hpp"
+
+// cppcheck-suppress missingInclude
 #include "version.hpp"
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
@@ -23,15 +26,17 @@
 #include "domains/dom_runner.h"
 #endif
 
+using namespace aos::zephyr;
+
 int main(void)
 {
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
-    printk("*** Aos core size: %lu ***\n", sizeof(App));
+    printk("*** Aos core size: %lu ***\n", sizeof(app::App));
 
 #if !defined(CONFIG_NATIVE_APPLICATION)
-    auto ret = littlefs_mount();
-    __ASSERT(ret == 0, "Error mounting little FS: %s [%d]", strerror(ret), ret);
+    auto ret = mount_fs();
+    __ASSERT(ret == 0, "Error mounting FS: %s [%d]", strerror(ret), ret);
 
     ret = TEE_SupplicantInit();
     __ASSERT(ret == 0, "Error initializing TEE supplicant: %s [%d]", strerror(ret), ret);
@@ -42,13 +47,29 @@ int main(void)
     __ASSERT(ret == 0, "Error creating domains: %s [%d]", strerror(ret), ret);
 #endif
 
-    Logger::Init();
+    auto err = logger::Logger::Init();
+    __ASSERT(err.IsNone(), "Error initializing logger: %s", utils::ErrorToCStr(err));
 
-    auto& app = App::Get();
+    auto& app = aos::zephyr::app::App::Get();
 
-    auto err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s [%d] (%s:%d)", err.Message(), err.Errno(),
-        err.FileName(), err.LineNumber());
+    atexit([]() {
+        auto err = aos::zephyr::app::App::Get().Stop();
+        if (!err.IsNone()) {
+            printk("Error stopping application: %s\n", utils::ErrorToCStr(err));
+
+            _exit(1);
+        }
+
+        printk("Application stopped\n");
+
+        _exit(0);
+    });
+
+    err = app.Init();
+    __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
+
+    err = app.Start();
+    __ASSERT(err.IsNone(), "Error starting application: %s", utils::ErrorToCStr(err));
 
     return 0;
 }

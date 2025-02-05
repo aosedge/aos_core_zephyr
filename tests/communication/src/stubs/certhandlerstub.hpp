@@ -15,7 +15,8 @@
 
 class CertHandlerStub : public aos::iam::certhandler::CertHandlerItf {
 public:
-    aos::Error GetCertTypes(aos::Array<aos::StaticString<aos::iam::certhandler::cCertTypeLen>>& certTypes) override
+    aos::Error GetCertTypes(
+        aos::Array<aos::StaticString<aos::iam::certhandler::cCertTypeLen>>& certTypes) const override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
@@ -79,9 +80,30 @@ public:
         return aos::ErrorEnum::eNone;
     }
 
+    aos::Error SubscribeCertChanged(
+        const aos::String& certType, aos::iam::certhandler::CertReceiverItf& certReceiver) override
+    {
+        (void)certType;
+        (void)certReceiver;
+
+        return aos::ErrorEnum::eNone;
+    }
+
+    aos::Error UnsubscribeCertChanged(aos::iam::certhandler::CertReceiverItf& certReceiver) override
+    {
+        (void)certReceiver;
+
+        return aos::ErrorEnum::eNone;
+    }
+
     aos::Error CreateSelfSignedCert(const aos::String& certType, const aos::String& password) override
     {
         return aos::ErrorEnum::eNone;
+    }
+
+    aos::RetWithError<aos::iam::certhandler::ModuleConfig> GetModuleConfig(const aos::String& certType) const override
+    {
+        return {aos::iam::certhandler::ModuleConfig {}, aos::ErrorEnum::eNone};
     }
 
     void Clear()

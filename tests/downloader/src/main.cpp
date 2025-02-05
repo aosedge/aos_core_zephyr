@@ -17,46 +17,47 @@
 #include <aos/common/tools/timer.hpp>
 
 #include "downloader/downloader.hpp"
+#include "utils/log.hpp"
 
-using namespace aos;
+using namespace aos::zephyr;
 
 constexpr auto cDownloadPath = "download";
 constexpr auto cFileName     = "test.txt";
 constexpr auto cDownloadUrl  = "http://www.example.com";
 constexpr auto cData         = "file content";
 
-static Downloader downloader;
+static downloader::Downloader sDownloader;
 
 void sendImageContentInfo(void*)
 {
-    aos::StaticArray<FileInfo, 32> files;
-    FileInfo                       file {};
+    aos::StaticArray<downloader::FileInfo, 32> files;
+    downloader::FileInfo                       file {};
     file.mRelativePath = cFileName;
 
     files.PushBack(file);
 
-    zassert_equal(downloader.ReceiveImageContentInfo(ImageContentInfo {1, files}), aos::ErrorEnum::eNone,
+    zassert_equal(sDownloader.ReceiveImageContentInfo(downloader::ImageContentInfo {1, files}), aos::ErrorEnum::eNone,
         "Failed to initialize downloader");
 
     aos::StaticArray<uint8_t, aos::cFileChunkSize> fileData {};
     fileData.Resize(strlen(cData));
     memcpy(fileData.Get(), cData, strlen(cData));
 
-    FileChunk chunk {1, file.mRelativePath, 1, 1, fileData};
+    downloader::FileChunk chunk {1, file.mRelativePath, 1, 1, fileData};
 
-    zassert_equal(downloader.ReceiveFileChunk(chunk), aos::ErrorEnum::eNone, "Failed to receive file chunk");
+    zassert_equal(sDownloader.ReceiveFileChunk(chunk), aos::ErrorEnum::eNone, "Failed to receive file chunk");
 }
 
 static aos::Timer timerReceive {};
 
-class TestDownloadRequester : public DownloadRequesterItf {
+class TestDownloadRequester : public downloader::DownloadRequesterItf {
 public:
     TestDownloadRequester(bool skipSendRequest = false)
         : mSkipSendRequest(skipSendRequest)
     {
     }
 
-    aos::Error SendImageContentRequest(const ImageContentRequest& request) override
+    aos::Error SendImageContentRequest(const downloader::ImageContentRequest& request) override
     {
         if (mSkipSendRequest) {
             return aos::ErrorEnum::eNone;
@@ -83,11 +84,6 @@ private:
     bool mSkipSendRequest;
 };
 
-void TestLogCallback(LogModule module, LogLevel level, const aos::String& message)
-{
-    printk("[downloader] %s \n", message.CStr());
-}
-
 ZTEST_SUITE(downloader, NULL, NULL, NULL, NULL, NULL);
 
 ZTEST(downloader, test_download_image)
@@ -96,12 +92,12 @@ ZTEST(downloader, test_download_image)
 
     TestDownloadRequester requester;
 
-    zassert_equal(downloader.Init(requester), aos::ErrorEnum::eNone, "Failed to initialize downloader");
+    zassert_equal(sDownloader.Init(requester), aos::ErrorEnum::eNone, "Failed to initialize downloader");
 
     aos::StaticString<aos::cURLLen>      url {cDownloadUrl};
     aos::StaticString<aos::cFilePathLen> path {cDownloadPath};
 
-    zassert_equal(downloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eNone,
+    zassert_equal(sDownloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eNone,
         "Failed to download image");
 
     aos::StaticString<aos::cFilePathLen> filePath {aos::FS::JoinPath(cDownloadPath, cFileName)};
@@ -124,11 +120,11 @@ ZTEST(downloader, test_timeout_download_image)
 
     TestDownloadRequester requester {true};
 
-    zassert_equal(downloader.Init(requester), aos::ErrorEnum::eNone, "Failed to initialize downloader");
+    zassert_equal(sDownloader.Init(requester), aos::ErrorEnum::eNone, "Failed to initialize downloader");
 
     aos::StaticString<aos::cURLLen>      url {cDownloadUrl};
     aos::StaticString<aos::cFilePathLen> path {cDownloadPath};
 
-    zassert_equal(downloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eTimeout,
+    zassert_equal(sDownloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eTimeout,
         "Expected timeout error");
 }

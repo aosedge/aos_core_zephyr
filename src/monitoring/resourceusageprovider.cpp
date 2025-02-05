@@ -8,68 +8,30 @@
 #include <xstat.h>
 
 #include <sys/stat.h>
+#ifdef CONFIG_NATIVE_APPLICATION
+#include <sys/statvfs.h>
+#else
 #include <zephyr/fs/fs.h>
+#endif
 
 #include "log.hpp"
 #include "resourceusageprovider.hpp"
+
+namespace aos::zephyr::monitoring {
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error ResourceUsageProvider::Init()
+Error ResourceUsageProvider::Init()
 {
     LOG_DBG() << "Init resource usage provider";
 
-    xenstat xstat {};
-
-    int ret = xstat_getstat(&xstat);
-    if (ret != 0) {
-        return AOS_ERROR_WRAP(ret);
-    }
-
-    mNodeInfo.mNodeID   = cNodeID;
-    mNodeInfo.mNumCPUs  = xstat.num_cpus;
-    mNodeInfo.mTotalRAM = xstat.tot_mem;
-
-    aos::monitoring::PartitionInfo partitionInfo;
-    partitionInfo.mName = cDiskPartitionName;
-    partitionInfo.mPath = cDiskPartitionPoint;
-    partitionInfo.mTypes.EmplaceBack("services");
-    partitionInfo.mTypes.EmplaceBack("layers");
-
-    mNodeInfo.mPartitions.PushBack(partitionInfo);
-
-    LOG_DBG() << "Number of CPUs: " << mNodeInfo.mNumCPUs << ", total RAM(K): " << (mNodeInfo.mTotalRAM / 1024);
-
-    for (size_t i = 0; i < mNodeInfo.mPartitions.Size(); ++i) {
-        struct fs_statvfs sbuf;
-
-        ret = fs_statvfs(mNodeInfo.mPartitions[i].mPath.CStr(), &sbuf);
-        if (ret != 0) {
-            return AOS_ERROR_WRAP(ret);
-        }
-
-        mNodeInfo.mPartitions[i].mTotalSize = sbuf.f_bsize * sbuf.f_blocks;
-
-        LOG_DBG() << "Partition: " << mNodeInfo.mPartitions[i].mName
-                  << ", total size(K): " << (mNodeInfo.mPartitions[i].mTotalSize / 1024);
-    }
-
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error ResourceUsageProvider::GetNodeInfo(aos::monitoring::NodeInfo& nodeInfo) const
-{
-    LOG_DBG() << "Get node info";
-
-    nodeInfo = mNodeInfo;
-
-    return aos::ErrorEnum::eNone;
-}
-
-aos::Error ResourceUsageProvider::GetNodeMonitoringData(
-    const aos::String& nodeID, aos::monitoring::MonitoringData& monitoringData)
+Error ResourceUsageProvider::GetNodeMonitoringData(
+    const String& nodeID, aos::monitoring::MonitoringData& monitoringData)
 {
     xenstat_domain domain;
 
@@ -90,34 +52,40 @@ aos::Error ResourceUsageProvider::GetNodeMonitoringData(
 
         auto us_elapsed = (curTime.tv_sec - mPrevTime.tv_sec) * 1000000.0 + (curTime.tv_usec - mPrevTime.tv_usec);
 
-        monitoringData.mCPU = ((cpuTimeDiff_ns / 10.0) / us_elapsed);
+        monitoringData.mCPU = (cpuTimeDiff_ns * 100.0 / 1000.0 / us_elapsed);
     }
 
-    LOG_DBG() << "Get node monitoring data: "
-              << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
+    LOG_DBG() << "Get node monitoring data: RAM(K): " << (monitoringData.mRAM / 1024)
+              << ", CPU: " << monitoringData.mCPU;
 
     mPrevNodeCPUTime = domain.cpu_ns;
     mPrevTime        = curTime;
 
-    for (size_t i = 0; i < monitoringData.mDisk.Size(); ++i) {
+    for (size_t i = 0; i < monitoringData.mPartitions.Size(); ++i) {
+#ifdef CONFIG_NATIVE_APPLICATION
+        struct statvfs sbuf;
+
+        if (ret = statvfs(monitoringData.mPartitions[i].mPath.CStr(), &sbuf); ret != 0) {
+            return ret;
+        }
+#else
         struct fs_statvfs sbuf;
 
-        ret = fs_statvfs(monitoringData.mDisk[i].mPath.CStr(), &sbuf);
-        if (ret != 0) {
+        if (ret = fs_statvfs(monitoringData.mPartitions[i].mPath.CStr(), &sbuf); ret != 0) {
             return AOS_ERROR_WRAP(ret);
         }
+#endif
+        monitoringData.mPartitions[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_frsize;
 
-        monitoringData.mDisk[i].mUsedSize = (uint64_t)(sbuf.f_blocks - sbuf.f_bfree) * (uint64_t)sbuf.f_bsize;
-
-        LOG_DBG() << "Disk: " << monitoringData.mDisk[i].mName
-                  << ", used size(K): " << (monitoringData.mDisk[i].mUsedSize / 1024);
+        LOG_DBG() << "Partition: " << monitoringData.mPartitions[i].mName
+                  << ", used size(K): " << (monitoringData.mPartitions[i].mUsedSize / 1024);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
-    const aos::String& instanceID, aos::monitoring::MonitoringData& monitoringData)
+Error ResourceUsageProvider::GetInstanceMonitoringData(
+    const String& instanceID, aos::monitoring::MonitoringData& monitoringData)
 {
     LOG_DBG() << "Get monitoring data for instance: " << instanceID;
 
@@ -144,7 +112,7 @@ aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
 
         monitoringData.mRAM = domain.cur_mem;
 
-        auto findInstanceCPUTime = mPrevInstanceCPUTime.Find([&instanceID](const InstanceCPUData& instanceCpuData) {
+        auto findInstanceCPUTime = mPrevInstanceCPUTime.FindIf([&instanceID](const InstanceCPUData& instanceCpuData) {
             return instanceCpuData.mInstanceID == instanceID;
         });
 
@@ -174,5 +142,7 @@ aos::Error ResourceUsageProvider::GetInstanceMonitoringData(
 
     LOG_DBG() << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
+
+} // namespace aos::zephyr::monitoring

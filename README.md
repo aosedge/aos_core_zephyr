@@ -1,5 +1,5 @@
-[![ci](https://github.com/aoscloud/aos_core_zephyr/actions/workflows/build_test.yaml/badge.svg)](https://github.com/aoscloud/aos_core_zephyr/actions/workflows/build_test.yaml)
-[![codecov](https://codecov.io/gh/aoscloud/aos_core_zephyr/branch/main/graph/badge.svg?token=ObQrD8aaAC)](https://codecov.io/gh/aoscloud/aos_core_zephyr)
+[![ci](https://github.com/aosedge/aos_core_zephyr/actions/workflows/build_test.yaml/badge.svg)](https://github.com/aosedge/aos_core_zephyr/actions/workflows/build_test.yaml)
+[![codecov](https://codecov.io/gh/aosedge/aos_core_zephyr/branch/main/graph/badge.svg?token=ObQrD8aaAC)](https://codecov.io/gh/aosedge/aos_core_zephyr)
 
 # AosCore zephyr application
 
@@ -21,7 +21,7 @@ The verified protobuf compiler version is v22.3: <https://github.com/protocolbuf
 Use zephyr `west` tool to fetch required repos:
 
 ```sh
-west init -m  https://github.com/aoscloud/aos_core_zephyr --mr main aos_zephyr_sdk
+west init -m  https://github.com/aosedge/aos_core_zephyr --mr main aos_zephyr_sdk
 cd aos_zephyr_sdk
 west update
 west zephyr-export
@@ -42,7 +42,6 @@ For real hardware with Xen the following command shall be used:
 
 ```sh
 west build -b ${BOARD} -p auto -S xen_dom0 -- \
--D'DCONFIG_AOS_NODE_ID="my_node_id"' \
 -D'DCONFIG_AOS_NODE_TYPE="my_node_type"' \
 -D'CONFIG_DOMD_UBOOT_PATH="path/to/domd/u-boot"' \
 -D'CONFIG_DOMD_DTB_PATH="path/to/domd/dtb"' \
@@ -52,7 +51,6 @@ west build -b ${BOARD} -p auto -S xen_dom0 -- \
 
 where:
 
-* `CONFIG_AOS_NODE_ID` - Aos node ID;
 * `CONFIG_AOS_NODE_TYPE` - Aos node type;
 * `CONFIG_DOMD_UBOOT_PATH` - path to DomD u-boot binary;
 * `CONFIG_DOMD_DTB_PATH` - path to DomD DTB file;

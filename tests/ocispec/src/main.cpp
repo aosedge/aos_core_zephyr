@@ -12,6 +12,10 @@
 
 #include <ocispec/ocispec.hpp>
 
+#include "utils/log.hpp"
+
+using namespace aos::zephyr;
+
 /***********************************************************************************************************************
  * Consts
  **********************************************************************************************************************/
@@ -88,6 +92,8 @@ aos::Error WriteFile(const aos::String& path, const void* data, size_t size)
 
 static void* Setup(void)
 {
+    aos::Log::SetCallback(TestLogCallback);
+
     zassert_true(aos::FS::MakeDirAll("/tmp/aos").IsNone(), "Can't create test folder");
 
     return nullptr;
@@ -165,7 +171,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     // Save image spec
 
-    OCISpec ociSpec;
+    ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveImageManifest(cImageManifestPath, testItem.mImageManifest);
@@ -267,7 +273,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     aos::oci::ImageManifest fullManifest = {1, "mediaType1", {"mediaType2", "digest2"}, {}, &fullAosService};
 
-    for (auto i = 0; i < aos::cMaxNumLayers; i++) {
+    for (size_t i = 0; i < aos::cMaxNumLayers; i++) {
         fullManifest.mLayers.PushBack({"layerType", "layerDigest", i});
     }
 
@@ -334,7 +340,7 @@ ZTEST(ocispec, test_ImageSpec)
 
     // Save image spec
 
-    OCISpec ociSpec;
+    ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveImageSpec(cImageSpecPath, testItem.mImageSpec);
@@ -483,7 +489,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         {
             "path2",
             3,
-            5,
+            18446744073709551615UL,
             aos::Array<aos::StaticString<aos::oci::cMaxDTDevLen>>(dtdevs, aos::ArraySize(dtdevs)),
             aos::Array<aos::oci::VMHWConfigIOMEM>(iomems, aos::ArraySize(iomems)),
             aos::Array<uint32_t>(irqs, aos::ArraySize(irqs)),
@@ -540,7 +546,7 @@ ZTEST(ocispec, test_RuntimeSpec)
             R"({"ociVersion":"1.0.0","vm":{)"
             R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"]},)"
             R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"]},)"
-            R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":5,)"
+            R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":18446744073709551615,)"
             R"("dtdevs":["dev0","dev1","dev2","dev3"],)"
             R"("iomems":[{"firstGFN":0,"firstMFN":1,"nrMFNs":2},{"firstGFN":3,"firstMFN":4,"nrMFNs":5}],)"
             R"("irqs":[1,2,3,4,5]}}})",
@@ -549,7 +555,7 @@ ZTEST(ocispec, test_RuntimeSpec)
 
     // Save runtime spec
 
-    OCISpec ociSpec;
+    ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveRuntimeSpec(cRuntimeSpecPath, testItem.mRuntimeSpec);
@@ -637,7 +643,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         R"({"ociVersion":"1.0.0","vm":{)"
         R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"],"extraHypervisor":"1234"},)"
         R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"],"extraKernel":"1234"},)"
-        R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":5,)"
+        R"("hwConfig":{"deviceTree":"path2","vcpus":3,"memKB":18446744073709551615,)"
         R"("dtdevs":["dev0","dev1","dev2","dev3"],)"
         R"("iomems":[{"firstGFN":0,"firstMFN":1,"nrMFNs":2},{"firstGFN":3,"firstMFN":4,"nrMFNs":5}],)"
         R"("irqs":[1,2,3,4,5]},"extraHWConfig":"1234"},)"

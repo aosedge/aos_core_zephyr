@@ -7,7 +7,19 @@
 
 #include <zephyr/logging/log.h>
 
+#if CONFIG_NATIVE_APPLICATION
+#include <aos/common/tools/thread.hpp>
+#endif
+
 #include "logger.hpp"
+
+namespace aos::zephyr::logger {
+
+/***********************************************************************************************************************
+ * Static
+ **********************************************************************************************************************/
+
+StaticMap<String, void (*)(LogLevel, const String&), Logger::cMaxLogModules> Logger::sLogCallbacks;
 
 /***********************************************************************************************************************
  * Log module callbacks
@@ -16,27 +28,27 @@
 #define LOG_CALLBACK(name)                                                                                             \
     namespace log_##name                                                                                               \
     {                                                                                                                  \
-        LOG_MODULE_REGISTER(name, CONFIG_LOG_DEFAULT_LEVEL);                                                           \
+        LOG_MODULE_REGISTER(name, CONFIG_AOS_CORE_LOG_LEVEL);                                                          \
                                                                                                                        \
-        static void LogCallback(aos::LogLevel level, const aos::String& message)                                       \
+        static void LogCallback(LogLevel level, const String& message)                                                 \
         {                                                                                                              \
             switch (level.GetValue()) {                                                                                \
-            case aos::LogLevelEnum::eDebug:                                                                            \
+            case LogLevelEnum::eDebug:                                                                                 \
                 LOG_DBG("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
                                                                                                                        \
-            case aos::LogLevelEnum::eInfo:                                                                             \
+            case LogLevelEnum::eInfo:                                                                                  \
                 LOG_INF("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
                                                                                                                        \
-            case aos::LogLevelEnum::eWarning:                                                                          \
+            case LogLevelEnum::eWarning:                                                                               \
                 LOG_WRN("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
                                                                                                                        \
-            case aos::LogLevelEnum::eError:                                                                            \
+            case LogLevelEnum::eError:                                                                                 \
                 LOG_ERR("%s", message.CStr());                                                                         \
                                                                                                                        \
                 break;                                                                                                 \
@@ -50,124 +62,109 @@
     }
 
 // internal logs
-
 LOG_CALLBACK(app);
 LOG_CALLBACK(clocksync);
 LOG_CALLBACK(communication);
 LOG_CALLBACK(downloader);
+LOG_CALLBACK(iamclient);
+LOG_CALLBACK(nodeinfoprovider);
 LOG_CALLBACK(ocispec);
-LOG_CALLBACK(provisioning);
+LOG_CALLBACK(provisionmanager);
 LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
+LOG_CALLBACK(smclient);
 LOG_CALLBACK(storage);
 
 // Aos lib logs
-
 LOG_CALLBACK(certhandler);
 LOG_CALLBACK(crypto);
 LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
-LOG_CALLBACK(servicemanager);
 LOG_CALLBACK(pkcs11);
+LOG_CALLBACK(servicemanager);
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-void Logger::Init()
+Error Logger::Init()
 {
-    aos::Log::SetCallback(LogCallback);
-}
+    Log::SetCallback(LogCallback);
 
-/***********************************************************************************************************************
- * Public
- **********************************************************************************************************************/
+    sLogCallbacks.Set("app", &log_app::LogCallback);
+    sLogCallbacks.Set("certhandler", &log_certhandler::LogCallback);
+    sLogCallbacks.Set("clocksync", &log_clocksync::LogCallback);
+    sLogCallbacks.Set("communication", &log_communication::LogCallback);
+    sLogCallbacks.Set("crypto", &log_crypto::LogCallback);
+    sLogCallbacks.Set("downloader", &log_downloader::LogCallback);
+    sLogCallbacks.Set("iamclient", &log_iamclient::LogCallback);
+    sLogCallbacks.Set("launcher", &log_launcher::LogCallback);
+    sLogCallbacks.Set("monitoring", &log_monitoring::LogCallback);
+    sLogCallbacks.Set("nodeinfoprovider", &log_nodeinfoprovider::LogCallback);
+    sLogCallbacks.Set("ocispec", &log_ocispec::LogCallback);
+    sLogCallbacks.Set("pkcs11", &log_pkcs11::LogCallback);
+    sLogCallbacks.Set("provisionmanager", &log_provisionmanager::LogCallback);
+    sLogCallbacks.Set("resourcemanager", &log_resourcemanager::LogCallback);
+    sLogCallbacks.Set("runner", &log_runner::LogCallback);
+    sLogCallbacks.Set("servicemanager", &log_servicemanager::LogCallback);
+    sLogCallbacks.Set("smclient", &log_smclient::LogCallback);
+    sLogCallbacks.Set("storage", &log_storage::LogCallback);
 
-void Logger::LogCallback(aos::LogModule module, aos::LogLevel level, const aos::String& message)
-{
-    switch (static_cast<int>(module.GetValue())) {
-        // internal logs
-
-    case static_cast<int>(Module::eApp):
-        log_app::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eCommunication):
-        log_communication::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eClockSync):
-        log_clocksync::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eDownloader):
-        log_downloader::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eOCISpec):
-        log_ocispec::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eProvisioning):
-        log_provisioning::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eResourceManager):
-        log_resourcemanager::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eRunner):
-        log_runner::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(Module::eStorage):
-        log_storage::LogCallback(level, message);
-
-        break;
-
-        // Aos lib logs
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonPKCS11):
-        log_pkcs11::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonCrypto):
-        log_crypto::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eIAMCertHandler):
-        log_certhandler::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eSMLauncher):
-        log_launcher::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eCommonMonitoring):
-        log_monitoring::LogCallback(level, message);
-
-        break;
-
-    case static_cast<int>(aos::LogModuleEnum::eSMServiceManager):
-        log_servicemanager::LogCallback(level, message);
-
-        break;
-
-    default:
-        LOG_MODULE_WRN(static_cast<aos::LogModule::EnumType>(Logger::Module::eCommunication))
-            << "Log from unknown module received: module = " << module << ", level = " << level
-            << ", message = " << message;
+#if CONFIG_LOG_RUNTIME_FILTERING
+    for (auto& [module, _] : sLogCallbacks) {
+        if (auto err = SetLogLevel(module, cRuntimeLogLevel); !err.IsNone()) {
+            return err;
+        }
     }
+#endif
+
+    return ErrorEnum::eNone;
 }
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
+
+void Logger::LogCallback(const String& module, LogLevel level, const String& message)
+{
+#ifdef CONFIG_NATIVE_APPLICATION
+    static Mutex sMutex;
+
+    LockGuard lock(sMutex);
+#endif
+
+    auto [callback, err] = sLogCallbacks.At(module);
+    if (!err.IsNone()) {
+        LOG_MODULE_WRN("app") << "Log from unknown module received: module=" << module << ", level=" << level
+                              << ", message=" << message;
+        return;
+    }
+
+    callback(level, message);
+}
+
+#if CONFIG_LOG_RUNTIME_FILTERING
+Error Logger::SetLogLevel(const String& module, int level)
+{
+    auto sourceID = log_source_id_get(module.CStr());
+    if (sourceID < 0) {
+        return AOS_ERROR_WRAP(ErrorEnum::eNotFound);
+    }
+
+    for (int i = 0; i < log_backend_count_get(); i++) {
+        auto backend = log_backend_get(i);
+
+        if (!log_backend_is_active(backend)) {
+            continue;
+        }
+
+        if (auto ret = log_filter_set(backend, Z_LOG_LOCAL_DOMAIN_ID, sourceID, level); ret < 0) {
+            return AOS_ERROR_WRAP(ret);
+        }
+    }
+
+    return ErrorEnum::eNone;
+}
+#endif
+
+} // namespace aos::zephyr::logger

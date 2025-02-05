@@ -8,6 +8,8 @@
 #include "app.hpp"
 #include "log.hpp"
 
+namespace aos::zephyr::app {
+
 /***********************************************************************************************************************
  * Variables
  **********************************************************************************************************************/
@@ -18,142 +20,261 @@ App App::sApp;
  * Public
  **********************************************************************************************************************/
 
-aos::Error App::Init()
+Error App::Init()
 {
     LOG_INF() << "Initialize application";
 
-    aos::Error err;
-
-    if (!(err = mStorage.Init()).IsNone()) {
+    if (auto err = InitZephyr(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mRunner.Init(mLauncher)).IsNone()) {
+    if (auto err = InitCommon(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mDownloader.Init(mCommunication)).IsNone()) {
+    if (auto err = InitIAM(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage)).IsNone()) {
+    if (auto err = InitSM(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mResourceUsageProvider.Init()).IsNone()) {
+    if (auto err = InitCommunication(); !err.IsNone()) {
         return err;
     }
 
-    if (!(err = mResourceMonitor.Init(mResourceUsageProvider, mCommunication, mCommunication)).IsNone()) {
-        return err;
+    return ErrorEnum::eNone;
+}
+
+Error App::Start()
+{
+    LOG_INF() << "Start application";
+
+    if (auto err = mLauncher.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mLauncher.Init(
-              mServiceManager, mRunner, mJsonOciSpec, mCommunication, mStorage, mResourceMonitor, mCommunication))
-             .IsNone()) {
-        return err;
+    if (auto err = mResourceMonitor.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mClockSync.Init(mCommunication)).IsNone()) {
-        return err;
+    if (auto err = mChannelManager.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mProvisioning.Init()).IsNone()) {
-        return err;
+    if (auto err = mIAMClient.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCryptoProvider.Init()).IsNone()) {
-        return err;
+    if (auto err = mSMClient.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager)).IsNone()) {
-        return err;
+    return ErrorEnum::eNone;
+}
+
+Error App::Stop()
+{
+    LOG_INF() << "Stop application";
+
+    if (auto err = mLauncher.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop launcher: err=" << err;
     }
 
-    if (!(err = InitCertHandler()).IsNone()) {
-        return err;
+    if (auto err = mResourceMonitor.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop resource monitor: err=" << err;
     }
 
-    if (!(err = InitCommunication()).IsNone()) {
-        return err;
+    if (auto err = mClockSync.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop clock sync: err=" << err;
     }
 
-    return aos::ErrorEnum::eNone;
+    if (auto err = mChannelManager.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop channel manager: err=" << err;
+    }
+
+    if (auto err = mIAMClient.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop IAM client: err=" << err;
+    }
+
+    if (auto err = mSMClient.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop SM client: err=" << err;
+    }
+
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-aos::Error App::InitCertHandler()
+Error App::InitCommon()
 {
-    aos::Error                              err;
-    aos::iam::certhandler::ExtendedKeyUsage keyUsage[] = {aos::iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
+    if (auto err = mCryptoProvider.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mCertLoader.Init(mCryptoProvider, mPKCS11Manager); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mResourceMonitor.Init(mNodeInfoProvider, mResourceUsageProvider, mSMClient, mSMClient);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error App::InitIAM()
+{
+#ifdef CONFIG_NATIVE_APPLICATION
+    if (auto ret = setenv("SOFTHSM2_CONF", "softhsm/softhsm2.conf", true); ret != 0) {
+        return AOS_ERROR_WRAP(Error(ret, "can't set softhsm env"));
+    }
+
+    if (auto err = FS::MakeDirAll(cHSMDir); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+#endif
+
+    iam::certhandler::ExtendedKeyUsage keyUsage[] = {iam::certhandler::ExtendedKeyUsageEnum::eClientAuth};
 
     // Register iam cert module
 
-    if (!(err = mIAMHSMModule.Init("iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
-              mPKCS11Manager, mCryptoProvider))
-             .IsNone()) {
-        return err;
+    if (auto err
+        = mIAMHSMModule.Init("iam", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+            mPKCS11Manager, mCryptoProvider);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mIAMCertModule.Init("iam",
-              {aos::crypto::KeyTypeEnum::eECDSA, 2,
-                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
-              mCryptoProvider, mIAMHSMModule, mStorage))
-             .IsNone()) {
-        return err;
+    if (auto err = mIAMCertModule.Init("iam",
+            {crypto::KeyTypeEnum::eECDSA, 2, Array<iam::certhandler::ExtendedKeyUsage>(keyUsage, ArraySize(keyUsage))},
+            mCryptoProvider, mIAMHSMModule, mStorage);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCertHandler.RegisterModule(mIAMCertModule)).IsNone()) {
-        return err;
+    if (auto err = mCertHandler.RegisterModule(mIAMCertModule); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
     // Register sm cert module
 
-    if (!(err = mSMHSMModule.Init("sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
-              mPKCS11Manager, mCryptoProvider))
-             .IsNone()) {
-        return err;
+    if (auto err
+        = mSMHSMModule.Init("sm", {cPKCS11ModuleLibrary, {}, {}, cPKCS11ModuleTokenLabel, cPKCS11ModulePinFile},
+            mPKCS11Manager, mCryptoProvider);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mSMCertModule.Init("sm",
-              {aos::crypto::KeyTypeEnum::eECDSA, 2,
-                  aos::Array<aos::iam::certhandler::ExtendedKeyUsage>(keyUsage, aos::ArraySize(keyUsage))},
-              mCryptoProvider, mSMHSMModule, mStorage))
-             .IsNone()) {
-        return err;
+    if (auto err = mSMCertModule.Init("sm",
+            {crypto::KeyTypeEnum::eECDSA, 2, Array<iam::certhandler::ExtendedKeyUsage>(keyUsage, ArraySize(keyUsage))},
+            mCryptoProvider, mSMHSMModule, mStorage);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCertHandler.RegisterModule(mSMCertModule)).IsNone()) {
-        return err;
+    if (auto err = mCertHandler.RegisterModule(mSMCertModule); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    if (auto err = mProvisionManager.Init(mProvisionManagerCallback, mCertHandler); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
 }
 
-aos::Error App::InitCommunication()
+Error App::InitSM()
 {
-    aos::Error err;
-
-    if (!(err = mOpenVChannel.Init("open", VChannel::cXSOpenReadPath, VChannel::cXSOpenWritePath)).IsNone()) {
-        return err;
+    if (auto err
+        = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mSMClient, mStorage, mResourceMonitor, mSMClient);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mSecureVChannel.Init("secure", VChannel::cXSCloseReadPath, VChannel::cXSCloseWritePath)).IsNone()) {
-        return err;
+    if (auto err = mResourceManager.Init(
+            mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cNodeConfigFile);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mSecureTLSChannel.Init(mCertHandler, mCertLoader, mSecureVChannel)).IsNone()) {
-        return err;
+    if (auto err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    if (!(err = mCommunication.Init(mOpenVChannel, mSecureTLSChannel, mLauncher, mCertHandler, mResourceManager,
-              mResourceMonitor, mDownloader, mClockSync, mProvisioning))
-             .IsNone()) {
-        return err;
-    }
-
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
+
+Error App::InitZephyr()
+{
+#ifdef CONFIG_NATIVE_APPLICATION
+    if (auto err = FS::MakeDirAll(cAosDiskMountPoint); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+#endif
+
+    if (auto err = mStorage.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mClockSync.Init(mSMClient); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mDownloader.Init(mSMClient); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mResourceUsageProvider.Init(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mRunner.Init(mLauncher); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error App::InitCommunication()
+{
+#ifdef CONFIG_NATIVE_APPLICATION
+    if (auto err = mTransport.Init(communication::Socket::cServerAddress, communication::Socket::cServerPort);
+        !err.IsNone()) {
+        return err;
+    }
+#else
+    if (auto err = mTransport.Init(communication::XenVChan::cReadPath, communication::XenVChan::cWritePath);
+        !err.IsNone()) {
+        return err;
+    }
+#endif
+
+    if (auto err = mChannelManager.Init(mTransport); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err
+        = mIAMClient.Init(mClockSync, mNodeInfoProvider, mProvisionManager, mChannelManager, mCertHandler, mCertLoader);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mSMClient.Init(mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader,
+            mClockSync, mChannelManager, mCertHandler, mCertLoader);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+} // namespace aos::zephyr::app

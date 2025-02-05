@@ -495,6 +495,7 @@ static int load_ipl_image(uint8_t* buf, size_t bufsize, uint64_t image_load_offs
 static ssize_t get_ipl_image_size(void* image_info, uint64_t* size)
 {
     ARG_UNUSED(image_info);
+    // cppcheck-suppress comparePointers
     *size = __img_ipl_end - __img_ipl_start;
     return 0;
 }

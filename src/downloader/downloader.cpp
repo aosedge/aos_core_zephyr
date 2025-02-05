@@ -13,30 +13,32 @@
 #include "downloader.hpp"
 #include "log.hpp"
 
+namespace aos::zephyr::downloader {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
 Downloader::~Downloader()
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     mFinishDownload = true;
     mWaitDownload.NotifyOne();
 }
 
-aos::Error Downloader::Init(DownloadRequesterItf& downloadRequester)
+Error Downloader::Init(DownloadRequesterItf& downloadRequester)
 {
     LOG_DBG() << "Initialize downloader";
 
     mDownloadRequester = &downloadRequester;
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error Downloader::Download(const aos::String& url, const aos::String& path, aos::DownloadContent contentType)
+Error Downloader::Download(const String& url, const String& path, DownloadContent contentType)
 {
-    aos::UniqueLock lock(mMutex);
+    UniqueLock lock(mMutex);
 
     LOG_DBG() << "Download: " << url;
 
@@ -44,7 +46,7 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
     mDownloadResults.Clear();
 
     auto err = mTimer.Create(
-        Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
+        Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
     if (!err.IsNone()) {
         LOG_DBG() << "Create timer failed: " << err;
 
@@ -85,14 +87,14 @@ aos::Error Downloader::Download(const aos::String& url, const aos::String& path,
     return mErrProcessImageRequest;
 }
 
-aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
+Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
 {
     LOG_DBG() << "Receive file chunk: path = " << chunk.mRelativePath << ", chunk = " << chunk.mPart << "/"
               << chunk.mPartsCount;
 
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
-    auto downloadResult = mDownloadResults.Find(
+    auto downloadResult = mDownloadResults.FindIf(
         [&chunk](const DownloadResult& result) { return result.mRelativePath == chunk.mRelativePath; });
 
     if (!downloadResult.mError.IsNone()) {
@@ -104,10 +106,10 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     }
 
     if (downloadResult.mValue->mFile == -1) {
-        auto path    = aos::FS::JoinPath(mRequestedPath, chunk.mRelativePath);
-        auto dirPath = aos::FS::Dir(path);
+        auto path    = FS::JoinPath(mRequestedPath, chunk.mRelativePath);
+        auto dirPath = FS::Dir(path);
 
-        auto err = aos::FS::MakeDirAll(dirPath);
+        auto err = FS::MakeDirAll(dirPath);
         if (!err.IsNone()) {
             err = AOS_ERROR_WRAP(errno);
 
@@ -135,7 +137,7 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
         return err;
     }
 
-    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
+    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
 
     if (chunk.mPart == chunk.mPartsCount) {
         ret = close(downloadResult.mValue->mFile);
@@ -156,36 +158,34 @@ aos::Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
         }
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
+Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock(mMutex);
 
     LOG_DBG() << "Receive image content info";
 
     if (content.mRequestID != mRequestID) {
-        return AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
+        return AOS_ERROR_WRAP(ErrorEnum::eFailed);
     }
 
-    if (content.mError != "") {
-        LOG_ERR() << "Error: " << content.mError;
+    if (!content.mError.IsNone()) {
+        LOG_ERR() << "Image content info error: err=" << content.mError;
 
-        auto err = AOS_ERROR_WRAP(aos::ErrorEnum::eFailed);
+        SetErrorAndNotify(content.mError);
 
-        SetErrorAndNotify(err);
-
-        return err;
+        return content.mError;
     }
 
     for (auto& file : content.mFiles) {
         mDownloadResults.PushBack(DownloadResult {file.mRelativePath, -1, false});
     }
 
-    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(aos::ErrorEnum::eTimeout)); });
+    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
 /***********************************************************************************************************************
@@ -203,9 +203,11 @@ bool Downloader::IsAllDownloadDone() const
     return true;
 }
 
-void Downloader::SetErrorAndNotify(const aos::Error& err)
+void Downloader::SetErrorAndNotify(const Error& err)
 {
     mFinishDownload         = true;
     mErrProcessImageRequest = err;
     mWaitDownload.NotifyOne();
 }
+
+} // namespace aos::zephyr::downloader

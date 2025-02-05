@@ -16,13 +16,15 @@
 #include <aos/common/tools/timer.hpp>
 #include <aos/common/types.hpp>
 
+namespace aos::zephyr::downloader {
+
 /**
  * Image content request.
  */
 struct ImageContentRequest {
-    aos::StaticString<aos::cURLLen> mURL;
-    uint64_t                        mRequestID;
-    aos::DownloadContent            mContentType;
+    StaticString<cURLLen> mURL;
+    uint64_t              mRequestID;
+    DownloadContent       mContentType;
 
     /**
      * Compares image content request.
@@ -48,9 +50,9 @@ struct ImageContentRequest {
  * File info.
  */
 struct FileInfo {
-    aos::StaticString<aos::cFilePathLen>        mRelativePath;
-    aos::StaticArray<uint8_t, aos::cSHA256Size> mSHA256;
-    uint64_t                                    mSize;
+    StaticString<cFilePathLen>        mRelativePath;
+    StaticArray<uint8_t, cSHA256Size> mSHA256;
+    uint64_t                          mSize;
 
     /**
      * Compares file info.
@@ -76,9 +78,9 @@ struct FileInfo {
  * Image content info.
  */
 struct ImageContentInfo {
-    uint64_t                                 mRequestID;
-    aos::StaticArray<FileInfo, 32>           mFiles;
-    aos::StaticString<aos::cErrorMessageLen> mError;
+    uint64_t                  mRequestID;
+    StaticArray<FileInfo, 32> mFiles;
+    Error                     mError;
 
     /**
      * Compares content info.
@@ -104,11 +106,11 @@ struct ImageContentInfo {
  * File chunk.
  */
 struct FileChunk {
-    uint64_t                                       mRequestID;
-    aos::StaticString<aos::cFilePathLen>           mRelativePath;
-    uint64_t                                       mPartsCount;
-    uint64_t                                       mPart;
-    aos::StaticArray<uint8_t, aos::cFileChunkSize> mData;
+    uint64_t                             mRequestID;
+    StaticString<cFilePathLen>           mRelativePath;
+    uint64_t                             mPartsCount;
+    uint64_t                             mPart;
+    StaticArray<uint8_t, cFileChunkSize> mData;
 
     /**
      * Compares file chunks.
@@ -142,7 +144,7 @@ public:
      * @param request image content request
      * @return Error
      */
-    virtual aos::Error SendImageContentRequest(const ImageContentRequest& request) = 0;
+    virtual Error SendImageContentRequest(const ImageContentRequest& request) = 0;
 
     /**
      * Destroys the Download Requester Itf object.
@@ -162,7 +164,7 @@ public:
      * @param chunk file chunk
      * @return Error
      */
-    virtual aos::Error ReceiveFileChunk(const FileChunk& chunk) = 0;
+    virtual Error ReceiveFileChunk(const FileChunk& chunk) = 0;
 
     /**
      * Receives image content info.
@@ -170,7 +172,7 @@ public:
      * @param content image content info
      * @return Error
      */
-    virtual aos::Error ReceiveImageContentInfo(const ImageContentInfo& content) = 0;
+    virtual Error ReceiveImageContentInfo(const ImageContentInfo& content) = 0;
 
     /**
      * Destroys the Download Receiver Itf object.
@@ -182,7 +184,7 @@ public:
  * Downloader class.
  *
  */
-class Downloader : public aos::DownloaderItf, public DownloadReceiverItf {
+class Downloader : public DownloaderItf, public DownloadReceiverItf {
 public:
     /**
      * Default constructor.
@@ -200,7 +202,7 @@ public:
      * @param downloadRequester download requester instance.
      * @return Error
      */
-    aos::Error Init(DownloadRequesterItf& downloadRequester);
+    Error Init(DownloadRequesterItf& downloadRequester);
 
     /**
      * Downloads file.
@@ -210,7 +212,7 @@ public:
      * @param contentType content type.
      * @return Error
      */
-    aos::Error Download(const aos::String& url, const aos::String& path, aos::DownloadContent contentType) override;
+    Error Download(const String& url, const String& path, DownloadContent contentType) override;
 
     /**
      * Receives image content request.
@@ -218,7 +220,7 @@ public:
      * @param chunk file chunk
      * @return Error
      */
-    aos::Error ReceiveFileChunk(const FileChunk& chunk) override;
+    Error ReceiveFileChunk(const FileChunk& chunk) override;
 
     /**
      * Receives image content info.
@@ -226,29 +228,31 @@ public:
      * @param content image content info
      * @return Error
      */
-    aos::Error ReceiveImageContentInfo(const ImageContentInfo& content) override;
+    Error ReceiveImageContentInfo(const ImageContentInfo& content) override;
 
 private:
     static constexpr auto cDownloadTimeout = 10000;
 
     struct DownloadResult {
-        aos::StaticString<aos::cFilePathLen> mRelativePath;
-        int                                  mFile;
-        bool                                 mIsDone;
+        StaticString<cFilePathLen> mRelativePath;
+        int                        mFile;
+        bool                       mIsDone;
     };
 
     bool IsAllDownloadDone() const;
-    void SetErrorAndNotify(const aos::Error& err);
+    void SetErrorAndNotify(const Error& err);
 
-    DownloadRequesterItf*                mDownloadRequester {};
-    aos::Mutex                           mMutex;
-    aos::ConditionalVariable             mWaitDownload;
-    aos::Error                           mErrProcessImageRequest {};
-    aos::StaticString<aos::cFilePathLen> mRequestedPath {};
-    aos::StaticArray<DownloadResult, 32> mDownloadResults {};
-    aos::Timer                           mTimer {};
-    uint64_t                             mRequestID {};
-    bool                                 mFinishDownload {false};
+    DownloadRequesterItf*           mDownloadRequester {};
+    Mutex                           mMutex;
+    ConditionalVariable             mWaitDownload;
+    Error                           mErrProcessImageRequest {};
+    StaticString<cFilePathLen>      mRequestedPath {};
+    StaticArray<DownloadResult, 32> mDownloadResults {};
+    Timer                           mTimer {};
+    uint64_t                        mRequestID {};
+    bool                            mFinishDownload {false};
 };
+
+} // namespace aos::zephyr::downloader
 
 #endif

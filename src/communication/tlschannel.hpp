@@ -12,14 +12,15 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ssl.h>
 
-#include <aos/common/crypto.hpp>
-#include <aos/common/cryptoutils.hpp>
+#include <aos/common/crypto/utils.hpp>
 #include <aos/common/tools/string.hpp>
 #include <aos/iam/certhandler.hpp>
 
-#include "commchannel.hpp"
+#include "channel.hpp"
 
-class TLSChannel : public CommChannelItf {
+namespace aos::zephyr::communication {
+
+class TLSChannel : public ChannelItf {
 public:
     /**
      * Destructor.
@@ -29,32 +30,33 @@ public:
     /**
      * Initializes secure channel.
      *
+     * @param name TLS channel name.
      * @param certHandler certificate handler.
      * @param certLoader certificate loader.
-     * @param vChannel virtual channel.
+     * @param channel virtual channel.
      */
-    aos::Error Init(aos::iam::certhandler::CertHandlerItf& certHandler, aos::cryptoutils::CertLoaderItf& certLoader,
-        CommChannelItf& vChannel);
+    Error Init(const String& name, iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader,
+        ChannelItf& channel);
 
     /**
      * Set TLS config.
      *
      * @param certType certificate type.
-     * @return aos::Error
+     * @return Error
      */
-    aos::Error SetTLSConfig(const aos::String& certType) override;
+    Error SetTLSConfig(const String& certType);
 
     /**
      * Connects to communication channel.
      *
-     * @return aos::Error.
+     * @return Error.
      */
-    aos::Error Connect() override;
+    Error Connect() override;
 
     /**
      * Closes current connection.
      */
-    aos::Error Close() override;
+    Error Close() override;
 
     /**
      * Returns if channel is connected.
@@ -82,29 +84,33 @@ public:
     int Write(const void* data, size_t size) override;
 
 private:
-    static constexpr auto cPers = "tls_vchannel_client";
+    static constexpr auto cPers    = "tls_vchannel_client";
+    static constexpr auto cNameLen = 64;
 
     static int TLSWrite(void* ctx, const unsigned char* buf, size_t len);
     static int TLSRead(void* ctx, unsigned char* buf, size_t len);
 
-    aos::Error                              TLSConnect();
-    aos::RetWithError<mbedtls_svc_key_id_t> SetupOpaqueKey(mbedtls_pk_context& pk);
-    void                                    Cleanup();
-    aos::Error                              SetupSSLConfig(const aos::String& certType);
+    Error                              TLSConnect();
+    RetWithError<mbedtls_svc_key_id_t> SetupOpaqueKey(mbedtls_pk_context& pk);
+    void                               Cleanup();
+    Error                              SetupSSLConfig(const String& certType);
 
-    mbedtls_entropy_context                                mEntropy {};
-    mbedtls_ctr_drbg_context                               mCtrDrbg {};
-    mbedtls_x509_crt                                       mCertChain {};
-    mbedtls_x509_crt                                       mCACert {};
-    mbedtls_pk_context                                     mPrivKeyCtx {};
-    mbedtls_ssl_config                                     mConf {};
-    mbedtls_ssl_context                                    mSSL {};
-    mbedtls_svc_key_id_t                                   mKeyID {};
-    aos::SharedPtr<aos::crypto::PrivateKeyItf>             mPrivKey {};
-    CommChannelItf*                                        mChannel {};
-    aos::iam::certhandler::CertHandlerItf*                 mCertHandler {};
-    aos::cryptoutils::CertLoaderItf*                       mCertLoader {};
-    aos::StaticString<aos::iam::certhandler::cCertTypeLen> mCertType;
+    StaticString<cNameLen>                       mName;
+    mbedtls_entropy_context                      mEntropy {};
+    mbedtls_ctr_drbg_context                     mCtrDrbg {};
+    mbedtls_x509_crt                             mCertChain {};
+    mbedtls_x509_crt                             mCACert {};
+    mbedtls_pk_context                           mPrivKeyCtx {};
+    mbedtls_ssl_config                           mConf {};
+    mbedtls_ssl_context                          mSSL {};
+    mbedtls_svc_key_id_t                         mKeyID {};
+    SharedPtr<crypto::PrivateKeyItf>             mPrivKey {};
+    ChannelItf*                                  mChannel {};
+    iam::certhandler::CertHandlerItf*            mCertHandler {};
+    crypto::CertLoaderItf*                       mCertLoader {};
+    StaticString<iam::certhandler::cCertTypeLen> mCertType;
 };
+
+} // namespace aos::zephyr::communication
 
 #endif /* TLSCHANNEL_HPP_ */

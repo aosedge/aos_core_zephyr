@@ -15,19 +15,21 @@
 
 #include "filestorage.hpp"
 
+namespace aos::zephyr::storage {
+
 /**
  * Storage instance.
  */
-class Storage : public aos::sm::launcher::StorageItf,
-                public aos::sm::servicemanager::StorageItf,
-                public aos::iam::certhandler::StorageItf,
-                private aos::NonCopyable {
+class Storage : public sm::launcher::StorageItf,
+                public sm::servicemanager::StorageItf,
+                public iam::certhandler::StorageItf,
+                private NonCopyable {
 public:
     /**
      * Initializes storage instance.
-     * @return aos::Error.
+     * @return Error.
      */
-    aos::Error Init();
+    Error Init();
 
     /**
      * Adds new instance to storage.
@@ -35,7 +37,7 @@ public:
      * @param instance instance to add.
      * @return Error.
      */
-    aos::Error AddInstance(const aos::InstanceInfo& instance) override;
+    Error AddInstance(const aos::InstanceInfo& instance) override;
 
     /**
      * Updates previously stored instance.
@@ -43,7 +45,7 @@ public:
      * @param instance instance to update.
      * @return Error.
      */
-    aos::Error UpdateInstance(const aos::InstanceInfo& instance) override;
+    Error UpdateInstance(const aos::InstanceInfo& instance) override;
 
     /**
      * Removes previously stored instance.
@@ -51,7 +53,7 @@ public:
      * @param instanceID instance ID to remove.
      * @return Error.
      */
-    aos::Error RemoveInstance(const aos::InstanceIdent& instanceIdent) override;
+    Error RemoveInstance(const aos::InstanceIdent& instanceIdent) override;
 
     /**
      * Returns all stored instances.
@@ -59,7 +61,7 @@ public:
      * @param instances array to return stored instances.
      * @return Error.
      */
-    aos::Error GetAllInstances(aos::Array<aos::InstanceInfo>& instances) override;
+    Error GetAllInstances(Array<aos::InstanceInfo>& instances) override;
 
     /**
      * Adds new service to storage.
@@ -67,7 +69,7 @@ public:
      * @param service service to add.
      * @return Error.
      */
-    aos::Error AddService(const aos::sm::servicemanager::ServiceData& service) override;
+    Error AddService(const sm::servicemanager::ServiceData& service) override;
 
     /**
      * Updates previously stored service.
@@ -75,7 +77,7 @@ public:
      * @param service service to update.
      * @return Error.
      */
-    aos::Error UpdateService(const aos::sm::servicemanager::ServiceData& service) override;
+    Error UpdateService(const sm::servicemanager::ServiceData& service) override;
 
     /**
      * Removes previously stored service.
@@ -84,7 +86,7 @@ public:
      * @param aosVersion Aos service version.
      * @return Error.
      */
-    aos::Error RemoveService(const aos::String& serviceID, uint64_t aosVersion) override;
+    Error RemoveService(const String& serviceID, const String& version) override;
 
     /**
      * Returns all stored services.
@@ -92,7 +94,7 @@ public:
      * @param services array to return stored services.
      * @return Error.
      */
-    aos::Error GetAllServices(aos::Array<aos::sm::servicemanager::ServiceData>& services) override;
+    Error GetAllServices(Array<sm::servicemanager::ServiceData>& services) override;
 
     /**
      * Returns service data by service ID.
@@ -100,7 +102,7 @@ public:
      * @param serviceID service ID.
      * @return  RetWithError<ServiceData>.
      */
-    aos::RetWithError<aos::sm::servicemanager::ServiceData> GetService(const aos::String& serviceID) override;
+    RetWithError<sm::servicemanager::ServiceData> GetService(const String& serviceID) override;
 
     /**
      * Adds new certificate info to the storage.
@@ -109,7 +111,7 @@ public:
      * @param certInfo certificate information.
      * @return Error.
      */
-    aos::Error AddCertInfo(const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo) override;
+    Error AddCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo) override;
 
     /**
      * Returns information about certificate with specified issuer and serial number.
@@ -119,8 +121,8 @@ public:
      * @param cert result certificate.
      * @return Error.
      */
-    aos::Error GetCertInfo(const aos::Array<uint8_t>& issuer, const aos::Array<uint8_t>& serial,
-        aos::iam::certhandler::CertInfo& cert) override;
+    Error GetCertInfo(
+        const Array<uint8_t>& issuer, const Array<uint8_t>& serial, iam::certhandler::CertInfo& cert) override;
 
     /**
      * Returns info for all certificates with specified certificate type.
@@ -129,8 +131,7 @@ public:
      * @param[out] certsInfo result certificates info.
      * @return Error.
      */
-    aos::Error GetCertsInfo(
-        const aos::String& certType, aos::Array<aos::iam::certhandler::CertInfo>& certsInfo) override;
+    Error GetCertsInfo(const String& certType, Array<iam::certhandler::CertInfo>& certsInfo) override;
 
     /**
      * Removes certificate with specified certificate type and url.
@@ -139,7 +140,7 @@ public:
      * @param certURL certificate URL.
      * @return Error.
      */
-    aos::Error RemoveCertInfo(const aos::String& certType, const aos::String& certURL) override;
+    Error RemoveCertInfo(const String& certType, const String& certURL) override;
 
     /**
      * Removes all certificates with specified certificate type.
@@ -147,14 +148,60 @@ public:
      * @param certType certificate type.
      * @return Error.
      */
-    aos::Error RemoveAllCertsInfo(const aos::String& certType) override;
+    Error RemoveAllCertsInfo(const String& certType) override;
+
+    /**
+     * Returns operation version.
+     *
+     * @return RetWithError<uint64_t>.
+     */
+    RetWithError<uint64_t> GetOperationVersion() const override;
+
+    /**
+     * Sets operation version.
+     *
+     * @param version operation version.
+     * @return Error.
+     */
+    Error SetOperationVersion(uint64_t version) override;
+
+    /**
+     * Returns instances's override environment variables array.
+     *
+     * @param envVarsInstanceInfos[out] instances's override environment variables array.
+     * @return Error.
+     */
+    Error GetOverrideEnvVars(cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) const override;
+
+    /**
+     * Sets instances's override environment variables array.
+     *
+     * @param envVarsInstanceInfos instances's override environment variables array.
+     * @return Error.
+     */
+    Error SetOverrideEnvVars(const cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) override;
+
+    /**
+     * Returns online time.
+     *
+     * @return RetWithError<Time>.
+     */
+    RetWithError<Time> GetOnlineTime() const override;
+
+    /**
+     * Sets online time.
+     *
+     * @param time online time.
+     * @return Error.
+     */
+    Error SetOnlineTime(const Time& time) override;
 
 private:
     constexpr static auto cStoragePath = CONFIG_AOS_STORAGE_DIR;
 
     struct InstanceIdent {
-        char     mServiceID[aos::cServiceIDLen + 1];
-        char     mSubjectID[aos::cSubjectIDLen + 1];
+        char     mServiceID[cServiceIDLen + 1];
+        char     mSubjectID[cSubjectIDLen + 1];
         uint64_t mInstance;
 
         /**
@@ -171,11 +218,11 @@ private:
     };
 
     struct InstanceInfo {
-        InstanceIdent mInstanceIdent;
-        uint32_t      mUID;
-        uint64_t      mPriority;
-        char          mStoragePath[aos::cFilePathLen + 1];
-        char          mStatePath[aos::cFilePathLen + 1];
+        Storage::InstanceIdent mInstanceIdent;
+        uint32_t               mUID;
+        uint64_t               mPriority;
+        char                   mStoragePath[cFilePathLen + 1];
+        char                   mStatePath[cFilePathLen + 1];
 
         /**
          * Compares instance info.
@@ -190,29 +237,11 @@ private:
         }
     };
 
-    struct VersionInfo {
-        uint64_t mAosVersion;
-        char     mVendorVersion[aos::cVendorVersionLen + 1];
-        char     mDescription[aos::cDescriptionLen + 1];
-
-        /**
-         * Compares version info.
-         *
-         * @param version info to compare.
-         * @return bool.
-         */
-        bool operator==(const VersionInfo& rhs) const
-        {
-            return mAosVersion == rhs.mAosVersion && strcmp(mVendorVersion, rhs.mVendorVersion) == 0
-                && strcmp(mDescription, rhs.mDescription) == 0;
-        }
-    };
-
     struct ServiceData {
-        VersionInfo mVersionInfo;
-        char        mServiceID[aos::cServiceIDLen + 1];
-        char        mProviderID[aos::cProviderIDLen + 1];
-        char        mImagePath[aos::cFilePathLen + 1];
+        char mServiceID[cServiceIDLen + 1];
+        char mProviderID[cProviderIDLen + 1];
+        char mVersion[cVersionLen + 1];
+        char mImagePath[cFilePathLen + 1];
 
         /**
          * Compares service data.
@@ -222,19 +251,19 @@ private:
          */
         bool operator==(const ServiceData& rhs) const
         {
-            return mVersionInfo == rhs.mVersionInfo && strcmp(mServiceID, rhs.mServiceID) == 0
-                && strcmp(mProviderID, rhs.mProviderID) == 0 && strcmp(mImagePath, rhs.mImagePath) == 0;
+            return strcmp(mServiceID, rhs.mServiceID) == 0 && strcmp(mProviderID, rhs.mProviderID) == 0
+                && strcmp(mVersion, rhs.mVersion) == 0 && strcmp(mImagePath, rhs.mImagePath) == 0;
         }
     };
 
     struct CertInfo {
-        uint8_t  mIssuer[aos::crypto::cCertIssuerSize];
+        uint8_t  mIssuer[crypto::cCertIssuerSize];
         size_t   mIssuerSize;
-        uint8_t  mSerial[aos::crypto::cSerialNumSize];
+        uint8_t  mSerial[crypto::cSerialNumSize];
         size_t   mSerialSize;
-        char     mCertURL[aos::cURLLen + 1];
-        char     mKeyURL[aos::cURLLen + 1];
-        char     mCertType[aos::iam::certhandler::cCertTypeLen + 1];
+        char     mCertURL[cURLLen + 1];
+        char     mKeyURL[cURLLen + 1];
+        char     mCertType[iam::certhandler::cCertTypeLen + 1];
         timespec mNotAfter;
 
         /**
@@ -253,23 +282,24 @@ private:
         }
     };
 
-    aos::UniquePtr<InstanceInfo>      ConvertInstanceInfo(const aos::InstanceInfo& instance);
-    aos::UniquePtr<aos::InstanceInfo> ConvertInstanceInfo(const InstanceInfo& instance);
-    aos::UniquePtr<ServiceData>       ConvertServiceData(const aos::sm::servicemanager::ServiceData& service);
-    aos::UniquePtr<aos::sm::servicemanager::ServiceData> ConvertServiceData(const ServiceData& service);
-    aos::UniquePtr<CertInfo>                             ConvertCertInfo(
-                                    const aos::String& certType, const aos::iam::certhandler::CertInfo& certInfo);
-    aos::UniquePtr<aos::iam::certhandler::CertInfo> ConvertCertInfo(const CertInfo& certInfo);
+    UniquePtr<Storage::InstanceInfo>           ConvertInstanceInfo(const aos::InstanceInfo& instance);
+    UniquePtr<aos::InstanceInfo>               ConvertInstanceInfo(const Storage::InstanceInfo& instance);
+    UniquePtr<Storage::ServiceData>            ConvertServiceData(const sm::servicemanager::ServiceData& service);
+    UniquePtr<sm::servicemanager::ServiceData> ConvertServiceData(const Storage::ServiceData& service);
+    UniquePtr<Storage::CertInfo> ConvertCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo);
+    UniquePtr<iam::certhandler::CertInfo> ConvertCertInfo(const Storage::CertInfo& certInfo);
 
-    FileStorage<InstanceInfo> mInstanceDatabase;
-    FileStorage<ServiceData>  mServiceDatabase;
-    FileStorage<CertInfo>     mCertDatabase;
-    aos::Mutex                mMutex;
+    FileStorage<Storage::InstanceInfo> mInstanceDatabase;
+    FileStorage<Storage::ServiceData>  mServiceDatabase;
+    FileStorage<Storage::CertInfo>     mCertDatabase;
+    Mutex                              mMutex;
 
-    aos::StaticAllocator<aos::Max(sizeof(InstanceInfo), sizeof(aos::InstanceInfo))
-        + aos::Max(sizeof(ServiceData), sizeof(aos::sm::servicemanager::ServiceData))
-        + aos::Max(sizeof(CertInfo), sizeof(aos::iam::certhandler::CertInfo))>
+    StaticAllocator<Max(sizeof(Storage::InstanceInfo), sizeof(aos::InstanceInfo))
+        + Max(sizeof(Storage::ServiceData), sizeof(sm::servicemanager::ServiceData))
+        + Max(sizeof(Storage::CertInfo), sizeof(iam::certhandler::CertInfo))>
         mAllocator;
 };
+
+} // namespace aos::zephyr::storage
 
 #endif

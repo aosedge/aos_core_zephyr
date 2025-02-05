@@ -14,7 +14,7 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/pk.h>
 
-#include <aos/common/crypto.hpp>
+#include <aos/common/crypto/crypto.hpp>
 
 class RSAPrivateKey : public aos::crypto::PrivateKeyItf {
 public:

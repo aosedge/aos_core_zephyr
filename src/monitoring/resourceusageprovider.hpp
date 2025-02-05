@@ -10,69 +10,61 @@
 
 #include <sys/time.h>
 
-#include <aos/common/monitoring.hpp>
+#include <aos/common/monitoring/monitoring.hpp>
+#include <aos/iam/nodeinfoprovider.hpp>
+
+namespace aos::zephyr::monitoring {
 
 class ResourceUsageProvider : public aos::monitoring::ResourceUsageProviderItf {
 public:
     /**
-     * Init resource usage provider
-     * @return Error
+     * Initializes resource usage provider.
+     *
+     * @param nodeInfoProvider node info provider.
+     * @return Error.
      */
-    aos::Error Init() override;
+    Error Init();
 
     /**
-     * Returns system info
+     * Returns node monitoring data.
      *
-     * @param systemInfo system info
-     * @return Error
+     * @param nodeID node ident.
+     * @param monitoringData monitoring data.
+     * @return Error.
      */
-    aos::Error GetNodeInfo(aos::monitoring::NodeInfo& systemInfo) const override;
+    Error GetNodeMonitoringData(const String& nodeID, aos::monitoring::MonitoringData& monitoringData) override;
 
     /**
-     * Returns node monitoring data
+     * Returns instance monitoring data.
      *
-     * @param nodeID node ident
-     * @param monitoringData monitoring data
-     * @return Error
+     * @param instance instance ident.
+     * @param monitoringData monitoring data.
+     * @return Error.
      */
-    aos::Error GetNodeMonitoringData(
-        const aos::String& nodeID, aos::monitoring::MonitoringData& monitoringData) override;
-
-    /**
-     * Returns instance monitoring data
-     *
-     * @param instance instance ident
-     * @param monitoringData monitoring data
-     * @return Error
-     */
-    aos::Error GetInstanceMonitoringData(
-        const aos::String& instanceID, aos::monitoring::MonitoringData& monitoringData) override;
+    Error GetInstanceMonitoringData(const String& instanceID, aos::monitoring::MonitoringData& monitoringData) override;
 
 private:
-    static constexpr auto cNodeID             = CONFIG_AOS_NODE_ID;
-    static constexpr auto cDiskPartitionPoint = CONFIG_AOS_DISK_MOUNT_POINT;
-    static constexpr auto cDiskPartitionName  = "Aos";
-    static constexpr auto cDom0ID             = 0;
+    static constexpr auto cDom0ID = 0;
 
     struct InstanceCPUData {
-        InstanceCPUData(
-            const aos::String& instanceID, unsigned long long instanceCPUTime, const timeval& instancePrevTime)
+        InstanceCPUData(const String& instanceID, unsigned long long instanceCPUTime, const timeval& instancePrevTime)
             : mInstanceCPUTime(instanceCPUTime)
             , mInstanceID(instanceID)
             , mInstancePrevTime(instancePrevTime)
         {
         }
 
-        unsigned long long                     mInstanceCPUTime;
-        aos::StaticString<aos::cInstanceIDLen> mInstanceID;
-        timeval                                mInstancePrevTime;
+        unsigned long long                mInstanceCPUTime;
+        StaticString<aos::cInstanceIDLen> mInstanceID;
+        timeval                           mInstancePrevTime;
     };
 
-    unsigned long long                                       mPrevNodeCPUTime {};
-    timeval                                                  mPrevTime {};
-    aos::StaticArray<InstanceCPUData, aos::cMaxNumInstances> mPrevInstanceCPUTime {};
-    aos::Mutex                                               mMutex {};
-    aos::monitoring::NodeInfo                                mNodeInfo {};
+    unsigned long long                                  mPrevNodeCPUTime {};
+    timeval                                             mPrevTime {};
+    StaticArray<InstanceCPUData, aos::cMaxNumInstances> mPrevInstanceCPUTime {};
+    Mutex                                               mMutex {};
 };
+
+} // namespace aos::zephyr::monitoring
 
 #endif

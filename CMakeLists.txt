@@ -23,7 +23,7 @@ set(AOS_CORE_CONFIG aoscoreconfig.hpp)
 # Includes
 # ######################################################################################################################
 
-zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} src)
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/proto src)
 zephyr_include_directories_ifdef(CONFIG_NATIVE_APPLICATION mocks/include)
 
 # ######################################################################################################################
@@ -75,21 +75,31 @@ target_sources(
     PRIVATE src/main.cpp
             src/app/app.cpp
             src/clocksync/clocksync.cpp
-            src/communication/cmclient.cpp
-            src/communication/communication.cpp
-            src/communication/iamserver.cpp
+            src/communication/channelmanager.cpp
             src/communication/tlschannel.cpp
-            src/communication/vchannel.cpp
+            src/communication/channel.cpp
+            src/communication/channelmanager.cpp
             src/downloader/downloader.cpp
+            src/iamclient/iamclient.cpp
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
+            src/nodeinfoprovider/nodeinfoprovider.cpp
             src/ocispec/ocispec.cpp
-            src/provisioning/provisioning.cpp
+            src/provisionmanager/provisionmanagercallback.cpp
             src/resourcemanager/resourcemanager.cpp
             src/runner/runner.cpp
+            src/smclient/openhandler.cpp
+            src/smclient/smclient.cpp
             src/storage/storage.cpp
             src/utils/checksum.cpp
+            src/utils/utils.cpp
 )
+
+# use pipe for native posix
+target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/socket.cpp)
+
+# use xenvchan for xen
+target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/xenvchan.cpp)
 
 # Enable vchannels and xrun mocks for native posix
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
@@ -108,6 +118,8 @@ target_sources_ifdef(CONFIG_DOMU_ENABLE app PRIVATE src/domains/domu/domu_cfg.c)
 
 # Include HW-specific source file
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/bsp/reboot.c src/bsp/mount.c)
+target_sources_ifdef(CONFIG_FILE_SYSTEM_LITTLEFS app PRIVATE src/bsp/mount_littlefs.c)
+target_sources_ifdef(CONFIG_FAT_FILESYSTEM_ELM app PRIVATE src/bsp/mount_fatfs.c)
 
 # ######################################################################################################################
 # Versioning
@@ -219,8 +231,8 @@ ExternalProject_Add(
                -DCMAKE_CXX_FLAGS=${aos_cxx_flags}
                -DWITH_MBEDTLS=OFF
     SOURCE_DIR ${aoscore_source_dir}
-    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossmcpp.a ${aoscore_build_dir}/lib/libaosiamcpp.a
-                     ${aoscore_build_dir}/lib/libaoscommoncpp.a
+    BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossm.a ${aoscore_build_dir}/lib/libaosiam.a
+                     ${aoscore_build_dir}/lib/libaoscommon.a
     DEPENDS zephyr_interface
 )
 
@@ -232,7 +244,7 @@ add_library(aossm STATIC IMPORTED GLOBAL)
 
 add_dependencies(aossm aoscore)
 
-set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaossmcpp.a)
+set_target_properties(aossm PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaossm.a)
 set_target_properties(aossm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aossm)
@@ -243,7 +255,7 @@ add_library(aosiam STATIC IMPORTED GLOBAL)
 
 add_dependencies(aosiam aoscore)
 
-set_target_properties(aosiam PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaosiamcpp.a)
+set_target_properties(aosiam PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaosiam.a)
 set_target_properties(aosiam PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aosiam)
@@ -254,7 +266,22 @@ add_library(aoscommon STATIC IMPORTED GLOBAL)
 
 add_dependencies(aoscommon aoscore)
 
-set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommoncpp.a)
+set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommon.a)
 set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
 
 target_link_libraries(app PUBLIC aoscommon)
+
+# ######################################################################################################################
+# Prepare softhsm2 config
+# ######################################################################################################################
+
+if(CONFIG_NATIVE_APPLICATION)
+    set(tokendir ${CONFIG_AOS_HSM_DIR})
+
+    if(NOT IS_ABSOLUTE ${tokendir})
+        set(tokendir ${CMAKE_CURRENT_BINARY_DIR}/${tokendir})
+    endif()
+
+    file(COPY misc/softhsm2.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/softhsm)
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/softhsm/softhsm2.conf "directories.tokendir = ${tokendir}/\n")
+endif()

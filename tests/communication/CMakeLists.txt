@@ -35,22 +35,15 @@ add_definitions(-DCONFIG_AOS_ROOT_CA_PATH="${cert_dir}/ca.pem")
 # Includes
 # ######################################################################################################################
 
+file(COPY ${APPLICATION_SOURCE_DIR}/../../../aos_core_api/aosprotocol/aosprotocol.h
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 zephyr_include_directories(${aoscore_source_dir}/include)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/..)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/../../src)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
 zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-# ######################################################################################################################
-#  Generate API
-# ######################################################################################################################
-
-find_package(CoreAPI)
-
-set(CORE_API_CXX_FLAGS -I${APPLICATION_SOURCE_DIR}/../../src -I${aoscore_source_dir}/include -include
-                       ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/autoconf.h -include ${aoscore_config}
-)
-
-core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_api ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts)
 
 # ######################################################################################################################
 # Certificates
@@ -118,14 +111,12 @@ target_sources(mbedTLSX509 PRIVATE ${mbedtls_source_dir}/library/x509write.c)
 
 target_sources(
     app
-    PRIVATE ../../src/communication/cmclient.cpp
-            ../../src/communication/communication.cpp
-            ../../src/communication/iamserver.cpp
-            ../../src/communication/tlschannel.cpp
+    PRIVATE ../../src/communication/tlschannel.cpp
             ../../src/rootca/rootca.S
+            ../../src/communication/channel.cpp
+            ../../src/communication/channelmanager.cpp
             ../../src/utils/checksum.cpp
-            src/cmclient.cpp
-            src/iamserver.cpp
+            ../utils/log.cpp
+            src/channelmanager.cpp
             src/tlschannel.cpp
-            src/utils.cpp
 )

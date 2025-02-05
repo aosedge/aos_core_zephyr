@@ -19,23 +19,25 @@
 
 #include <aos/common/tools/fs.hpp>
 
-#include "communication/commchannel.hpp"
+#include "communication/channel.hpp"
 #include "communication/tlschannel.hpp"
 
 #include "stubs/certhandlerstub.hpp"
 #include "stubs/certloaderstub.hpp"
 #include "stubs/rsaprivatekey.hpp"
 
+using namespace aos::zephyr;
+
 /***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
 
-class ClientChannel : public CommChannelItf {
+class ClientChannel : public communication::ChannelItf {
 public:
     ClientChannel() { mbedtls_net_init(&mServerFd); }
     ~ClientChannel() { mbedtls_net_free(&mServerFd); }
 
-    aos::Error SetTLSConfig(const aos::String& certType) override { return aos::ErrorEnum::eNone; }
+    aos::Error SetTLSConfig(const aos::String& certType) { return aos::ErrorEnum::eNone; }
 
     aos::Error Connect() override
     {
@@ -239,9 +241,9 @@ ZTEST_F(tlschannel, test_TLSChannelConnect)
     CertHandlerStub certHandler;
     ClientChannel   vChannel;
 
-    TLSChannel channel;
+    communication::TLSChannel channel;
 
-    auto err = channel.Init(certHandler, certLoader, vChannel);
+    auto err = channel.Init("test", certHandler, certLoader, vChannel);
     zassert_equal(err, aos::ErrorEnum::eNone, "test failed");
 
     err = channel.SetTLSConfig("client");
@@ -256,7 +258,7 @@ ZTEST_F(tlschannel, test_TLSChannelConnect)
         zassert_unreachable("test failed");
     }
 
-    auto resClient = std::async(std::launch::async, &TLSChannel::Connect, &channel);
+    auto resClient = std::async(std::launch::async, &communication::TLSChannel::Connect, &channel);
 
     auto errClient = resClient.get();
     auto errServer = resServer.get();

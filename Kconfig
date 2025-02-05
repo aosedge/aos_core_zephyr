@@ -9,29 +9,27 @@ config AOS_DOMD_ID
 	int "DomD id"
 	default 1
 
-config AOS_VCHAN_OPEN_TX_PATH
-	string "Path to open TX vchan"
-	default "/local/domain/1/tmp/vchan/aos/open/tx"
+config AOS_CHAN_TX_PATH
+	string "Path to TX channel"
+	depends on !NATIVE_APPLICATION
+	default "/local/domain/1/tmp/vchan/aos/tx"
 
-config AOS_VCHAN_OPEN_RX_PATH
-	string "Path to open RX vchan"
-	default "/local/domain/1/tmp/vchan/aos/open/rx"
-
-config AOS_VCHAN_SECURE_TX_PATH
-	string "Path to secure TX vchan"
-	default "/local/domain/1/tmp/vchan/aos/secure/tx"
-
-config AOS_VCHAN_SECURE_RX_PATH
-	string "Path to secure RX vchan"
-	default "/local/domain/1/tmp/vchan/aos/secure/rx"
+config AOS_CHAN_RX_PATH
+	string "Path to RX channel"
+	depends on !NATIVE_APPLICATION
+	default "/local/domain/1/tmp/vchan/aos/rx"
 
 config AOS_REBOOT_XEN_STORE_PATH
 	string "Path to user reboot request"
 	default "/local/domain/1/data/user-reboot"
 
+config AOS_DISK_MOUNT_POINT
+	string "Disk mount point"
+	default "/lfs"
+
 config AOS_STORAGE_DIR
 	string "Path to the storage"
-	default "/aos/storage"
+	default "/lfs/aos/storage"
 
 config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
@@ -39,35 +37,35 @@ config AOS_RUNTIME_DIR
 
 config AOS_SERVICES_DIR
 	string "Aos services dir"
-	default "/aos/services"
+	default "/lfs/aos/services"
 
-config AOS_UNIT_CONFIG_FILE
+config AOS_NODE_CONFIG_FILE
 	string "Node configuration file path"
-	default "/aos/unit_config.cfg"
+	default "/lfs/aos/node_config.cfg"
 
-config AOS_NODE_ID
-	string "Node id"
-	default "NODE_0"
+config AOS_NODE_STATUS_FILE
+	string "Path to provisioning state file."
+	default "/lfs/aos/.nodestatus"
+
+config AOS_NODE_ID_FILE
+	string "Path to node id file."
+	default "/lfs/aos/node-id"
+
+config AOS_PKCS11_MODULE_PIN_FILE
+	string "Path to PKCS11 module PIN file."
+	default "/lfs/aos/.pkcs11pin"
+
+config AOS_HSM_DIR
+	string "Path HSM tokens dir."
+	default "/lfs/tee"
+
+config AOS_NODE_NAME
+	string "Node name"
+	default "zephyr"
 
 config AOS_NODE_TYPE
 	string "Node type"
 	default "NODE_TYPE1"
-
-config AOS_NUM_CPU
-	int "Count of CPUs for domain with Zephyr"
-	default 1
-
-config AOS_TOTAL_RAM
-	int "Total RAM of the domain"
-	default 204800
-
-config AOS_PARTITION_SIZE
-	int "Partition size"
-	default 209715200
-
-config AOS_DISK_MOUNT_POINT
-	string "Disk mount point"
-	default "/aos"
 
 config AOS_CLOCK_SYNC_SEND_PERIOD_SEC
 	int "Send clock sync period in seconds"
@@ -81,28 +79,61 @@ config AOS_CLOCK_SYNC_MAX_DIFF_MSEC
 	int "Maximum allowed difference between source and current time."
 	default 10000
 
-config AOS_PROVISIONING_FILE
-	string "Path to provisioning file."
-	default "/aos/.provisioned"
-	
-config AOS_PKCS11_MODULE_PIN_FILE
-	string "Path to PKCS11 module PIN file."
-	default "/aos/.pkcs11pin"
+config AOS_MAX_CPU_DMIPS
+	int "Maximum CPU DMIPS"
+	default 10000
 
 config AOS_ROOT_CA_PATH
 	string "Path to Aos Root CA certificate. Required to build in root CA into app image."
 	default "prebuilt/rootca.pem"
 
+config AOS_IAM_OPEN_PORT
+	int "Aos IAM open port"
+	default 1
+
+config AOS_IAM_SECURE_PORT
+	int "Aos IAM secure port"
+	default 2
+
+config AOS_SM_OPEN_PORT
+	int "Aos SM open port"
+	default 3
+
+config AOS_SM_SECURE_PORT
+	int "Aos SM secure port"
+	default 4
+
+config AOS_SOCKET_SERVER_ADDRESS
+	string "Aos socket server address"
+	depends on NATIVE_APPLICATION
+	default "10.0.0.100"
+
+config AOS_SOCKET_SERVER_PORT
+	int "Aos socket server port"
+	depends on NATIVE_APPLICATION
+	default 30001
+
+config AOS_PBHANDLER_THREAD_STACK_SIZE
+	int "Aos PB handler stack size"
+	default 32768
+
+config AOS_LAUNCHER_THREAD_STACK_SIZE
+	int "Aos launcher stack size"
+	default 32768
+
+config DOMD_ENABLE
+	bool "Enable Domain-D creation"
+	default y
+
 config DOMD_UBOOT_PATH
 	string "Location for Domain-D IPL binary"
+	depends on DOMD_ENABLE
 	default "prebuilt/ipl.bin"
 
 config DOMD_DTB_PATH
 	string "Location of Domain-D partial device-tree"
+	depends on DOMD_ENABLE
 	default "prebuilt/ipl.dtb"
-
-config TA_DEPLOY_DIR
-	string "Location of optee TA's deploy dir"
 
 config DOMU_ENABLE
 	bool "Enable Domain-U creation"
@@ -116,5 +147,16 @@ config DOMU_DTB_PATH
 	string "Location for Domain-U device-tree"
 	depends on DOMU_ENABLE
 	default "prebuilt/domu.dtb"
+
+config TA_DEPLOY_DIR
+	string "Location of optee TA's deploy dir"
+
+module = AOS_CORE
+module-str = Aos core
+source "subsys/logging/Kconfig.template.log_config"
+
+module = AOS_CORE_RUNTIME
+module-str = Aos core runtime
+source "subsys/logging/Kconfig.template.log_config"
 
 source "Kconfig"

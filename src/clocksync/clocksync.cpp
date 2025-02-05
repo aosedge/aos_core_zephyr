@@ -8,11 +8,13 @@
 #include "clocksync.hpp"
 #include "log.hpp"
 
+namespace aos::zephyr::clocksync {
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-aos::Error ClockSync::Init(ClockSyncSenderItf& sender)
+Error ClockSync::Init(ClockSyncSenderItf& sender)
 {
     LOG_DBG() << "Init clock sync";
 
@@ -20,15 +22,9 @@ aos::Error ClockSync::Init(ClockSyncSenderItf& sender)
 
     auto err = mThread.Run([this](void*) {
         while (true) {
-            aos::UniqueLock lock(mMutex);
+            UniqueLock lock {mMutex};
 
-#ifdef CONFIG_NATIVE_APPLICATION
-            auto now = aos::Time::Now();
-#else
-            auto now = aos::Time::Now(CLOCK_MONOTONIC);
-#endif
-
-            mCondVar.Wait(lock, now.Add(cSendPeriod), [this] { return mStart || mClose || mSync; });
+            mCondVar.Wait(lock, cSendPeriod, [this] { return mStart || mClose || mSync; });
 
             if (mClose) {
                 return;
@@ -41,21 +37,21 @@ aos::Error ClockSync::Init(ClockSyncSenderItf& sender)
 
             if (mSync) {
                 mSync     = false;
-                mSyncTime = aos::Time::Now(CLOCK_MONOTONIC);
+                mSyncTime = Time::Now(CLOCK_MONOTONIC);
 
                 if (!mSynced) {
                     mSynced = true;
-                    mSender->ClockSynced();
+                    ClockSyncNotification();
                 }
 
                 continue;
             }
 
-            if (mSynced && abs(aos::Time::Now(CLOCK_MONOTONIC).Sub(mSyncTime)) > cSyncTimeout) {
+            if (mSynced && abs(Time::Now(CLOCK_MONOTONIC).Sub(mSyncTime)) > cSyncTimeout) {
                 LOG_WRN() << "Time is not synced";
 
                 mSynced = false;
-                mSender->ClockUnsynced();
+                ClockSyncNotification();
             }
 
             if (mStarted) {
@@ -70,28 +66,42 @@ aos::Error ClockSync::Init(ClockSyncSenderItf& sender)
         return AOS_ERROR_WRAP(err);
     }
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error ClockSync::Start()
+Error ClockSync::Start()
 {
-    aos::LockGuard lock(mMutex);
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Start";
 
     mStart = true;
     mCondVar.NotifyOne();
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-aos::Error ClockSync::Sync(const aos::Time& time)
+Error ClockSync::Stop()
 {
-    aos::LockGuard lock(mMutex);
+    {
+        LockGuard lock {mMutex};
+
+        LOG_DBG() << "Stop";
+
+        mClose = true;
+        mCondVar.NotifyOne();
+    }
+
+    return mThread.Join();
+}
+
+Error ClockSync::Sync(const Time& time)
+{
+    LockGuard lock {mMutex};
 
     LOG_DBG() << "Sync: time = " << time;
 
-    if (llabs(aos::Time::Now().Sub(time)) > cMaxTimeDiff) {
+    if (llabs(Time::Now().Sub(time)) > cMaxTimeDiff) {
         LOG_DBG() << "Set time: time = " << time;
 
         auto ts = time.UnixTime();
@@ -105,17 +115,43 @@ aos::Error ClockSync::Sync(const aos::Time& time)
     mSync = true;
     mCondVar.NotifyOne();
 
-    return aos::ErrorEnum::eNone;
+    return ErrorEnum::eNone;
 }
 
-ClockSync::~ClockSync()
+Error ClockSync::Subscribe(ClockSyncSubscriberItf& subscriber)
 {
-    {
-        aos::LockGuard lock(mMutex);
+    LockGuard lock {mMutex};
 
-        mClose = true;
-        mCondVar.NotifyOne();
+    auto err = mConnectionSubscribers.PushBack(&subscriber);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
     }
 
-    mThread.Join();
+    return ErrorEnum::eNone;
 }
+
+void ClockSync::Unsubscribe(ClockSyncSubscriberItf& subscriber)
+{
+    LockGuard lock {mMutex};
+
+    mConnectionSubscribers.Remove(&subscriber);
+}
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
+
+void ClockSync::ClockSyncNotification()
+{
+    LOG_INF() << "Clock sync notification: synced=" << (mSynced ? "true" : "false");
+
+    for (auto& subscriber : mConnectionSubscribers) {
+        if (mSynced) {
+            subscriber->OnClockSynced();
+        } else {
+            subscriber->OnClockUnsynced();
+        }
+    }
+}
+
+} // namespace aos::zephyr::clocksync

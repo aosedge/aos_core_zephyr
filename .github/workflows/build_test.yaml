@@ -13,7 +13,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: zephyrprojectrtos/ci:latest
+    container: zephyrprojectrtos/ci:v0.26.14
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
 
@@ -26,6 +26,7 @@ jobs:
             rcar_h3ulcb_ca57,
             native_posix,
             native_posix_64,
+            rpi_5,
           ]
 
     steps:
@@ -37,6 +38,7 @@ jobs:
       - name: Initialize
         run: |
           sudo apt update
+          pip install --upgrade protobuf==4.25.3
           ln -ns /opt/protoc/include/google /usr/local/include
           west init -l ./
           west update
@@ -50,28 +52,33 @@ jobs:
           touch src/prebuilt/rootca.pem
 
       - name: Build ${{ matrix.platform }}
-        if: "!startsWith(matrix.platform, 'native')"
+        if: ${{ !startsWith(matrix.platform, 'native') && matrix.platform != 'rpi_5' }}
         run: |
           west build -b ${{ matrix.platform }} -p always -S xen_dom0
 
       - name: Build ${{ matrix.platform }}
-        if: startsWith(matrix.platform, 'native')
+        if: ${{ matrix.platform == 'rpi_5' }}
+        run: |
+          west build -b ${{ matrix.platform }} -p always
+
+      - name: Build ${{ matrix.platform }}
+        if: ${{ startsWith(matrix.platform, 'native') }}
         run: |
           west build -b ${{ matrix.platform }} -p always
 
       - name: Test ${{ matrix.platform }}
-        if: matrix.platform == 'native_posix'
+        if: ${{ matrix.platform == 'native_posix' }}
         run: |
-          west twister -c -v -p ${{ matrix.platform }} -T tests
+          west twister -c -v -p ${{ matrix.platform }} -T tests -v
 
       - name: Test ${{ matrix.platform }}
-        if: matrix.platform == 'native_posix_64'
+        if: ${{ matrix.platform == 'native_posix_64' }}
         run: |
-          west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests
+          west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests -v
           gcovr twister-out/${{ matrix.platform }}/ -f src/ --xml-pretty > ./coverage.xml
 
       - name: Upload codecov report
-        if: startsWith(matrix.platform, 'native_posix_64')
+        if: ${{ startsWith(matrix.platform, 'native_posix_64') }}
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

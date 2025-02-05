@@ -10,12 +10,16 @@
 
 #include <aos/common/types.hpp>
 
+namespace aos::zephyr::utils {
+
 /**
  * Calculates SHA-256.
  *
  * @param data[in] data array.
- * @return aos::RetWithError<aos::StaticArray<aos::cSHA256Size>>.
+ * @return RetWithError<aos::StaticArray<aos::cSHA256Size>>.
  */
-aos::RetWithError<aos::StaticArray<uint8_t, aos::cSHA256Size>> CalculateSha256(const aos::Array<uint8_t>& data);
+RetWithError<StaticArray<uint8_t, cSHA256Size>> CalculateSha256(const Array<uint8_t>& data);
+
+} // namespace aos::zephyr::utils
 
 #endif
