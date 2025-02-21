@@ -4,11 +4,12 @@ on:
   push:
     branches:
       - main
+      - sonar_integration
 
   pull_request:
     branches:
       - develop
-      - feature_*
+      - sonar_integration
 
 jobs:
   build:
