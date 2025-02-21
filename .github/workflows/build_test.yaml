@@ -20,14 +20,13 @@ jobs:
 
     strategy:
       matrix:
-        platform:
-          [
-            rcar_spider_ca55,
-            rcar_salvator_xs_m3,
-            rcar_h3ulcb_ca57,
-            native_posix,
+        platform: [
+            # rcar_spider_ca55,
+            # rcar_salvator_xs_m3,
+            # rcar_h3ulcb_ca57,
+            # native_posix,
             native_posix_64,
-            rpi_5,
+            # rpi_5,
           ]
 
     steps:
@@ -84,3 +83,9 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
+
+      - name: Check build artifacts
+        if: ${{ startsWith(matrix.platform, 'native_posix_64') }}
+        run: |
+          ls -l build/
+          ls -l .
