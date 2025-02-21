@@ -76,6 +76,7 @@ jobs:
         run: |
           west twister -c -v -p ${{ matrix.platform }} --coverage --coverage-basedir src/ --coverage-tool gcovr -T tests -v
           gcovr twister-out/${{ matrix.platform }}/ -f src/ --xml-pretty > ./coverage.xml
+          gcovr twister-out/native_posix_64 -f src/ --sonarqube ./coverage-sonar.xml
 
       - name: Upload codecov report
         if: ${{ startsWith(matrix.platform, 'native_posix_64') }}
@@ -83,3 +84,31 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
+
+      - name: SonarCloud Scan on push
+        if: startsWith(matrix.platform, 'native_posix_64') && github.event_name == 'push'
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+        with:
+          args: >
+            --define sonar.cfamily.compile-commands=build/compile_commands.json
+            --define sonar.coverageReportPaths=./coverage-sonar.xml
+
+      - name: SonarCloud Scan on pull request
+        if: startsWith(matrix.platform, 'native_posix_64') && github.event_name == 'pull_request_target'
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        with:
+          projectBaseDir: "."
+          args: >
+            --define sonar.scm.revision=${{ github.event.pull_request.head.sha }}
+            --define sonar.pullrequest.key=${{ github.event.pull_request.number }}
+            --define sonar.pullrequest.branch=${{ github.event.pull_request.head.ref }}
+            --define sonar.pullrequest.base=${{ github.event.pull_request.base.ref }}
+            --define sonar.cfamily.compile-commands=build/compile_commands.json
+            --define sonar.coverageReportPaths=./coverage-sonar.xml
