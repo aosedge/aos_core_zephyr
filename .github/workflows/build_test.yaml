@@ -4,11 +4,19 @@ on:
   push:
     branches:
       - main
-
-  pull_request:
-    branches:
       - develop
-      - feature_*
+
+  pull_request_target:
+    types:
+      - edited
+      - opened
+      - reopened
+      - synchronize
+
+    branches:
+      - main
+      - develop
+      - feature*
 
 jobs:
   build:
