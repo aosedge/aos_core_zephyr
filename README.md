@@ -1,5 +1,6 @@
 [![ci](https://github.com/aosedge/aos_core_zephyr/actions/workflows/build_test.yaml/badge.svg)](https://github.com/aosedge/aos_core_zephyr/actions/workflows/build_test.yaml)
 [![codecov](https://codecov.io/gh/aosedge/aos_core_zephyr/branch/main/graph/badge.svg?token=ObQrD8aaAC)](https://codecov.io/gh/aosedge/aos_core_zephyr)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=aosedge_aos_core_zephyr)](https://sonarcloud.io/summary/new_code?id=aosedge_aos_core_zephyr)
 
 # AosCore zephyr application
 
