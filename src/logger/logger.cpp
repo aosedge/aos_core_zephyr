@@ -133,14 +133,14 @@ void Logger::LogCallback(const String& module, LogLevel level, const String& mes
     LockGuard lock(sMutex);
 #endif
 
-    auto [callback, err] = sLogCallbacks.At(module);
-    if (!err.IsNone()) {
+    auto callbackIt = sLogCallbacks.Find(module);
+    if (callbackIt == sLogCallbacks.end()) {
         LOG_MODULE_WRN("app") << "Log from unknown module received: module=" << module << ", level=" << level
                               << ", message=" << message;
         return;
     }
 
-    callback(level, message);
+    callbackIt->mSecond(level, message);
 }
 
 #if CONFIG_LOG_RUNTIME_FILTERING
