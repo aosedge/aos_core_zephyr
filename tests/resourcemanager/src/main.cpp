@@ -246,7 +246,7 @@ ZTEST(resourcemanager, test_JSONProviderParse)
     aos::sm::resourcemanager::NodeConfig       parsedNodeConfig;
 
     aos::String jsonStr(cTestNodeConfigJSON);
-    auto        err = provider.ParseNodeConfig(jsonStr, parsedNodeConfig);
+    auto        err = provider.NodeConfigFromJSON(jsonStr, parsedNodeConfig);
 
     zassert_true(err.IsNone(), "Failed to parse node config: %s", utils::ErrorToCStr(err));
 
@@ -259,13 +259,13 @@ ZTEST(resourcemanager, test_DumpNodeConfig)
     aos::sm::resourcemanager::NodeConfig       nodeConfig = CreateNodeConfig();
 
     aos::StaticString<aos::sm::resourcemanager::cNodeConfigJSONLen> jsonStr;
-    auto                                                            err = provider.DumpNodeConfig(nodeConfig, jsonStr);
+    auto err = provider.NodeConfigToJSON(nodeConfig, jsonStr);
 
     zassert_true(err.IsNone(), "Failed to dump node config: %s", utils::ErrorToCStr(err));
     zassert_false(jsonStr.IsEmpty(), "Empty json string");
 
     aos::sm::resourcemanager::NodeConfig parsedNodeConfig;
-    err = provider.ParseNodeConfig(jsonStr, parsedNodeConfig);
+    err = provider.NodeConfigFromJSON(jsonStr, parsedNodeConfig);
 
     zassert_true(err.IsNone(), "Failed to parse node config: %s", utils::ErrorToCStr(err));
 

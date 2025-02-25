@@ -72,7 +72,7 @@ struct NodeConfig {
     const char* version;
     // cppcheck-suppress unusedStructMember
     const char* nodeType;
-    Device      devices[cMaxNumDevices];
+    Device      devices[cMaxNumNodeDevices];
     size_t      devicesLen;
     Resource    resources[cMaxNumNodeResources];
     size_t      resourcesLen;
@@ -131,7 +131,8 @@ static const struct json_obj_descr cResourceDescr[] = {
 static const struct json_obj_descr cNodeConfigDescr[] = {
     JSON_OBJ_DESCR_PRIM(NodeConfig, version, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(NodeConfig, nodeType, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_OBJ_ARRAY(NodeConfig, devices, cMaxNumDevices, devicesLen, cDeviceDescr, ARRAY_SIZE(cDeviceDescr)),
+    JSON_OBJ_DESCR_OBJ_ARRAY(
+        NodeConfig, devices, cMaxNumHostDevices, devicesLen, cDeviceDescr, ARRAY_SIZE(cDeviceDescr)),
     JSON_OBJ_DESCR_OBJ_ARRAY(
         NodeConfig, resources, cMaxNumNodeResources, resourcesLen, cResourceDescr, ARRAY_SIZE(cResourceDescr)),
     JSON_OBJ_DESCR_ARRAY(NodeConfig, labels, cMaxNumNodeLabels, labelsLen, JSON_TOK_STRING),
@@ -268,7 +269,7 @@ static Error FillAosStruct(const NodeConfig& in, Array<ResourceInfo>& outResourc
         for (size_t j = 0; j < inResourceInfo.mountsLen; ++j) {
             const auto& parsedMount = inResourceInfo.mounts[j];
 
-            FileSystemMount& mount = outResourceInfo.mMounts[j];
+            auto& mount = outResourceInfo.mMounts[j];
 
             mount.mDestination = parsedMount.destination;
             mount.mType        = parsedMount.type;
@@ -307,7 +308,7 @@ static Error FillAosStruct(const NodeConfig& in, Array<ResourceInfo>& outResourc
  * Public
  **********************************************************************************************************************/
 
-Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config, String& json) const
+Error JSONProvider::NodeConfigToJSON(const sm::resourcemanager::NodeConfig& config, String& json) const
 {
     LockGuard lock(mMutex);
 
@@ -339,7 +340,7 @@ Error JSONProvider::DumpNodeConfig(const sm::resourcemanager::NodeConfig& config
     return ErrorEnum::eNone;
 }
 
-Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::NodeConfig& config) const
+Error JSONProvider::NodeConfigFromJSON(const String& json, sm::resourcemanager::NodeConfig& config) const
 {
     LockGuard lock(mMutex);
 
@@ -384,57 +385,18 @@ Error JSONProvider::ParseNodeConfig(const String& json, sm::resourcemanager::Nod
  * Public
  **********************************************************************************************************************/
 
-Error HostDeviceManager::AllocateDevice(const DeviceInfo& deviceInfo, const String& instanceID)
-{
-    (void)deviceInfo;
-    (void)instanceID;
-
-    return ErrorEnum::eNone;
-}
-
-Error HostDeviceManager::RemoveInstanceFromDevice(const String& deviceName, const String& instanceID)
-{
-    (void)deviceName;
-    (void)instanceID;
-
-    return ErrorEnum::eNone;
-}
-
-Error HostDeviceManager::RemoveInstanceFromAllDevices(const String& instanceID)
-{
-    (void)instanceID;
-
-    return ErrorEnum::eNone;
-}
-
-Error HostDeviceManager::GetDeviceInstances(
-    const String& deviceName, Array<StaticString<cInstanceIDLen>>& instanceIDs) const
-{
-    (void)deviceName;
-    (void)instanceIDs;
-
-    return ErrorEnum::eNone;
-}
-
-bool HostDeviceManager::DeviceExists(const String& device) const
+Error HostDeviceManager::CheckDevice(const String& device) const
 {
     (void)device;
 
-    return false;
+    return ErrorEnum::eNotSupported;
 }
 
-/***********************************************************************************************************************
- * HostGroupManager
- **********************************************************************************************************************/
-/***********************************************************************************************************************
- * Public
- **********************************************************************************************************************/
-
-bool HostGroupManager::GroupExists(const String& group) const
+Error HostDeviceManager::CheckGroup(const String& group) const
 {
     (void)group;
 
-    return false;
+    return ErrorEnum::eNotSupported;
 }
 
 } // namespace aos::zephyr::resourcemanager
