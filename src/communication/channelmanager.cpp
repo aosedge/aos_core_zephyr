@@ -63,9 +63,9 @@ RetWithError<ChannelItf*> ChannelManager::CreateChannel(uint32_t port)
 {
     LockGuard lock {mMutex};
 
-    auto findChannel = mChannels.At(port);
-    if (findChannel.mError.IsNone()) {
-        return {findChannel.mValue.Get(), ErrorEnum::eNone};
+    auto findChannel = mChannels.Find(port);
+    if (findChannel != mChannels.end()) {
+        return {findChannel->mSecond.Get(), ErrorEnum::eNone};
     }
 
     LOG_DBG() << "Create channel: port=" << port;
@@ -248,10 +248,12 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
 
     LOG_DBG() << "Process data: port=" << header.mPort << " size=" << header.mDataSize;
 
-    auto [channel, err] = mChannels.At(header.mPort);
-    if (!err.IsNone()) {
-        return err;
+    auto channelIt = mChannels.Find(header.mPort);
+    if (channelIt == mChannels.end()) {
+        return ErrorEnum::eNotFound;
     }
+
+    const auto& channel = channelIt->mSecond;
 
     size_t processedSize = 0;
 
@@ -259,7 +261,7 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
         void*  buffer = nullptr;
         size_t size   = 0;
 
-        if (err = channel->WaitRead(&buffer, &size); !err.IsNone()) {
+        if (auto err = channel->WaitRead(&buffer, &size); !err.IsNone()) {
             return err;
         }
 
@@ -267,7 +269,7 @@ Error ChannelManager::ProcessData(const AosProtocolHeader& header)
 
         memcpy(buffer, mTmpReadBuffer + processedSize, size);
 
-        if (err = channel->ReadDone(size); !err.IsNone()) {
+        if (auto err = channel->ReadDone(size); !err.IsNone()) {
             return err;
         }
 
