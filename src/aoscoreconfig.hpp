@@ -100,4 +100,9 @@
  */
 #define AOS_CONFIG_TYPES_FUNCTIONS_MAX_COUNT 8
 
+/**
+ * Max number of instances.
+ */
+#define AOS_CONFIG_TYPES_MAX_NUM_INSTANCES 16
+
 #endif
