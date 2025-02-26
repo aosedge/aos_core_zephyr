@@ -95,4 +95,9 @@
  */
 #define AOS_CONFIG_THREAD_STACK_USAGE 1
 
+/**
+ * Maximum number of functions for functional service.
+ */
+#define AOS_CONFIG_TYPES_FUNCTIONS_MAX_COUNT 8
+
 #endif
