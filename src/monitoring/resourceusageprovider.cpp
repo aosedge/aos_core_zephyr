@@ -85,7 +85,7 @@ Error ResourceUsageProvider::GetNodeMonitoringData(
 }
 
 Error ResourceUsageProvider::GetInstanceMonitoringData(
-    const String& instanceID, aos::monitoring::MonitoringData& monitoringData)
+    const String& instanceID, aos::monitoring::InstanceMonitoringData& monitoringData)
 {
     LOG_DBG() << "Get monitoring data for instance: " << instanceID;
 
@@ -110,7 +110,7 @@ Error ResourceUsageProvider::GetInstanceMonitoringData(
             continue;
         }
 
-        monitoringData.mRAM = domain.cur_mem;
+        monitoringData.mMonitoringData.mRAM = domain.cur_mem;
 
         auto findInstanceCPUTime = mPrevInstanceCPUTime.FindIf([&instanceID](const InstanceCPUData& instanceCpuData) {
             return instanceCpuData.mInstanceID == instanceID;
@@ -119,28 +119,33 @@ Error ResourceUsageProvider::GetInstanceMonitoringData(
         timeval curTime {};
         gettimeofday(&curTime, nullptr);
 
-        if (!findInstanceCPUTime.mError.IsNone()) {
-            mPrevInstanceCPUTime.EmplaceBack(instanceID, domain.cpu_ns, curTime);
-            monitoringData.mCPU = 0;
+        if (findInstanceCPUTime == mPrevInstanceCPUTime.end()) {
+            if (auto err = mPrevInstanceCPUTime.EmplaceBack(instanceID, domain.cpu_ns, curTime);
+                err != ErrorEnum::eNone) {
+                return err;
+            }
+
+            monitoringData.mMonitoringData.mCPU = 0;
 
             break;
         }
 
-        unsigned long long prevCPUTime = findInstanceCPUTime.mValue->mInstanceCPUTime;
-        auto               prevTime    = findInstanceCPUTime.mValue->mInstancePrevTime;
+        unsigned long long prevCPUTime = findInstanceCPUTime->mInstanceCPUTime;
+        auto               prevTime    = findInstanceCPUTime->mInstancePrevTime;
 
-        findInstanceCPUTime.mValue->mInstanceCPUTime  = domain.cpu_ns;
-        findInstanceCPUTime.mValue->mInstancePrevTime = curTime;
+        findInstanceCPUTime->mInstanceCPUTime  = domain.cpu_ns;
+        findInstanceCPUTime->mInstancePrevTime = curTime;
 
         auto cpuTimeDiff = domain.cpu_ns - prevCPUTime;
         auto us_elapsed  = (curTime.tv_sec - prevTime.tv_sec) * 1000000.0 + (curTime.tv_usec - prevTime.tv_usec);
 
-        monitoringData.mCPU = ((cpuTimeDiff / 10.0) / us_elapsed);
+        monitoringData.mMonitoringData.mCPU = ((cpuTimeDiff / 10.0) / us_elapsed);
 
         break;
     }
 
-    LOG_DBG() << "RAM(K): " << (monitoringData.mRAM / 1024) << ", CPU: " << monitoringData.mCPU;
+    LOG_DBG() << "RAM(K): " << (monitoringData.mMonitoringData.mRAM / 1024)
+              << ", CPU: " << monitoringData.mMonitoringData.mCPU;
 
     return ErrorEnum::eNone;
 }
