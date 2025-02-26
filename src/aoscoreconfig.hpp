@@ -110,4 +110,9 @@
  */
 #define AOS_CONFIG_TYPES_MAX_NUM_SERVICES 16
 
+/**
+ * Max number of layers.
+ */
+#define AOS_CONFIG_TYPES_MAX_NUM_LAYERS 16
+
 #endif
