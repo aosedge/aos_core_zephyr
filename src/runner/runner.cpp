@@ -25,7 +25,8 @@ Error Runner::Init(sm::runner::RunStatusReceiverItf& statusReceiver)
     return ErrorEnum::eNone;
 }
 
-sm::runner::RunStatus Runner::StartInstance(const String& instanceID, const String& runtimeDir)
+sm::runner::RunStatus Runner::StartInstance(
+    const String& instanceID, const String& runtimeDir, const RunParameters& runParams)
 {
     sm::runner::RunStatus runStatus {instanceID, InstanceRunStateEnum::eActive, ErrorEnum::eNone};
 
