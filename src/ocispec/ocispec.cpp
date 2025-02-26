@@ -91,6 +91,22 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
  * Public
  **********************************************************************************************************************/
 
+Error OCISpec::LoadContentDescriptor(const String& path, oci::ContentDescriptor& descriptor)
+{
+    (void)path;
+    (void)descriptor;
+
+    return ErrorEnum::eNotSupported;
+}
+
+Error OCISpec::SaveContentDescriptor(const String& path, const oci::ContentDescriptor& descriptor)
+{
+    (void)path;
+    (void)descriptor;
+
+    return ErrorEnum::eNotSupported;
+}
+
 Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifest)
 {
     LockGuard lock(mMutex);
@@ -144,15 +160,8 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
     // aosService
 
     if (ret & eImageManifestAosServiceField) {
-        if (manifest.mAosService == nullptr) {
-            return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
-        }
-
-        *manifest.mAosService = {
-            jsonImageManifest->aosService.mediaType,
-            jsonImageManifest->aosService.digest,
-            jsonImageManifest->aosService.size,
-        };
+        manifest.mAosService.EmplaceValue(jsonImageManifest->aosService.mediaType, jsonImageManifest->aosService.digest,
+            jsonImageManifest->aosService.size);
     }
 
     return ErrorEnum::eNone;
@@ -192,7 +201,7 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
 
     // aosService
 
-    if (manifest.mAosService) {
+    if (manifest.mAosService.HasValue()) {
         jsonImageManifest->aosService = {
             manifest.mAosService->mMediaType.CStr(), manifest.mAosService->mDigest.CStr(), manifest.mAosService->mSize};
     }
@@ -346,9 +355,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
     runtimeSpec.mOCIVersion = jsonRuntimeSpec->ociVersion;
 
     if (ret & eRuntimeVMField) {
-        if (runtimeSpec.mVM == nullptr) {
-            return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
-        }
+        runtimeSpec.mVM.EmplaceValue();
 
         runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
         runtimeSpec.mVM->mKernel.mPath     = jsonRuntimeSpec->vm.kernel.path;
@@ -405,7 +412,7 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
     jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
     jsonRuntimeSpec->ociVersion             = runtimeSpec.mOCIVersion.CStr();
 
-    if (runtimeSpec.mVM) {
+    if (runtimeSpec.mVM.HasValue()) {
         jsonRuntimeSpec->vm.hypervisor.path          = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
         jsonRuntimeSpec->vm.kernel.path              = const_cast<char*>(runtimeSpec.mVM->mKernel.mPath.CStr());
         jsonRuntimeSpec->vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
@@ -467,6 +474,22 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
     }
 
     return ErrorEnum::eNone;
+}
+
+Error OCISpec::LoadServiceConfig(const String& path, oci::ServiceConfig& serviceConfig)
+{
+    (void)path;
+    (void)serviceConfig;
+
+    return ErrorEnum::eNotSupported;
+}
+
+Error OCISpec::SaveServiceConfig(const String& path, const oci::ServiceConfig& serviceConfig)
+{
+    (void)path;
+    (void)serviceConfig;
+
+    return ErrorEnum::eNotSupported;
 }
 
 } // namespace aos::zephyr::ocispec
