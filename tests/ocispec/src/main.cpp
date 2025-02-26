@@ -125,25 +125,25 @@ ZTEST(ocispec, test_ImageManifest)
     TestImageManifest testData[] = {
         // empty
         {
-            {0, "", {}, {}, &emptyAosService},
+            {0, "", {}, {}, emptyAosService},
             R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"","digest":"","size":0},)"
             R"("layers":[],"aosService":{"mediaType":"","digest":"","size":0}})",
         },
         // schemaVersion and mediaType
         {
-            {42, "mediaType1", {}, {}, &emptyAosService},
+            {42, "mediaType1", {}, {}, emptyAosService},
             R"({"schemaVersion":42,"mediaType":"mediaType1","config":{"mediaType":"","digest":"","size":0},)"
             R"("layers":[],"aosService":{"mediaType":"","digest":"","size":0}})",
         },
         // config
         {
-            {0, "", {"mediaType2", "digest2", 2}, {}, &emptyAosService},
+            {0, "", {"mediaType2", "digest2", 2}, {}, emptyAosService},
             R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"mediaType2","digest":"digest2","size":2},)"
             R"("layers":[],"aosService":{"mediaType":"","digest":"","size":0}})",
         },
         // layers
         {
-            {0, "", {}, aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), &emptyAosService},
+            {0, "", {}, aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), emptyAosService},
             R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"","digest":"","size":0},)"
             R"("layers":[{"mediaType":"mediaType3","digest":"digest3","size":3},)"
             R"({"mediaType":"mediaType4","digest":"digest4","size":4},)"
@@ -152,14 +152,14 @@ ZTEST(ocispec, test_ImageManifest)
         },
         // aosService
         {
-            {0, "", {}, {}, &fullAosService},
+            {0, "", {}, {}, fullAosService},
             R"({"schemaVersion":0,"mediaType":"","config":{"mediaType":"","digest":"","size":0},)"
             R"("layers":[],"aosService":{"mediaType":"mediaType6","digest":"digest6","size":6}})",
         },
         // All fields
         {
             {42, "mediaType1", {"mediaType2", "digest2", 2},
-                aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), &fullAosService},
+                aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), fullAosService},
             R"({"schemaVersion":42,"mediaType":"mediaType1",)"
             R"("config":{"mediaType":"mediaType2","digest":"digest2","size":2},)"
             R"("layers":[{"mediaType":"mediaType3","digest":"digest3","size":3},)"
@@ -171,7 +171,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     // Save image spec
 
-    ocispec::OCISpec ociSpec;
+    aos::zephyr::ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveImageManifest(cImageManifestPath, testItem.mImageManifest);
@@ -190,7 +190,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     for (auto testItem : testData) {
         aos::oci::ContentDescriptor aosService {};
-        aos::oci::ImageManifest     imageManifest {0, "", {}, {}, &aosService};
+        aos::oci::ImageManifest     imageManifest {0, "", {}, {}, aosService};
 
         auto err = WriteFile(cImageManifestPath, testItem.mContent, strlen(testItem.mContent));
         zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
@@ -212,8 +212,8 @@ ZTEST(ocispec, test_ImageManifest)
 
     for (auto testItem : testMissingData) {
         aos::oci::ContentDescriptor aosService;
-        aos::oci::ImageManifest     imageManifest {0, "", {}, {}, &aosService};
-        aos::oci::ImageManifest     emptyManifest {0, "", {}, {}, &emptyAosService};
+        aos::oci::ImageManifest     imageManifest {0, "", {}, {}, aosService};
+        aos::oci::ImageManifest     emptyManifest {0, "", {}, {}, emptyAosService};
 
         auto err = WriteFile(cImageManifestPath, testItem, strlen(testItem));
         zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
@@ -248,7 +248,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     TestImageManifest extraFieldsData = {
         {42, "mediaType1", {"mediaType2", "digest2", 2},
-            aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), &fullAosService},
+            aos::Array<aos::oci::ContentDescriptor>(layers, aos::ArraySize(layers)), fullAosService},
         R"({"schemaVersion":42,"mediaType":"mediaType1","extraField1":1,)"
         R"("config":{"mediaType":"mediaType2","digest":"digest2","size":2,"extraField2":2},)"
         R"("layers":[{"mediaType":"mediaType3","digest":"digest3","size":3,"extraField3":3},)"
@@ -259,7 +259,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     aos::oci::ContentDescriptor aosService {};
 
-    imageManifest.mAosService = &aosService;
+    imageManifest.mAosService = aosService;
 
     err = WriteFile(cImageManifestPath, extraFieldsData.mContent, strlen(extraFieldsData.mContent));
     zassert_true(err.IsNone(), "Can't write manifest file: %s", err.Message());
@@ -271,7 +271,7 @@ ZTEST(ocispec, test_ImageManifest)
 
     // Check max memory allocations
 
-    aos::oci::ImageManifest fullManifest = {1, "mediaType1", {"mediaType2", "digest2"}, {}, &fullAosService};
+    aos::oci::ImageManifest fullManifest = {1, "mediaType1", {"mediaType2", "digest2", 1}, {}, fullAosService};
 
     for (size_t i = 0; i < aos::cMaxNumLayers; i++) {
         fullManifest.mLayers.PushBack({"layerType", "layerDigest", i});
@@ -288,20 +288,26 @@ ZTEST(ocispec, test_ImageSpec)
         char                mContent[cJsonMaxContentSize];
     };
 
-    aos::StaticString<aos::oci::cMaxParamLen> envs[]    = {"env0", "env1", "env2", "env3", "env4", "env5"};
+    aos::StaticString<aos::cEnvVarLen>        envs[]    = {"env0", "env1", "env2", "env3", "env4", "env5"};
     aos::StaticString<aos::oci::cMaxParamLen> entries[] = {"entry0", "entry1", "entry2"};
     aos::StaticString<aos::oci::cMaxParamLen> cmds[]    = {"cmd0", "cmd1"};
 
     TestImageSpec testData[] = {
         // empty
         {
-            {},
+            {"arch", "os", "os-version", "variant", aos::Time::Now(), "author", {}},
             R"({"config":{"Env":[],"Entrypoint":[],"Cmd":[]}})",
         },
         // Env
         {
             {
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
+                "arch",
+                "os",
+                "os-version",
+                "variant",
+                aos::Time::Now(),
+                "author",
+                {aos::Array<aos::StaticString<aos::cEnvVarLen>>(envs, aos::ArraySize(envs))},
             },
             R"({"config":{"Env":["env0","env1","env2","env3","env4","env5"],)"
             R"("Entrypoint":[],"Cmd":[]}})",
@@ -309,8 +315,16 @@ ZTEST(ocispec, test_ImageSpec)
         // Entrypoint
         {
             {
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+                "arch",
+                "os",
+                "os-version",
+                "variant",
+                aos::Time::Now(),
+                "author",
+                {
+                    {},
+                    aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+                },
 
             },
             R"({"config":{"Env":[],"Entrypoint":["entry0","entry1","entry2"],"Cmd":[]}})",
@@ -318,20 +332,35 @@ ZTEST(ocispec, test_ImageSpec)
         // Cmd
         {
             {
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(),
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
-
+                "arch",
+                "os",
+                "os-version",
+                "variant",
+                aos::Time::Now(),
+                "author",
+                {
+                    {},
+                    {},
+                    aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+                },
             },
+
             R"({"config":{"Env":[],"Entrypoint":[],"Cmd":["cmd0","cmd1"]}})",
         },
         // All fields
         {
             {
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
-                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
-
+                "arch",
+                "os",
+                "os-version",
+                "variant",
+                aos::Time::Now(),
+                "author",
+                {
+                    aos::Array<aos::StaticString<aos::cEnvVarLen>>(envs, aos::ArraySize(envs)),
+                    aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+                    aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+                },
             },
             R"({"config":{"Env":["env0","env1","env2","env3","env4","env5"],)"
             R"("Entrypoint":["entry0","entry1","entry2"],"Cmd":["cmd0","cmd1"]}})",
@@ -340,7 +369,7 @@ ZTEST(ocispec, test_ImageSpec)
 
     // Save image spec
 
-    ocispec::OCISpec ociSpec;
+    aos::zephyr::ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveImageSpec(cImageSpecPath, testItem.mImageSpec);
@@ -413,10 +442,17 @@ ZTEST(ocispec, test_ImageSpec)
 
     TestImageSpec extraFieldsData = {
         {
-            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(envs, aos::ArraySize(envs)),
-            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
-            aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
-
+            "arch",
+            "os",
+            "os-version",
+            "variant",
+            aos::Time::Now(),
+            "author",
+            {
+                aos::Array<aos::StaticString<aos::cEnvVarLen>>(envs, aos::ArraySize(envs)),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(entries, aos::ArraySize(entries)),
+                aos::Array<aos::StaticString<aos::oci::cMaxParamLen>>(cmds, aos::ArraySize(cmds)),
+            },
         },
         R"({"config":{"Env":["env0","env1","env2","env3","env4","env5"],)"
         R"("Entrypoint":["entry0","entry1","entry2"],"Cmd":["cmd0","cmd1"],)"
@@ -499,7 +535,7 @@ ZTEST(ocispec, test_RuntimeSpec)
     TestRuntimeSpec testData[] = {
         // empty
         {
-            {"", &vmEmpty},
+            {"", {}, {}, {}, {}, {}, vmEmpty},
             R"({"ociVersion":"","vm":{)"
             R"("hypervisor":{"path":"","parameters":[]},)"
             R"("kernel":{"path":"","parameters":[]},)"
@@ -507,7 +543,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         },
         // ociVersion
         {
-            {"1.0.0", &vmEmpty},
+            {"1.0.0", {}, {}, {}, {}, {}, vmEmpty},
             R"({"ociVersion":"1.0.0","vm":{)"
             R"("hypervisor":{"path":"","parameters":[]},)"
             R"("kernel":{"path":"","parameters":[]},)"
@@ -515,7 +551,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         },
         // hypervisor
         {
-            {"", &vmWithHypervisor},
+            {"", {}, {}, {}, {}, {}, vmWithHypervisor},
             R"({"ociVersion":"","vm":{)"
             R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"]},)"
             R"("kernel":{"path":"","parameters":[]},)"
@@ -523,7 +559,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         },
         // kernel
         {
-            {"", &vmWithKernel},
+            {"", {}, {}, {}, {}, {}, vmWithKernel},
             R"({"ociVersion":"","vm":{)"
             R"("hypervisor":{"path":"","parameters":[]},)"
             R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"]},)"
@@ -531,7 +567,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         },
         // hwConfig
         {
-            {"", &vmWithHWConfig},
+            {"", {}, {}, {}, {}, {}, vmWithHWConfig},
             R"({"ociVersion":"","vm":{)"
             R"("hypervisor":{"path":"","parameters":[]},)"
             R"("kernel":{"path":"","parameters":[]},)"
@@ -542,7 +578,7 @@ ZTEST(ocispec, test_RuntimeSpec)
         },
         // All fields
         {
-            {"1.0.0", &vmWithAll},
+            {"1.0.0", {}, {}, {}, {}, {}, vmWithAll},
             R"({"ociVersion":"1.0.0","vm":{)"
             R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"]},)"
             R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"]},)"
@@ -555,7 +591,7 @@ ZTEST(ocispec, test_RuntimeSpec)
 
     // Save runtime spec
 
-    ocispec::OCISpec ociSpec;
+    aos::zephyr::ocispec::OCISpec ociSpec;
 
     for (auto testItem : testData) {
         auto err = ociSpec.SaveRuntimeSpec(cRuntimeSpecPath, testItem.mRuntimeSpec);
@@ -574,7 +610,7 @@ ZTEST(ocispec, test_RuntimeSpec)
 
     for (auto testItem : testData) {
         aos::oci::VM          vmSpec {};
-        aos::oci::RuntimeSpec runtimeSpec {"", &vmSpec};
+        aos::oci::RuntimeSpec runtimeSpec {"", {}, {}, {}, {}, {}, vmSpec};
 
         auto err = WriteFile(cRuntimeSpecPath, testItem.mContent, strlen(testItem.mContent));
         zassert_true(err.IsNone(), "Can't write runtime file: %s", err.Message());
@@ -596,8 +632,8 @@ ZTEST(ocispec, test_RuntimeSpec)
 
     for (auto testItem : testMissingData) {
         aos::oci::VM          vmSpec {};
-        aos::oci::RuntimeSpec runtimeSpec {"", &vmSpec};
-        aos::oci::RuntimeSpec emptySpec {"", &vmEmpty};
+        aos::oci::RuntimeSpec runtimeSpec {"", {}, {}, {}, {}, {}, vmSpec};
+        aos::oci::RuntimeSpec emptySpec {"", {}, {}, {}, {}, {}, vmEmpty};
 
         auto err = WriteFile(cRuntimeSpecPath, testItem, strlen(testItem));
         zassert_true(err.IsNone(), "Can't write runtime file: %s", err.Message());
@@ -634,12 +670,14 @@ ZTEST(ocispec, test_RuntimeSpec)
     zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
 
     err = ociSpec.LoadRuntimeSpec(cRuntimeSpecPath, runtimeSpec);
-    zassert_true(err.Is(aos::ErrorEnum::eNoMemory), "Wrong error: %s", err.Message());
+    zassert_true(err.IsNone(), "Can't load runtime spec: %s", err.Message());
+
+    zassert_true(runtimeSpec == testData[5].mRuntimeSpec, "Runtime spec mismatch");
 
     // Check extra fields
 
     TestRuntimeSpec extraFieldsData = {
-        {"1.0.0", &vmWithAll},
+        {"1.0.0", {}, {}, {}, {}, {}, vmWithAll},
         R"({"ociVersion":"1.0.0","vm":{)"
         R"("hypervisor":{"path":"path0","parameters":["hyp0","hyp1","hyp2"],"extraHypervisor":"1234"},)"
         R"("kernel":{"path":"path1","parameters":["krnl0","krnl1"],"extraKernel":"1234"},)"
@@ -651,8 +689,6 @@ ZTEST(ocispec, test_RuntimeSpec)
     };
 
     aos::oci::VM vmSpec {};
-
-    runtimeSpec.mVM = &vmSpec;
 
     err = WriteFile(cRuntimeSpecPath, extraFieldsData.mContent, strlen(extraFieldsData.mContent));
     zassert_true(err.IsNone(), "Can't write spec file: %s", err.Message());
