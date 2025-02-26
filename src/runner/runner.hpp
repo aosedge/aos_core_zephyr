@@ -18,14 +18,6 @@ namespace aos::zephyr::runner {
 class Runner : public sm::runner::RunnerItf, private NonCopyable {
 public:
     /**
-     * Creates runner instance.
-     */
-    Runner()
-        : mStatusReceiver(nullptr)
-    {
-    }
-
-    /**
      * Initializes runner instance.
      * @param launcher instance launcher.
      * @return Error.
@@ -37,9 +29,11 @@ public:
      *
      * @param instanceID instance ID.
      * @param runtimeDir directory with runtime spec.
+     * @param runParams runtime parameters.
      * @return RunStatus.
      */
-    sm::runner::RunStatus StartInstance(const String& instanceID, const String& runtimeDir) override;
+    sm::runner::RunStatus StartInstance(
+        const String& instanceID, const String& runtimeDir, const RunParameters& runParams) override;
 
     /**
      * Stops instance.
@@ -52,7 +46,7 @@ public:
 private:
     static constexpr int cConsoleSocket = 0;
 
-    sm::runner::RunStatusReceiverItf* mStatusReceiver;
+    sm::runner::RunStatusReceiverItf* mStatusReceiver {};
 };
 
 } // namespace aos::zephyr::runner
