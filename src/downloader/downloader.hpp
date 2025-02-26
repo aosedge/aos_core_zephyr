@@ -8,7 +8,7 @@
 #ifndef DOWNLOADER_HPP_
 #define DOWNLOADER_HPP_
 
-#include <aos/common/downloader.hpp>
+#include <aos/common/downloader/downloader.hpp>
 #include <aos/common/tools/array.hpp>
 #include <aos/common/tools/error.hpp>
 #include <aos/common/tools/string.hpp>
@@ -22,9 +22,9 @@ namespace aos::zephyr::downloader {
  * Image content request.
  */
 struct ImageContentRequest {
-    StaticString<cURLLen> mURL;
-    uint64_t              mRequestID;
-    DownloadContent       mContentType;
+    StaticString<cURLLen>            mURL;
+    uint64_t                         mRequestID;
+    aos::downloader::DownloadContent mContentType;
 
     /**
      * Compares image content request.
@@ -184,7 +184,7 @@ public:
  * Downloader class.
  *
  */
-class Downloader : public DownloaderItf, public DownloadReceiverItf {
+class Downloader : public aos::downloader::DownloaderItf, public DownloadReceiverItf {
 public:
     /**
      * Default constructor.
@@ -212,7 +212,7 @@ public:
      * @param contentType content type.
      * @return Error
      */
-    Error Download(const String& url, const String& path, DownloadContent contentType) override;
+    Error Download(const String& url, const String& path, aos::downloader::DownloadContent contentType) override;
 
     /**
      * Receives image content request.
@@ -231,7 +231,7 @@ public:
     Error ReceiveImageContentInfo(const ImageContentInfo& content) override;
 
 private:
-    static constexpr auto cDownloadTimeout = 10000;
+    static constexpr auto cDownloadTimeout = Time::cSeconds * 10;
 
     struct DownloadResult {
         StaticString<cFilePathLen> mRelativePath;

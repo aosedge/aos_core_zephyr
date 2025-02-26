@@ -67,7 +67,7 @@ public:
             return aos::ErrorEnum::eInvalidArgument;
         }
 
-        if (request.mContentType != aos::DownloadContentEnum::eService) {
+        if (request.mContentType != aos::downloader::DownloadContentEnum::eService) {
             return aos::ErrorEnum::eInvalidArgument;
         }
 
@@ -97,8 +97,8 @@ ZTEST(downloader, test_download_image)
     aos::StaticString<aos::cURLLen>      url {cDownloadUrl};
     aos::StaticString<aos::cFilePathLen> path {cDownloadPath};
 
-    zassert_equal(sDownloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eNone,
-        "Failed to download image");
+    zassert_equal(sDownloader.Download(url, path, aos::downloader::DownloadContentEnum::eService),
+        aos::ErrorEnum::eNone, "Failed to download image");
 
     aos::StaticString<aos::cFilePathLen> filePath {aos::FS::JoinPath(cDownloadPath, cFileName)};
 
@@ -125,6 +125,6 @@ ZTEST(downloader, test_timeout_download_image)
     aos::StaticString<aos::cURLLen>      url {cDownloadUrl};
     aos::StaticString<aos::cFilePathLen> path {cDownloadPath};
 
-    zassert_equal(sDownloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eTimeout,
-        "Expected timeout error");
+    zassert_equal(sDownloader.Download(url, path, aos::downloader::DownloadContentEnum::eService),
+        aos::ErrorEnum::eTimeout, "Expected timeout error");
 }
