@@ -105,4 +105,9 @@
  */
 #define AOS_CONFIG_TYPES_MAX_NUM_INSTANCES 16
 
+/**
+ * Max number of services.
+ */
+#define AOS_CONFIG_TYPES_MAX_NUM_SERVICES 16
+
 #endif
