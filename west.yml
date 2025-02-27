@@ -56,7 +56,7 @@ manifest:
 
     - name: fatfs
       remote: zephyrproject-rtos
-      revision: master
+      revision: 427159b
       path: modules/fs/fatfs
       groups:
         - fs
