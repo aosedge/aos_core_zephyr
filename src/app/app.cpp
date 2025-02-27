@@ -119,7 +119,10 @@ Error App::InitCommon()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mResourceMonitor.Init(mNodeInfoProvider, mResourceUsageProvider, mSMClient, mSMClient);
+    aos::monitoring::Config monitorConfig;
+
+    if (auto err = mResourceMonitor.Init(monitorConfig, mNodeInfoProvider, mResourceManager, mResourceUsageProvider,
+            mSMClient, mSMClient, mSMClient);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -190,19 +193,27 @@ Error App::InitIAM()
 
 Error App::InitSM()
 {
-    if (auto err
-        = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mSMClient, mStorage, mResourceMonitor, mSMClient);
+    aos::sm::launcher::Config launcherConfig;
+
+    if (auto err = mLauncher.Init(launcherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
+            mNetworkManager, mPermHandler, mRunner, mRuntime, mResourceMonitor, mJsonOciSpec, mSMClient, mSMClient,
+            mStorage);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mResourceManager.Init(
-            mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cNodeConfigFile);
+    if (auto err = mResourceManager.Init(mResourceManagerJSONProvider, mHostDeviceManager, cNodeType, cNodeConfigFile);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage); !err.IsNone()) {
+    aos::sm::servicemanager::Config smConfig;
+    smConfig.mServicesDir = CONFIG_AOS_SERVICES_DIR;
+    smConfig.mDownloadDir = CONFIG_AOS_DOWNLOAD_DIR;
+
+    if (auto err = mServiceManager.Init(smConfig, mJsonOciSpec, mDownloader, mStorage, mServiceSpaceAllocator,
+            mDownloadSpaceAllocator, mImageHandler);
+        !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
