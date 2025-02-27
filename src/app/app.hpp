@@ -15,8 +15,11 @@
 #include <aos/common/tools/noncopyable.hpp>
 #include <aos/iam/certhandler.hpp>
 #include <aos/iam/certmodules/pkcs11/pkcs11.hpp>
+#include <aos/iam/permhandler.hpp>
 #include <aos/iam/provisionmanager.hpp>
 #include <aos/sm/launcher.hpp>
+#include <aos/sm/layermanager.hpp>
+#include <aos/sm/networkmanager.hpp>
 #include <aos/sm/servicemanager.hpp>
 
 #include "clocksync/clocksync.hpp"
@@ -28,6 +31,8 @@
 #endif
 #include "downloader/downloader.hpp"
 #include "iamclient/iamclient.hpp"
+#include "image/imagehandler.hpp"
+#include "launcher/runtime.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "nodeinfoprovider/nodeinfoprovider.hpp"
 #include "ocispec/ocispec.hpp"
@@ -106,10 +111,13 @@ private:
     iam::certhandler::PKCS11Module          mIAMHSMModule;
     iam::certhandler::PKCS11Module          mSMHSMModule;
     iam::provisionmanager::ProvisionManager mProvisionManager;
+    iam::permhandler::PermHandler           mPermHandler;
 
     sm::launcher::Launcher               mLauncher;
     sm::resourcemanager::ResourceManager mResourceManager;
     sm::servicemanager::ServiceManager   mServiceManager;
+    sm::layermanager::LayerManager       mLayerManager;
+    sm::networkmanager::NetworkManager   mNetworkManager;
 
     clocksync::ClockSync          mClockSync;
     communication::ChannelManager mChannelManager;
@@ -125,11 +133,15 @@ private:
     ocispec::OCISpec                           mJsonOciSpec;
     provisionmanager::ProvisionManagerCallback mProvisionManagerCallback;
     resourcemanager::HostDeviceManager         mHostDeviceManager;
-    resourcemanager::HostGroupManager          mHostGroupManager;
     resourcemanager::JSONProvider              mResourceManagerJSONProvider;
     runner::Runner                             mRunner;
     smclient::SMClient                         mSMClient;
     storage::Storage                           mStorage;
+    launcher::Runtime                          mRuntime;
+
+    spaceallocator::SpaceAllocator<cMaxNumServices> mServiceSpaceAllocator;
+    spaceallocator::SpaceAllocator<cMaxNumLayers>   mDownloadSpaceAllocator;
+    image::ImageHandler                             mImageHandler;
 };
 
 } // namespace aos::zephyr::app
