@@ -44,70 +44,99 @@ Error Storage::Init()
     return ErrorEnum::eNone;
 }
 
-Error Storage::AddInstance(const aos::InstanceInfo& instance)
+Error Storage::AddInstance(const sm::launcher::InstanceData& instance)
 {
     LockGuard lock(mMutex);
 
-    LOG_DBG() << "Add instance: " << instance.mInstanceIdent;
+    LOG_DBG() << "Add instance: id=" << instance.mInstanceID;
 
-    auto storageInstance = ConvertInstanceInfo(instance);
+    auto storageInstance = ConvertInstanceData(instance);
 
     return mInstanceDatabase.Add(
-        *storageInstance, [](const Storage::InstanceInfo& storedInstance, const Storage::InstanceInfo& addedInstance) {
-            return storedInstance.mInstanceIdent == addedInstance.mInstanceIdent;
+        *storageInstance, [](const Storage::InstanceData& storedInstance, const Storage::InstanceData& addedInstance) {
+            return strcmp(storedInstance.mInstanceID, addedInstance.mInstanceID) == 0;
         });
 }
 
-Error Storage::UpdateInstance(const aos::InstanceInfo& instance)
+Error Storage::UpdateInstance(const sm::launcher::InstanceData& instance)
 {
     LockGuard lock(mMutex);
 
-    LOG_DBG() << "Update instance: " << instance.mInstanceIdent;
+    LOG_DBG() << "Update instance: id=" << instance.mInstanceID;
 
-    auto storageInstance = ConvertInstanceInfo(instance);
+    auto storageInstance = ConvertInstanceData(instance);
 
-    return mInstanceDatabase.Update(*storageInstance, [&instance](const Storage::InstanceInfo& data) {
-        return data.mInstanceIdent.mInstance == instance.mInstanceIdent.mInstance
-            && data.mInstanceIdent.mSubjectID == instance.mInstanceIdent.mSubjectID
-            && data.mInstanceIdent.mServiceID == instance.mInstanceIdent.mServiceID;
-    });
+    return mInstanceDatabase.Update(*storageInstance,
+        [&instance](const Storage::InstanceData& data) { return data.mInstanceID == instance.mInstanceID; });
 
     return ErrorEnum::eNone;
 }
 
-Error Storage::RemoveInstance(const aos::InstanceIdent& instanceIdent)
+Error Storage::RemoveInstance(const String& instanceID)
 {
     LockGuard lock(mMutex);
 
-    LOG_DBG() << "Remove instance: " << instanceIdent;
+    LOG_DBG() << "Remove instance: id=" << instanceID;
 
-    return mInstanceDatabase.Remove([&instanceIdent](const Storage::InstanceInfo& data) {
-        return data.mInstanceIdent.mInstance == instanceIdent.mInstance
-            && data.mInstanceIdent.mSubjectID == instanceIdent.mSubjectID
-            && data.mInstanceIdent.mServiceID == instanceIdent.mServiceID;
-    });
-
-    return ErrorEnum::eNone;
+    return mInstanceDatabase.Remove(
+        [&instanceID](const Storage::InstanceData& data) { return data.mInstanceID == instanceID; });
 }
 
-Error Storage::GetAllInstances(Array<aos::InstanceInfo>& instances)
+Error Storage::GetAllInstances(Array<sm::launcher::InstanceData>& instances)
 {
     LockGuard lock(mMutex);
 
     LOG_DBG() << "Get all instances";
 
-    auto err = mInstanceDatabase.ReadRecords([&instances, this](const Storage::InstanceInfo& instanceInfo) -> Error {
-        auto instance = ConvertInstanceInfo(instanceInfo);
+    return mInstanceDatabase.ReadRecords([&instances, this](const Storage::InstanceData& storageInstance) -> Error {
+        if (auto err = instances.EmplaceBack(); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
 
-        auto err = instances.PushBack(*instance);
-        if (!err.IsNone()) {
+        if (auto err = ConvertInstanceData(storageInstance, instances.Back()); !err.IsNone()) {
             return AOS_ERROR_WRAP(err);
         }
 
         return ErrorEnum::eNone;
     });
+}
 
-    return err;
+RetWithError<uint64_t> Storage::GetOperationVersion() const
+{
+    return 0;
+}
+
+Error Storage::SetOperationVersion(uint64_t version)
+{
+    (void)version;
+
+    return ErrorEnum::eNone;
+}
+
+Error Storage::GetOverrideEnvVars(Array<cloudprotocol::EnvVarsInstanceInfo>& envVarsInstanceInfos) const
+{
+    (void)envVarsInstanceInfos;
+
+    return ErrorEnum::eNone;
+}
+
+Error Storage::SetOverrideEnvVars(const Array<cloudprotocol::EnvVarsInstanceInfo>& envVarsInstanceInfos)
+{
+    (void)envVarsInstanceInfos;
+
+    return ErrorEnum::eNone;
+};
+
+RetWithError<Time> Storage::GetOnlineTime() const
+{
+    return Time::Now();
+}
+
+Error Storage::SetOnlineTime(const Time& time)
+{
+    (void)time;
+
+    return ErrorEnum::eNone;
 }
 
 Error Storage::AddService(const sm::servicemanager::ServiceData& service)
@@ -279,76 +308,43 @@ Error Storage::GetCertInfo(const Array<uint8_t>& issuer, const Array<uint8_t>& s
     return ErrorEnum::eNone;
 }
 
-RetWithError<uint64_t> Storage::GetOperationVersion() const
-{
-    return RetWithError<uint64_t>(0);
-}
-
-Error Storage::SetOperationVersion(uint64_t version)
-{
-    (void)version;
-
-    return ErrorEnum::eNone;
-}
-
-Error Storage::GetOverrideEnvVars(cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) const
-{
-    (void)envVarsInstanceInfos;
-
-    return ErrorEnum::eNone;
-}
-
-Error Storage::SetOverrideEnvVars(const cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos)
-{
-    (void)envVarsInstanceInfos;
-
-    return ErrorEnum::eNone;
-}
-
-RetWithError<Time> Storage::GetOnlineTime() const
-{
-    return RetWithError<Time>(Time::Now());
-}
-
-Error Storage::SetOnlineTime(const Time& time)
-{
-    (void)time;
-
-    return ErrorEnum::eNone;
-}
-
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-UniquePtr<Storage::InstanceInfo> Storage::ConvertInstanceInfo(const aos::InstanceInfo& instance)
+UniquePtr<Storage::InstanceData> Storage::ConvertInstanceData(const sm::launcher::InstanceData& instance)
 {
-    UniquePtr<Storage::InstanceInfo> instanceInfo = MakeUnique<Storage::InstanceInfo>(&mAllocator);
+    auto instanceInfo = MakeUnique<Storage::InstanceData>(&mAllocator);
 
-    instanceInfo->mInstanceIdent.mInstance = instance.mInstanceIdent.mInstance;
-    strcpy(instanceInfo->mInstanceIdent.mSubjectID, instance.mInstanceIdent.mSubjectID.CStr());
-    strcpy(instanceInfo->mInstanceIdent.mServiceID, instance.mInstanceIdent.mServiceID.CStr());
-    instanceInfo->mPriority = instance.mPriority;
-    strcpy(instanceInfo->mStatePath, instance.mStatePath.CStr());
-    strcpy(instanceInfo->mStoragePath, instance.mStoragePath.CStr());
-    instanceInfo->mUID = instance.mUID;
+    strcpy(instanceInfo->mInstanceID, instance.mInstanceID.CStr());
+
+    instanceInfo->mInstanceIdent.mInstance = instance.mInstanceInfo.mInstanceIdent.mInstance;
+    strcpy(instanceInfo->mInstanceIdent.mSubjectID, instance.mInstanceInfo.mInstanceIdent.mSubjectID.CStr());
+    strcpy(instanceInfo->mInstanceIdent.mServiceID, instance.mInstanceInfo.mInstanceIdent.mServiceID.CStr());
+
+    instanceInfo->mPriority = instance.mInstanceInfo.mPriority;
+    strcpy(instanceInfo->mStatePath, instance.mInstanceInfo.mStatePath.CStr());
+    strcpy(instanceInfo->mStoragePath, instance.mInstanceInfo.mStoragePath.CStr());
+    instanceInfo->mUID = instance.mInstanceInfo.mUID;
 
     return instanceInfo;
 }
 
-UniquePtr<aos::InstanceInfo> Storage::ConvertInstanceInfo(const Storage::InstanceInfo& instance)
+Error Storage::ConvertInstanceData(const Storage::InstanceData& dbInstance, sm::launcher::InstanceData& outInstance)
 {
-    UniquePtr<aos::InstanceInfo> instanceInfo = MakeUnique<aos::InstanceInfo>(&mAllocator);
+    if (auto err = outInstance.mInstanceID.Assign(dbInstance.mInstanceID); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
 
-    instanceInfo->mInstanceIdent.mInstance  = instance.mInstanceIdent.mInstance;
-    instanceInfo->mInstanceIdent.mSubjectID = instance.mInstanceIdent.mSubjectID;
-    instanceInfo->mInstanceIdent.mServiceID = instance.mInstanceIdent.mServiceID;
-    instanceInfo->mPriority                 = instance.mPriority;
-    instanceInfo->mStatePath                = instance.mStatePath;
-    instanceInfo->mStoragePath              = instance.mStoragePath;
-    instanceInfo->mUID                      = instance.mUID;
+    outInstance.mInstanceInfo.mInstanceIdent.mInstance  = dbInstance.mInstanceIdent.mInstance;
+    outInstance.mInstanceInfo.mInstanceIdent.mSubjectID = dbInstance.mInstanceIdent.mSubjectID;
+    outInstance.mInstanceInfo.mInstanceIdent.mServiceID = dbInstance.mInstanceIdent.mServiceID;
+    outInstance.mInstanceInfo.mPriority                 = dbInstance.mPriority;
+    outInstance.mInstanceInfo.mStatePath                = dbInstance.mStatePath;
+    outInstance.mInstanceInfo.mStoragePath              = dbInstance.mStoragePath;
+    outInstance.mInstanceInfo.mUID                      = dbInstance.mUID;
 
-    return instanceInfo;
+    return ErrorEnum::eNone;
 }
 
 UniquePtr<Storage::ServiceData> Storage::ConvertServiceData(const sm::servicemanager::ServiceData& service)
