@@ -390,7 +390,7 @@ Error IAMClient::CheckNodeIDAndStatus(const String& nodeID, const Array<NodeStat
         return Error(ErrorEnum::eInvalidArgument, "wrong node ID");
     }
 
-    if (auto [_, err] = expectedStatuses.Find(mNodeInfo.mStatus); !err.IsNone()) {
+    if (auto it = expectedStatuses.Find(mNodeInfo.mStatus); it == expectedStatuses.end()) {
         return Error(ErrorEnum::eWrongState, "wrong node status");
     }
 
