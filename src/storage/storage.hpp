@@ -37,7 +37,7 @@ public:
      * @param instance instance to add.
      * @return Error.
      */
-    Error AddInstance(const aos::InstanceInfo& instance) override;
+    Error AddInstance(const sm::launcher::InstanceData& instance) override;
 
     /**
      * Updates previously stored instance.
@@ -45,7 +45,7 @@ public:
      * @param instance instance to update.
      * @return Error.
      */
-    Error UpdateInstance(const aos::InstanceInfo& instance) override;
+    Error UpdateInstance(const sm::launcher::InstanceData& instance) override;
 
     /**
      * Removes previously stored instance.
@@ -53,7 +53,7 @@ public:
      * @param instanceID instance ID to remove.
      * @return Error.
      */
-    Error RemoveInstance(const aos::InstanceIdent& instanceIdent) override;
+    Error RemoveInstance(const String& instanceID) override;
 
     /**
      * Returns all stored instances.
@@ -61,7 +61,53 @@ public:
      * @param instances array to return stored instances.
      * @return Error.
      */
-    Error GetAllInstances(Array<aos::InstanceInfo>& instances) override;
+    Error GetAllInstances(Array<sm::launcher::InstanceData>& instances) override;
+
+    /**
+     * Returns operation version.
+     *
+     * @return RetWithError<uint64_t>.
+     */
+    RetWithError<uint64_t> GetOperationVersion() const override;
+
+    /**
+     * Sets operation version.
+     *
+     * @param version operation version.
+     * @return Error.
+     */
+    Error SetOperationVersion(uint64_t version) override;
+
+    /**
+     * Returns instances's override environment variables array.
+     *
+     * @param envVarsInstanceInfos[out] instances's override environment variables array.
+     * @return Error.
+     */
+    Error GetOverrideEnvVars(Array<cloudprotocol::EnvVarsInstanceInfo>& envVarsInstanceInfos) const override;
+
+    /**
+     * Sets instances's override environment variables array.
+     *
+     * @param envVarsInstanceInfos instances's override environment variables array.
+     * @return Error.
+     */
+    Error SetOverrideEnvVars(const Array<cloudprotocol::EnvVarsInstanceInfo>& envVarsInstanceInfos) override;
+
+    /**
+     * Returns online time.
+     *
+     * @return RetWithError<Time>.
+     */
+    RetWithError<Time> GetOnlineTime() const override;
+
+    /**
+     * Sets online time.
+     *
+     * @param time online time.
+     * @return Error.
+     */
+    Error SetOnlineTime(const Time& time) override;
 
     /**
      * Adds new service to storage.
@@ -150,52 +196,6 @@ public:
      */
     Error RemoveAllCertsInfo(const String& certType) override;
 
-    /**
-     * Returns operation version.
-     *
-     * @return RetWithError<uint64_t>.
-     */
-    RetWithError<uint64_t> GetOperationVersion() const override;
-
-    /**
-     * Sets operation version.
-     *
-     * @param version operation version.
-     * @return Error.
-     */
-    Error SetOperationVersion(uint64_t version) override;
-
-    /**
-     * Returns instances's override environment variables array.
-     *
-     * @param envVarsInstanceInfos[out] instances's override environment variables array.
-     * @return Error.
-     */
-    Error GetOverrideEnvVars(cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) const override;
-
-    /**
-     * Sets instances's override environment variables array.
-     *
-     * @param envVarsInstanceInfos instances's override environment variables array.
-     * @return Error.
-     */
-    Error SetOverrideEnvVars(const cloudprotocol::EnvVarsInstanceInfoArray& envVarsInstanceInfos) override;
-
-    /**
-     * Returns online time.
-     *
-     * @return RetWithError<Time>.
-     */
-    RetWithError<Time> GetOnlineTime() const override;
-
-    /**
-     * Sets online time.
-     *
-     * @param time online time.
-     * @return Error.
-     */
-    Error SetOnlineTime(const Time& time) override;
-
 private:
     constexpr static auto cStoragePath = CONFIG_AOS_STORAGE_DIR;
 
@@ -217,7 +217,8 @@ private:
         }
     };
 
-    struct InstanceInfo {
+    struct InstanceData {
+        char                   mInstanceID[cInstanceIDLen + 1];
         Storage::InstanceIdent mInstanceIdent;
         uint32_t               mUID;
         uint64_t               mPriority;
@@ -225,15 +226,16 @@ private:
         char                   mStatePath[cFilePathLen + 1];
 
         /**
-         * Compares instance info.
+         * Compares instance data.
          *
-         * @param instance info to compare.
+         * @param instance instance to compare.
          * @return bool.
          */
-        bool operator==(const InstanceInfo& rhs) const
+        bool operator==(const InstanceData& rhs) const
         {
-            return mInstanceIdent == rhs.mInstanceIdent && mPriority == rhs.mPriority && mUID == rhs.mUID
-                && strcmp(mStoragePath, rhs.mStoragePath) == 0 && strcmp(mStatePath, rhs.mStatePath) == 0;
+            return strcmp(mInstanceID, rhs.mInstanceID) == 0 && mInstanceIdent == rhs.mInstanceIdent
+                && mPriority == rhs.mPriority && mUID == rhs.mUID && strcmp(mStoragePath, rhs.mStoragePath) == 0
+                && strcmp(mStatePath, rhs.mStatePath) == 0;
         }
     };
 
@@ -282,19 +284,20 @@ private:
         }
     };
 
-    UniquePtr<Storage::InstanceInfo>           ConvertInstanceInfo(const aos::InstanceInfo& instance);
-    UniquePtr<aos::InstanceInfo>               ConvertInstanceInfo(const Storage::InstanceInfo& instance);
+    UniquePtr<Storage::InstanceData> ConvertInstanceData(const sm::launcher::InstanceData& instance);
+    Error ConvertInstanceData(const Storage::InstanceData& dbInstance, sm::launcher::InstanceData& outInstance);
+
     UniquePtr<Storage::ServiceData>            ConvertServiceData(const sm::servicemanager::ServiceData& service);
     UniquePtr<sm::servicemanager::ServiceData> ConvertServiceData(const Storage::ServiceData& service);
     UniquePtr<Storage::CertInfo> ConvertCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo);
     UniquePtr<iam::certhandler::CertInfo> ConvertCertInfo(const Storage::CertInfo& certInfo);
 
-    FileStorage<Storage::InstanceInfo> mInstanceDatabase;
+    FileStorage<Storage::InstanceData> mInstanceDatabase;
     FileStorage<Storage::ServiceData>  mServiceDatabase;
     FileStorage<Storage::CertInfo>     mCertDatabase;
     Mutex                              mMutex;
 
-    StaticAllocator<Max(sizeof(Storage::InstanceInfo), sizeof(aos::InstanceInfo))
+    StaticAllocator<Max(sizeof(Storage::InstanceData), sizeof(sm::launcher::InstanceData))
         + Max(sizeof(Storage::ServiceData), sizeof(sm::servicemanager::ServiceData))
         + Max(sizeof(Storage::CertInfo), sizeof(iam::certhandler::CertInfo))>
         mAllocator;
