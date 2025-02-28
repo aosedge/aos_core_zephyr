@@ -35,6 +35,10 @@ config AOS_RUNTIME_DIR
 	string "Aos runtime dir"
 	default "/tmp/aos/runtime"
 
+config AOS_DOWNLOAD_DIR
+	string "Aos download dir"
+	default "/lfs/aos/download"
+
 config AOS_SERVICES_DIR
 	string "Aos services dir"
 	default "/lfs/aos/services"
