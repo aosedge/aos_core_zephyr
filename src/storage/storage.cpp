@@ -154,16 +154,42 @@ Error Storage::AddService(const sm::servicemanager::ServiceData& service)
         });
 }
 
+Error Storage::GetServiceVersions(const String& serviceID, Array<sm::servicemanager::ServiceData>& services)
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get service versions: id=" << serviceID;
+
+    return mServiceDatabase.ReadRecords(
+        [&services, &serviceID, this](const Storage::ServiceData& storageService) -> Error {
+            if (storageService.mServiceID != serviceID) {
+                return ErrorEnum::eNone;
+            }
+
+            if (auto err = services.EmplaceBack(); !err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
+
+            if (auto err = ConvertServiceData(storageService, services.Back()); !err.IsNone()) {
+                return AOS_ERROR_WRAP(err);
+            }
+
+            return ErrorEnum::eNone;
+        });
+}
+
 Error Storage::UpdateService(const sm::servicemanager::ServiceData& service)
 {
     LockGuard lock(mMutex);
 
-    LOG_DBG() << "Update service: " << service.mServiceID;
+    LOG_DBG() << "Update service: id=" << service.mServiceID << ", version=" << service.mVersion
+              << ", state=" << service.mState;
 
     auto storageService = ConvertServiceData(service);
 
-    return mServiceDatabase.Update(*storageService,
-        [&service](const Storage::ServiceData& data) { return data.mServiceID == service.mServiceID; });
+    return mServiceDatabase.Update(*storageService, [&service](const Storage::ServiceData& data) {
+        return data.mServiceID == service.mServiceID && data.mVersion == service.mVersion;
+    });
 }
 
 Error Storage::RemoveService(const String& serviceID, const String& version)
@@ -183,38 +209,17 @@ Error Storage::GetAllServices(Array<sm::servicemanager::ServiceData>& services)
 
     LOG_DBG() << "Get all services";
 
-    auto err = mServiceDatabase.ReadRecords([&services, this](const Storage::ServiceData& serviceData) -> Error {
-        auto service = ConvertServiceData(serviceData);
+    return mServiceDatabase.ReadRecords([&services, this](const Storage::ServiceData& storageData) -> Error {
+        if (auto err = services.EmplaceBack(); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
 
-        auto err = services.PushBack(*service);
-        if (!err.IsNone()) {
+        if (auto err = ConvertServiceData(storageData, services.Back()); !err.IsNone()) {
             return AOS_ERROR_WRAP(err);
         }
 
         return ErrorEnum::eNone;
     });
-
-    return err;
-}
-
-RetWithError<sm::servicemanager::ServiceData> Storage::GetService(const String& serviceID)
-{
-    LockGuard lock(mMutex);
-
-    LOG_DBG() << "Get service: " << serviceID;
-
-    UniquePtr<Storage::ServiceData> serviceData = MakeUnique<Storage::ServiceData>(&mAllocator);
-
-    auto err = mServiceDatabase.ReadRecordByFilter(
-        *serviceData, [&serviceID](const Storage::ServiceData data) { return data.mServiceID == serviceID; });
-
-    if (!err.IsNone()) {
-        return RetWithError<sm::servicemanager::ServiceData>(sm::servicemanager::ServiceData {}, err);
-    }
-
-    auto retServiceData = ConvertServiceData(*serviceData);
-
-    return RetWithError<sm::servicemanager::ServiceData>(*retServiceData);
 }
 
 Error Storage::AddCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo)
@@ -349,28 +354,38 @@ Error Storage::ConvertInstanceData(const Storage::InstanceData& dbInstance, sm::
 
 UniquePtr<Storage::ServiceData> Storage::ConvertServiceData(const sm::servicemanager::ServiceData& service)
 {
-    UniquePtr<ServiceData> serviceData = MakeUnique<ServiceData>(&mAllocator);
+    auto serviceData = MakeUnique<ServiceData>(&mAllocator);
 
     strcpy(serviceData->mServiceID, service.mServiceID.CStr());
     strcpy(serviceData->mProviderID, service.mProviderID.CStr());
     strcpy(serviceData->mVersion, service.mVersion.CStr());
     strcpy(serviceData->mImagePath, service.mImagePath.CStr());
+    strcpy(serviceData->mManifestDigest, service.mManifestDigest.CStr());
+    serviceData->mTimestamp = service.mTimestamp.UnixTime();
+    strcpy(serviceData->mState, service.mState.ToString().CStr());
+    serviceData->mSize = service.mSize;
+    serviceData->mGID  = service.mGID;
 
     return serviceData;
 }
 
-UniquePtr<sm::servicemanager::ServiceData> Storage::ConvertServiceData(const Storage::ServiceData& service)
+Error Storage::ConvertServiceData(
+    const Storage::ServiceData& storageService, sm::servicemanager::ServiceData& outService)
 {
-    UniquePtr<sm::servicemanager::ServiceData> serviceData = MakeUnique<sm::servicemanager::ServiceData>(&mAllocator);
+    outService.mServiceID      = storageService.mServiceID;
+    outService.mProviderID     = storageService.mProviderID;
+    outService.mVersion        = storageService.mVersion;
+    outService.mImagePath      = storageService.mImagePath;
+    outService.mManifestDigest = storageService.mManifestDigest;
+    outService.mTimestamp      = Time::Unix(storageService.mTimestamp.tv_sec, storageService.mTimestamp.tv_nsec);
+    outService.mSize           = storageService.mSize;
+    outService.mGID            = storageService.mGID;
 
-    *serviceData = sm::servicemanager::ServiceData {};
+    if (auto err = outService.mState.FromString(storageService.mState); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
 
-    serviceData->mServiceID  = service.mServiceID;
-    serviceData->mProviderID = service.mProviderID;
-    serviceData->mVersion    = service.mVersion;
-    serviceData->mImagePath  = service.mImagePath;
-
-    return serviceData;
+    return ErrorEnum::eNone;
 }
 
 UniquePtr<Storage::CertInfo> Storage::ConvertCertInfo(

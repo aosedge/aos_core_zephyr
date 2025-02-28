@@ -118,6 +118,15 @@ public:
     Error AddService(const sm::servicemanager::ServiceData& service) override;
 
     /**
+     * Returns service versions by service ID.
+     *
+     * @param serviceID service ID.
+     * @param services[out] service version for the given id.
+     * @return Error.
+     */
+    Error GetServiceVersions(const String& serviceID, Array<sm::servicemanager::ServiceData>& services) override;
+
+    /**
      * Updates previously stored service.
      *
      * @param service service to update.
@@ -129,7 +138,7 @@ public:
      * Removes previously stored service.
      *
      * @param serviceID service ID to remove.
-     * @param aosVersion Aos service version.
+     * @param version Aos service version.
      * @return Error.
      */
     Error RemoveService(const String& serviceID, const String& version) override;
@@ -141,14 +150,6 @@ public:
      * @return Error.
      */
     Error GetAllServices(Array<sm::servicemanager::ServiceData>& services) override;
-
-    /**
-     * Returns service data by service ID.
-     *
-     * @param serviceID service ID.
-     * @return  RetWithError<ServiceData>.
-     */
-    RetWithError<sm::servicemanager::ServiceData> GetService(const String& serviceID) override;
 
     /**
      * Adds new certificate info to the storage.
@@ -240,10 +241,15 @@ private:
     };
 
     struct ServiceData {
-        char mServiceID[cServiceIDLen + 1];
-        char mProviderID[cProviderIDLen + 1];
-        char mVersion[cVersionLen + 1];
-        char mImagePath[cFilePathLen + 1];
+        char     mServiceID[cServiceIDLen + 1];
+        char     mProviderID[cProviderIDLen + 1];
+        char     mVersion[cVersionLen + 1];
+        char     mImagePath[cFilePathLen + 1];
+        char     mManifestDigest[oci::cMaxDigestLen + 1];
+        timespec mTimestamp;
+        char     mState[32];
+        uint64_t mSize;
+        uint32_t mGID;
 
         /**
          * Compares service data.
@@ -254,7 +260,10 @@ private:
         bool operator==(const ServiceData& rhs) const
         {
             return strcmp(mServiceID, rhs.mServiceID) == 0 && strcmp(mProviderID, rhs.mProviderID) == 0
-                && strcmp(mVersion, rhs.mVersion) == 0 && strcmp(mImagePath, rhs.mImagePath) == 0;
+                && strcmp(mVersion, rhs.mVersion) == 0 && strcmp(mImagePath, rhs.mImagePath) == 0
+                && strcmp(mManifestDigest, rhs.mManifestDigest) == 0 && mTimestamp.tv_sec == rhs.mTimestamp.tv_sec
+                && mTimestamp.tv_nsec == rhs.mTimestamp.tv_nsec && strcmp(mState, rhs.mState) == 0 && mSize == rhs.mSize
+                && mGID == rhs.mGID;
         }
     };
 
@@ -286,9 +295,8 @@ private:
 
     UniquePtr<Storage::InstanceData> ConvertInstanceData(const sm::launcher::InstanceData& instance);
     Error ConvertInstanceData(const Storage::InstanceData& dbInstance, sm::launcher::InstanceData& outInstance);
-
-    UniquePtr<Storage::ServiceData>            ConvertServiceData(const sm::servicemanager::ServiceData& service);
-    UniquePtr<sm::servicemanager::ServiceData> ConvertServiceData(const Storage::ServiceData& service);
+    UniquePtr<Storage::ServiceData> ConvertServiceData(const sm::servicemanager::ServiceData& service);
+    Error ConvertServiceData(const Storage::ServiceData& storageService, sm::servicemanager::ServiceData& outService);
     UniquePtr<Storage::CertInfo> ConvertCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo);
     UniquePtr<iam::certhandler::CertInfo> ConvertCertInfo(const Storage::CertInfo& certInfo);
 
