@@ -8,6 +8,7 @@
 #ifndef SMCLIENT_HPP_
 #define SMCLIENT_HPP_
 
+#include <aos/common/alerts/alerts.hpp>
 #include <aos/common/connectionsubsc.hpp>
 #include <aos/common/monitoring/monitoring.hpp>
 #include <aos/iam/certhandler.hpp>
@@ -37,6 +38,7 @@ class SMClient : public communication::PBHandler<servicemanager_v4_SMIncomingMes
                  public ConnectionPublisherItf,
                  public clocksync::ClockSyncSenderItf,
                  public clocksync::ClockSyncSubscriberItf,
+                 public aos::alerts::SenderItf,
                  private aos::iam::certhandler::CertReceiverItf,
                  private NonCopyable {
 public:
@@ -157,6 +159,14 @@ public:
      * @param info certificate info.
      */
     void OnCertChanged(const aos::iam::certhandler::CertInfo& info) override;
+
+    /**
+     * Sends alert data.
+     *
+     * @param alert alert variant.
+     * @return Error.
+     */
+    Error SendAlert(const cloudprotocol::AlertVariant& alert) override;
 
 private:
     static constexpr auto cOpenPort                 = CONFIG_AOS_SM_OPEN_PORT;
