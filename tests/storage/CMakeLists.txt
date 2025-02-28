@@ -32,4 +32,7 @@ zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp ../utils/log.cpp ../../src/storage/storage.cpp ../../src/utils/checksum.cpp)
+target_sources(
+    app PRIVATE src/main.cpp ../utils/log.cpp ../../src/storage/storage.cpp ../../src/utils/checksum.cpp
+                ../../src/utils/utils.cpp
+)
