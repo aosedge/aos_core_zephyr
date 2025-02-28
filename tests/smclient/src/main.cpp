@@ -25,7 +25,7 @@
 #include "utils/pbmessages.hpp"
 #include "utils/utils.hpp"
 
-using namespace aos::zephyr;
+namespace aos::zephyr {
 
 /***********************************************************************************************************************
  * Consts
@@ -52,20 +52,21 @@ struct smclient_fixture {
  * Static
  **********************************************************************************************************************/
 
-static aos::Error ReceiveSMOutgoingMessage(ChannelStub* channel, servicemanager_v4_SMOutgoingMessages& message)
+namespace {
+
+Error ReceiveSMOutgoingMessage(ChannelStub* channel, servicemanager_v4_SMOutgoingMessages& message)
 {
     return ReceivePBMessage(channel, cWaitTimeout, &message, servicemanager_v4_SMOutgoingMessages_size,
         &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
-static aos::Error SendSMIncomingMessage(ChannelStub* channel, const servicemanager_v4_SMIncomingMessages& message)
+Error SendSMIncomingMessage(ChannelStub* channel, const servicemanager_v4_SMIncomingMessages& message)
 {
     return SendPBMessage(
         channel, &message, servicemanager_v4_SMIncomingMessages_size, &servicemanager_v4_SMIncomingMessages_msg);
 }
 
-static void ReceiveNodeConfigStatus(
-    ChannelStub* channel, const aos::NodeInfo& nodeInfo, const aos::String& nodeConfigVersion)
+void ReceiveNodeConfigStatus(ChannelStub* channel, const NodeInfo& nodeInfo, const String& nodeConfigVersion)
 {
     servicemanager_v4_SMOutgoingMessages outgoingMessage;
     auto&                                pbNodeConfigStatus = outgoingMessage.SMOutgoingMessage.node_config_status;
@@ -83,8 +84,8 @@ static void ReceiveNodeConfigStatus(
     zassert_equal(pbNodeConfigStatus.version, nodeConfigVersion, "Wrong node config version");
 }
 
-static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, uint32_t port,
-    const aos::NodeInfo& nodeInfo = {}, const aos::String& nodeConfigVersion = "1.0.0")
+RetWithError<ChannelStub*> InitSMClient(
+    smclient_fixture* fixture, uint32_t port, const NodeInfo& nodeInfo = {}, const String& nodeConfigVersion = "1.0.0")
 {
     fixture->mNodeInfoProvider.SetNodeInfo(nodeInfo);
     fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
@@ -110,8 +111,7 @@ static aos::RetWithError<ChannelStub*> InitSMClient(smclient_fixture* fixture, u
     return channel;
 }
 
-static void PBToMonitoringData(
-    const servicemanager_v4_MonitoringData& pbMonitoring, aos::monitoring::MonitoringData& aosMonitoring)
+void PBToMonitoringData(const servicemanager_v4_MonitoringData& pbMonitoring, monitoring::MonitoringData& aosMonitoring)
 {
     aosMonitoring.mRAM = pbMonitoring.ram;
     aosMonitoring.mCPU = pbMonitoring.cpu;
@@ -127,11 +127,11 @@ static void PBToMonitoringData(
 }
 
 template <typename T>
-static void PBToNodeMonitoring(const T& pbNodeMonitoring, aos::monitoring::NodeMonitoringData& nodeMonitoring)
+void PBToNodeMonitoring(const T& pbNodeMonitoring, monitoring::NodeMonitoringData& nodeMonitoring)
 {
     if (pbNodeMonitoring.has_node_monitoring) {
         if (pbNodeMonitoring.node_monitoring.has_timestamp) {
-            nodeMonitoring.mTimestamp = aos::Time::Unix(
+            nodeMonitoring.mTimestamp = Time::Unix(
                 pbNodeMonitoring.node_monitoring.timestamp.seconds, pbNodeMonitoring.node_monitoring.timestamp.nanos);
         }
 
@@ -148,7 +148,7 @@ static void PBToNodeMonitoring(const T& pbNodeMonitoring, aos::monitoring::NodeM
     }
 }
 
-static void PBToInstanceStatus(const servicemanager_v4_InstanceStatus& pbInstance, aos::InstanceStatus& aosInstance)
+void PBToInstanceStatus(const servicemanager_v4_InstanceStatus& pbInstance, InstanceStatus& aosInstance)
 {
     if (pbInstance.has_instance) {
         utils::PBToInstanceIdent(pbInstance.instance, aosInstance.mInstanceIdent);
@@ -163,86 +163,86 @@ static void PBToInstanceStatus(const servicemanager_v4_InstanceStatus& pbInstanc
         if (pbInstance.error_info.exit_code) {
             aosInstance.mError = pbInstance.error_info.exit_code;
         } else {
-            aosInstance.mError = static_cast<aos::ErrorEnum>(pbInstance.error_info.aos_code);
+            aosInstance.mError = static_cast<ErrorEnum>(pbInstance.error_info.aos_code);
         }
     }
 }
 
-static void GenerateNodeMonitoring(aos::monitoring::NodeMonitoringData& nodeMonitoring)
+void GenerateNodeMonitoring(monitoring::NodeMonitoringData& nodeMonitoring)
 {
-    aos::PartitionInfo nodeDisks[]     = {{.mName = "disk1", .mUsedSize = 512}, {.mName = "disk2", .mUsedSize = 1024}};
-    aos::PartitionInfo instanceDisks[] = {{.mName = "disk3", .mUsedSize = 2048}};
+    PartitionInfo nodeDisks[]     = {{.mName = "disk1", .mUsedSize = 512}, {.mName = "disk2", .mUsedSize = 1024}};
+    PartitionInfo instanceDisks[] = {{.mName = "disk3", .mUsedSize = 2048}};
 
-    aos::monitoring::InstanceMonitoringData instancesData[] = {
+    monitoring::InstanceMonitoringData instancesData[] = {
         {{"service1", "subject1", 1},
-            {2000, 34423, aos::Array<aos::PartitionInfo>(instanceDisks, aos::ArraySize(instanceDisks)), 342, 432}},
+            {2000, 34423, Array<PartitionInfo>(instanceDisks, ArraySize(instanceDisks)), 342, 432}},
         {{"service2", "subject2", 2},
-            {3000, 54344, aos::Array<aos::PartitionInfo>(instanceDisks, aos::ArraySize(instanceDisks)), 432, 321}},
+            {3000, 54344, Array<PartitionInfo>(instanceDisks, ArraySize(instanceDisks)), 432, 321}},
         {{"service3", "subject3", 3},
-            {4000, 90995, aos::Array<aos::PartitionInfo>(instanceDisks, aos::ArraySize(instanceDisks)), 594, 312}},
+            {4000, 90995, Array<PartitionInfo>(instanceDisks, ArraySize(instanceDisks)), 594, 312}},
     };
 
-    nodeMonitoring.mTimestamp = aos::Time::Now();
-    nodeMonitoring.mMonitoringData
-        = {1000, 2048, aos::Array<aos::PartitionInfo>(nodeDisks, aos::ArraySize(nodeDisks)), 4, 5};
+    nodeMonitoring.mTimestamp      = Time::Now();
+    nodeMonitoring.mMonitoringData = {1000, 2048, Array<PartitionInfo>(nodeDisks, ArraySize(nodeDisks)), 4, 5};
     nodeMonitoring.mServiceInstances
-        = aos::Array<aos::monitoring::InstanceMonitoringData>(instancesData, aos::ArraySize(instancesData));
+        = Array<monitoring::InstanceMonitoringData>(instancesData, ArraySize(instancesData));
 }
 
-static void GenerateServicesInfo(aos::Array<aos::ServiceInfo>& services)
+void GenerateServicesInfo(Array<ServiceInfo>& services)
 {
     uint8_t sha256[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    services.EmplaceBack(aos::ServiceInfo {
-        "service1", "provider1", "1.0.0", 1, "service1 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 312});
-    services.EmplaceBack(aos::ServiceInfo {
-        "service2", "provider2", "2.0.0", 2, "service2 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 512});
+    services.EmplaceBack(
+        ServiceInfo {"service1", "provider1", "1.0.0", 1, "service1 URL", Array<uint8_t>(sha256, sizeof(sha256)), 312});
+    services.EmplaceBack(
+        ServiceInfo {"service2", "provider2", "2.0.0", 2, "service2 URL", Array<uint8_t>(sha256, sizeof(sha256)), 512});
 }
 
-static void GenerateLayersInfo(aos::Array<aos::LayerInfo>& layers)
+void GenerateLayersInfo(Array<LayerInfo>& layers)
 {
     uint8_t sha256[] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
     layers.EmplaceBack(
-        aos::LayerInfo {"layer1", "digest1", "1.0.0", "layer1 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 1024});
+        LayerInfo {"layer1", "digest1", "1.0.0", "layer1 URL", Array<uint8_t>(sha256, sizeof(sha256)), 1024});
     layers.EmplaceBack(
-        aos::LayerInfo {"layer2", "digest2", "2.0.0", "layer2 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 2048});
+        LayerInfo {"layer2", "digest2", "2.0.0", "layer2 URL", Array<uint8_t>(sha256, sizeof(sha256)), 2048});
     layers.EmplaceBack(
-        aos::LayerInfo {"layer3", "digest3", "3.0.0", "layer3 URL", aos::Array<uint8_t>(sha256, sizeof(sha256)), 4096});
+        LayerInfo {"layer3", "digest3", "3.0.0", "layer3 URL", Array<uint8_t>(sha256, sizeof(sha256)), 4096});
 }
 
-static void GenerateInstancesInfo(aos::Array<aos::InstanceInfo>& instances)
+void GenerateInstancesInfo(Array<InstanceInfo>& instances)
 {
-    instances.EmplaceBack(aos::InstanceInfo {{"service1", "subject1", 1}, {}, 1, 1, "storage1", "state1"});
-    instances.EmplaceBack(aos::InstanceInfo {{"service2", "subject2", 2}, {}, 2, 2, "storage2", "state2"});
-    instances.EmplaceBack(aos::InstanceInfo {{"service3", "subject3", 3}, {}, 3, 3, "storage3", "state3"});
-    instances.EmplaceBack(aos::InstanceInfo {{"service4", "subject4", 4}, {}, 4, 4, "storage4", "state4"});
+    instances.EmplaceBack(InstanceInfo {{"service1", "subject1", 1}, 1, 1, "storage1", "state1", {}});
+    instances.EmplaceBack(InstanceInfo {{"service2", "subject2", 2}, 2, 2, "storage2", "state2", {}});
+    instances.EmplaceBack(InstanceInfo {{"service3", "subject3", 3}, 3, 3, "storage3", "state3", {}});
+    instances.EmplaceBack(InstanceInfo {{"service4", "subject4", 4}, 4, 4, "storage4", "state4", {}});
 }
 
-static void GenerateInstancesRunStatus(aos::Array<aos::InstanceStatus>& status)
+void GenerateInstancesRunStatus(Array<InstanceStatus>& status)
 {
-    status.EmplaceBack(aos::InstanceStatus {
-        {"service1", "subject1", 0}, "1.0.0", aos::InstanceRunStateEnum::eActive, aos::ErrorEnum::eNone});
     status.EmplaceBack(
-        aos::InstanceStatus {{"service1", "subject1", 1}, "3.0.0", aos::InstanceRunStateEnum::eFailed, 42});
-    status.EmplaceBack(aos::InstanceStatus {
-        {"service1", "subject1", 2}, "2.0.0", aos::InstanceRunStateEnum::eFailed, aos::ErrorEnum::eRuntime});
+        InstanceStatus {{"service1", "subject1", 0}, "1.0.0", InstanceRunStateEnum::eActive, ErrorEnum::eNone});
+    status.EmplaceBack(InstanceStatus {{"service1", "subject1", 1}, "3.0.0", InstanceRunStateEnum::eFailed, 42});
+    status.EmplaceBack(
+        InstanceStatus {{"service1", "subject1", 2}, "2.0.0", InstanceRunStateEnum::eFailed, ErrorEnum::eRuntime});
 }
 
-static void GenerateImageContentInfo(downloader::ImageContentInfo& contentInfo)
+void GenerateImageContentInfo(downloader::ImageContentInfo& contentInfo)
 
 {
     uint8_t sha256[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
     contentInfo.mRequestID = 42;
     contentInfo.mFiles.EmplaceBack(
-        downloader::FileInfo {"path/to/file1", aos::Array<uint8_t>(sha256, sizeof(sha256)), 1024});
+        downloader::FileInfo {"path/to/file1", Array<uint8_t>(sha256, sizeof(sha256)), 1024});
     contentInfo.mFiles.EmplaceBack(
-        downloader::FileInfo {"path/to/file2", aos::Array<uint8_t>(sha256, sizeof(sha256)), 2048});
+        downloader::FileInfo {"path/to/file2", Array<uint8_t>(sha256, sizeof(sha256)), 2048});
     contentInfo.mFiles.EmplaceBack(
-        downloader::FileInfo {"path/to/file3", aos::Array<uint8_t>(sha256, sizeof(sha256)), 4096});
-    contentInfo.mError = aos::Error(aos::ErrorEnum::eRuntime, "some error");
+        downloader::FileInfo {"path/to/file3", Array<uint8_t>(sha256, sizeof(sha256)), 4096});
+    contentInfo.mError = Error(ErrorEnum::eRuntime, "some error");
 }
+
+} // namespace
 
 /***********************************************************************************************************************
  * Setup
@@ -251,7 +251,7 @@ static void GenerateImageContentInfo(downloader::ImageContentInfo& contentInfo)
 ZTEST_SUITE(
     smclient, nullptr,
     []() -> void* {
-        aos::Log::SetCallback(TestLogCallback);
+        Log::SetCallback(TestLogCallback);
 
         auto fixture = new smclient_fixture;
 
@@ -310,7 +310,7 @@ ZTEST_F(smclient, test_ClockSync)
 
     // Send clock sync
 
-    auto timestamp = aos::Time::Now();
+    auto timestamp = Time::Now();
 
     servicemanager_v4_SMIncomingMessages incomingMessage;
     auto&                                pbClockSync = incomingMessage.SMIncomingMessage.clock_sync;
@@ -335,8 +335,8 @@ ZTEST_F(smclient, test_ClockSync)
 
 ZTEST_F(smclient, test_GetNodeConfigStatus)
 {
-    const auto    nodeConfigVersion = "1.0.0";
-    aos::NodeInfo nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned};
+    const auto nodeConfigVersion = "1.0.0";
+    NodeInfo   nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned};
 
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT, nodeInfo, nodeConfigVersion);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
@@ -359,7 +359,7 @@ ZTEST_F(smclient, test_GetNodeConfigStatus)
 
 ZTEST_F(smclient, test_CheckNodeConfig)
 {
-    aos::NodeInfo nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned};
+    NodeInfo nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned};
 
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT, nodeInfo);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
@@ -385,7 +385,7 @@ ZTEST_F(smclient, test_CheckNodeConfig)
 
 ZTEST_F(smclient, test_SetNodeConfig)
 {
-    aos::NodeInfo nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned};
+    NodeInfo nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned};
 
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT, nodeInfo);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
@@ -407,18 +407,20 @@ ZTEST_F(smclient, test_SetNodeConfig)
     // Receive node config status
 
     ReceiveNodeConfigStatus(channel, nodeInfo, pbSetNodeConfig.version);
-    zassert_equal(fixture->mResourceManager.GetNodeConfig(), pbSetNodeConfig.node_config, "Wrong node config");
+
+    zassert_equal(
+        fixture->mResourceManager.GetNodeConfigString(), String(pbSetNodeConfig.node_config), "Wrong node config");
 }
 
 ZTEST_F(smclient, test_InstantMonitoring)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send node monitoring
 
-    aos::monitoring::NodeMonitoringData sendMonitoring;
+    monitoring::NodeMonitoringData sendMonitoring;
 
     GenerateNodeMonitoring(sendMonitoring);
 
@@ -438,7 +440,7 @@ ZTEST_F(smclient, test_InstantMonitoring)
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v4_SMOutgoingMessages_instant_monitoring_tag,
         "Unexpected message type");
 
-    aos::monitoring::NodeMonitoringData receiveMonitoring;
+    monitoring::NodeMonitoringData receiveMonitoring;
 
     PBToNodeMonitoring(pbInstantMonitoring, receiveMonitoring);
     zassert_equal(receiveMonitoring, sendMonitoring, "Wrong node monitoring");
@@ -447,12 +449,12 @@ ZTEST_F(smclient, test_InstantMonitoring)
 ZTEST_F(smclient, test_GetAverageMonitoring)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send get average monitoring
 
-    aos::monitoring::NodeMonitoringData sendMonitoring;
+    monitoring::NodeMonitoringData sendMonitoring;
 
     GenerateNodeMonitoring(sendMonitoring);
 
@@ -480,7 +482,7 @@ ZTEST_F(smclient, test_GetAverageMonitoring)
     zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v4_SMOutgoingMessages_average_monitoring_tag,
         "Unexpected message type");
 
-    aos::monitoring::NodeMonitoringData receiveMonitoring;
+    monitoring::NodeMonitoringData receiveMonitoring;
 
     PBToNodeMonitoring(pbAverageMonitoring, receiveMonitoring);
     zassert_equal(receiveMonitoring, sendMonitoring, "Wrong node monitoring");
@@ -489,14 +491,14 @@ ZTEST_F(smclient, test_GetAverageMonitoring)
 ZTEST_F(smclient, test_RunInstance)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send run instances
 
-    aos::ServiceInfoStaticArray  services;
-    aos::LayerInfoStaticArray    layers;
-    aos::InstanceInfoStaticArray instances;
+    ServiceInfoStaticArray  services;
+    LayerInfoStaticArray    layers;
+    InstanceInfoStaticArray instances;
 
     GenerateServicesInfo(services);
     GenerateLayersInfo(layers);
@@ -570,12 +572,12 @@ ZTEST_F(smclient, test_RunInstance)
 ZTEST_F(smclient, test_RunInstancesStatus)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send run instances status
 
-    aos::InstanceStatusStaticArray sendRunStatus;
+    InstanceStatusStaticArray sendRunStatus;
 
     GenerateInstancesRunStatus(sendRunStatus);
 
@@ -595,7 +597,7 @@ ZTEST_F(smclient, test_RunInstancesStatus)
     zassert_equal(outgoingMessage.which_SMOutgoingMessage,
         servicemanager_v4_SMOutgoingMessages_run_instances_status_tag, "Unexpected message type");
 
-    aos::InstanceStatusStaticArray receivedRunStatus;
+    InstanceStatusStaticArray receivedRunStatus;
 
     receivedRunStatus.Resize(pbRunInstancesStatus.instances_count);
 
@@ -609,12 +611,12 @@ ZTEST_F(smclient, test_RunInstancesStatus)
 ZTEST_F(smclient, test_UpdateInstancesStatus)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send update instances status
 
-    aos::InstanceStatusStaticArray sendUpdateStatus;
+    InstanceStatusStaticArray sendUpdateStatus;
 
     GenerateInstancesRunStatus(sendUpdateStatus);
 
@@ -635,7 +637,7 @@ ZTEST_F(smclient, test_UpdateInstancesStatus)
     zassert_equal(outgoingMessage.which_SMOutgoingMessage,
         servicemanager_v4_SMOutgoingMessages_update_instances_status_tag, "Unexpected message type");
 
-    aos::InstanceStatusStaticArray receivedUpdateStatus;
+    InstanceStatusStaticArray receivedUpdateStatus;
 
     receivedUpdateStatus.Resize(pbUpdateInstancesStatus.instances_count);
 
@@ -649,12 +651,13 @@ ZTEST_F(smclient, test_UpdateInstancesStatus)
 ZTEST_F(smclient, test_ImageContentRequest)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send image content request
 
-    downloader::ImageContentRequest sendContentRequest {"content URL", 42, aos::DownloadContentEnum::eService};
+    downloader::ImageContentRequest sendContentRequest {
+        "content URL", 42, aos::downloader::DownloadContentEnum::eService};
 
     err = fixture->mSMClient->SendImageContentRequest(sendContentRequest);
     zassert_true(err.IsNone(), "Error sending image content request: %s", utils::ErrorToCStr(err));
@@ -684,7 +687,7 @@ ZTEST_F(smclient, test_ImageContentRequest)
 ZTEST_F(smclient, test_ImageContentInfo)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send image content info
@@ -730,13 +733,13 @@ ZTEST_F(smclient, test_ImageContentInfo)
 ZTEST_F(smclient, test_ImageContent)
 {
     auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Send image content
 
     uint8_t data[]       = {12, 23, 45, 32, 21, 56, 12, 18};
-    auto    aosFileChunk = downloader::FileChunk {43, "path/to/file1", 4, 1, aos::Array<uint8_t>(data, sizeof(data))};
+    auto    aosFileChunk = downloader::FileChunk {43, "path/to/file1", 4, 1, Array<uint8_t>(data, sizeof(data))};
 
     servicemanager_v4_SMIncomingMessages incomingMessage;
     auto&                                pbImageContent = incomingMessage.SMIncomingMessage.image_content;
@@ -770,8 +773,8 @@ ZTEST_F(smclient, test_ConnectionNotification)
 
     ChannelStub* channel = nullptr;
 
-    aos::Tie(channel, err) = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
-        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = aos::NodeStatusEnum::eProvisioned});
+    Tie(channel, err) = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT,
+        {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned});
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     // Wait connected
@@ -788,3 +791,5 @@ ZTEST_F(smclient, test_ConnectionNotification)
 
     fixture->mSMClient->Unsubscribe(subscriber);
 }
+
+} // namespace aos::zephyr
