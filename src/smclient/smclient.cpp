@@ -20,14 +20,16 @@ namespace aos::zephyr::smclient {
  * Static
  **********************************************************************************************************************/
 
-static google_protobuf_Timestamp TimestampToPB(const Time& time)
+namespace {
+
+google_protobuf_Timestamp TimestampToPB(const Time& time)
 {
     auto unixTime = time.UnixTime();
 
     return google_protobuf_Timestamp {unixTime.tv_sec, static_cast<int32_t>(unixTime.tv_nsec)};
 }
 
-static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
+void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
     servicemanager_v4_MonitoringData& pbMonitoringData)
 {
     pbMonitoringData.cpu              = monitoringData.mCPU + 0.5;
@@ -45,7 +47,7 @@ static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData,
 }
 
 template <typename T>
-static constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& nodeMonitoring, T& pbNodeMonitoring)
+constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& nodeMonitoring, T& pbNodeMonitoring)
 {
     pbNodeMonitoring.has_node_monitoring = true;
     MonitoringDataToPB(nodeMonitoring.mMonitoringData, nodeMonitoring.mTimestamp, pbNodeMonitoring.node_monitoring);
@@ -61,8 +63,7 @@ static constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& n
     }
 }
 
-static void InstanceStatusToPB(
-    const InstanceStatus& aosInstanceStatus, servicemanager_v4_InstanceStatus& pbInstanceStatus)
+void InstanceStatusToPB(const InstanceStatus& aosInstanceStatus, servicemanager_v4_InstanceStatus& pbInstanceStatus)
 {
     pbInstanceStatus.has_instance = true;
     utils::InstanceIdentToPB(aosInstanceStatus.mInstanceIdent, pbInstanceStatus.instance);
@@ -74,6 +75,143 @@ static void InstanceStatusToPB(
         pbInstanceStatus.error_info     = utils::ErrorToPB(aosInstanceStatus.mError);
     }
 }
+
+class AlertVisitor : public aos::StaticVisitor<Error> {
+public:
+    AlertVisitor(servicemanager_v4_Alert& pbAlert)
+        : mPBAlert(pbAlert)
+    {
+    }
+
+    Res Visit(const aos::cloudprotocol::SystemAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_system_alert_tag);
+
+        auto&                                 alert = mPBAlert.AlertItem.system_alert;
+        alert = servicemanager_v4_SystemAlert servicemanager_v4_SystemAlert_init_default;
+
+        utils::StringFromCStr(alert.message) = val.mMessage;
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::CoreAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_core_alert_tag);
+
+        auto&                               alert = mPBAlert.AlertItem.core_alert;
+        alert = servicemanager_v4_CoreAlert servicemanager_v4_CoreAlert_init_default;
+
+        utils::StringFromCStr(alert.core_component) = val.mCoreComponent.ToString();
+        utils::StringFromCStr(alert.message)        = val.mMessage;
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::SystemQuotaAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_system_alert_tag);
+
+        auto&                                      alert = mPBAlert.AlertItem.system_quota_alert;
+        alert = servicemanager_v4_SystemQuotaAlert servicemanager_v4_SystemQuotaAlert_init_default;
+
+        utils::StringFromCStr(alert.parameter) = val.mParameter;
+        alert.value                            = val.mValue;
+        utils::StringFromCStr(alert.status)    = val.mStatus.ToString();
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::InstanceQuotaAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_instance_quota_alert_tag);
+
+        auto&                                        alert = mPBAlert.AlertItem.instance_quota_alert;
+        alert = servicemanager_v4_InstanceQuotaAlert servicemanager_v4_InstanceQuotaAlert_init_default;
+
+        SetInstanceIndent(val, alert);
+
+        utils::StringFromCStr(alert.parameter) = val.mParameter;
+        alert.value                            = val.mValue;
+        utils::StringFromCStr(alert.status)    = val.mStatus.ToString();
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::DeviceAllocateAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_device_allocate_alert_tag);
+
+        auto&                                         alert = mPBAlert.AlertItem.device_allocate_alert;
+        alert = servicemanager_v4_DeviceAllocateAlert servicemanager_v4_DeviceAllocateAlert_init_default;
+
+        SetInstanceIndent(val, alert);
+
+        utils::StringFromCStr(alert.device)  = val.mDevice;
+        utils::StringFromCStr(alert.message) = val.mMessage;
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::ResourceValidateAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_resource_validate_alert_tag);
+
+        auto&                                           alert = mPBAlert.AlertItem.resource_validate_alert;
+        alert = servicemanager_v4_ResourceValidateAlert servicemanager_v4_ResourceValidateAlert_init_default;
+
+        utils::StringFromCStr(alert.name) = val.mName;
+
+        alert.errors_count = val.mErrors.Size();
+
+        for (size_t i = 0; i < alert.errors_count; ++i) {
+            auto& alertError = alert.errors[i];
+
+            alertError                                = common_v1_ErrorInfo common_v1_ErrorInfo_init_default;
+            alertError.aos_code                       = static_cast<int32_t>(val.mErrors[i].Value());
+            alertError.exit_code                      = val.mErrors[i].Errno();
+            utils::StringFromCStr(alertError.message) = val.mErrors[i].Message();
+        }
+
+        return ErrorEnum::eNone;
+    }
+
+    template <class T>
+    Res Visit(const T&) const
+    {
+        return ErrorEnum::eNotSupported;
+    }
+
+private:
+    void SetTimeAndTag(const aos::cloudprotocol::AlertItem& src,
+        decltype(servicemanager_v4_Alert::which_AlertItem)  whichAlertItem) const
+    {
+        utils::StringFromCStr(mPBAlert.tag) = src.mTag.ToString();
+        mPBAlert.has_timestamp              = true;
+        mPBAlert.timestamp                  = TimestampToPB(src.mTimestamp);
+
+        mPBAlert.which_AlertItem = whichAlertItem;
+    }
+
+    template <class T, class P>
+    void SetInstanceIndent(const T& aosAlert, P& pbAlert) const
+    {
+        pbAlert.has_instance                               = true;
+        utils::StringFromCStr(pbAlert.instance.service_id) = aosAlert.mInstanceIdent.mServiceID;
+        utils::StringFromCStr(pbAlert.instance.subject_id) = aosAlert.mInstanceIdent.mSubjectID;
+        pbAlert.instance.instance                          = aosAlert.mInstanceIdent.mInstance;
+    }
+
+    servicemanager_v4_Alert& mPBAlert;
+};
+
+Error AlertToPB(const cloudprotocol::AlertVariant& alert, servicemanager_v4_Alert& pbAlert)
+{
+    return alert.ApplyVisitor(AlertVisitor(pbAlert));
+}
+
+} // namespace
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
@@ -314,6 +452,27 @@ void SMClient::OnCertChanged(const iam::certhandler::CertInfo& info)
 Error SMClient::SendClockSyncRequest()
 {
     return mOpenHandler.SendClockSyncRequest();
+}
+
+Error SMClient::SendAlert(const cloudprotocol::AlertVariant& alert)
+{
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "Send alert";
+    LOG_DBG() << "Send alert: alert=" << alert;
+
+    auto outgoingMessage                     = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_alert_tag;
+
+    auto& pbAlert = outgoingMessage->SMOutgoingMessage.alert;
+
+    pbAlert = servicemanager_v4_Alert servicemanager_v4_Alert_init_default;
+
+    if (auto err = AlertToPB(alert, pbAlert); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 /***********************************************************************************************************************
