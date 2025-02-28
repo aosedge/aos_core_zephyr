@@ -14,10 +14,19 @@
 #include <aos/common/types.hpp>
 #include <aos/sm/launcher.hpp>
 
+namespace aos::zephyr {
+
 class LauncherStub : public aos::sm::launcher::LauncherItf {
 public:
-    aos::Error RunInstances(const aos::Array<aos::ServiceInfo>& services, const aos::Array<aos::LayerInfo>& layers,
-        const aos::Array<aos::InstanceInfo>& instances, bool forceRestart) override
+    /**
+     * Runs specified instances.
+     *
+     * @param instances instance info array.
+     * @param forceRestart forces restart already started instance.
+     * @return Error.
+     */
+    Error RunInstances(const Array<ServiceInfo>& services, const Array<LayerInfo>& layers,
+        const Array<InstanceInfo>& instances, bool forceRestart) override
     {
         std::lock_guard<std::mutex> lock(mMutex);
 
@@ -29,7 +38,20 @@ public:
 
         mCV.notify_one();
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
+    }
+
+    /**
+     * Returns current run status.
+     *
+     * @param instances instances status.
+     * @return Error.
+     */
+    Error GetCurrentRunStatus(Array<InstanceStatus>& instances) const override
+    {
+        (void)instances;
+
+        return ErrorEnum::eNone;
     }
 
     /**
@@ -39,54 +61,41 @@ public:
      * @param statuses[out] environment variables statuses.
      * @return Error
      */
-    aos::Error OverrideEnvVars(const aos::Array<aos::cloudprotocol::EnvVarsInstanceInfo>& envVarsInfo,
-        aos::cloudprotocol::EnvVarsInstanceStatusArray&                                   statuses) override
+    Error OverrideEnvVars(const Array<cloudprotocol::EnvVarsInstanceInfo>& envVarsInfo,
+        Array<cloudprotocol::EnvVarsInstanceStatus>&                       statuses) override
     {
         (void)envVarsInfo;
         (void)statuses;
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
-    /**
-     * Sets cloud connection status.
-     *
-     * @param connected cloud connection status.
-     * @return Error
-     */
-    aos::Error SetCloudConnection(bool connected) override
-    {
-        (void)connected;
-
-        return aos::ErrorEnum::eNone;
-    }
-
-    aos::Error WaitEvent(const std::chrono::duration<double> timeout)
+    Error WaitEvent(const std::chrono::duration<double> timeout)
     {
         std::unique_lock<std::mutex> lock(mMutex);
 
         if (!mCV.wait_for(lock, timeout, [&] { return mEventReceived; })) {
-            return aos::ErrorEnum::eTimeout;
+            return ErrorEnum::eTimeout;
         }
 
         mEventReceived = false;
 
-        return aos::ErrorEnum::eNone;
+        return ErrorEnum::eNone;
     }
 
-    const aos::Array<aos::ServiceInfo> GetServices() const
+    const Array<ServiceInfo> GetServices() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
         return mServices;
     }
 
-    const aos::Array<aos::LayerInfo> GetLayers() const
+    const Array<LayerInfo> GetLayers() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
         return mLayers;
     }
 
-    const aos::Array<aos::InstanceInfo> GetInstances() const
+    const Array<InstanceInfo> GetInstances() const
     {
         std::lock_guard<std::mutex> lock(mMutex);
         return mInstances;
@@ -112,14 +121,16 @@ public:
 private:
     static constexpr auto cWaitTimeout = std::chrono::seconds {1};
 
-    aos::ServiceInfoStaticArray  mServices {};
-    aos::LayerInfoStaticArray    mLayers {};
-    aos::InstanceInfoStaticArray mInstances {};
-    bool                         mForceRestart = false;
+    ServiceInfoStaticArray  mServices {};
+    LayerInfoStaticArray    mLayers {};
+    InstanceInfoStaticArray mInstances {};
+    bool                    mForceRestart = false;
 
     std::condition_variable mCV;
     mutable std::mutex      mMutex;
     bool                    mEventReceived = false;
 };
+
+} // namespace aos::zephyr
 
 #endif
