@@ -14,6 +14,55 @@
 namespace aos::zephyr {
 
 /**
+ * Cert provider stub.
+ */
+class CertProviderStub : public iam::certprovider::CertProviderItf {
+public:
+    /**
+     * Returns certificate info.
+     *
+     * @param certType certificate type.
+     * @param issuer issuer name.
+     * @param serial serial number.
+     * @param[out] resCert result certificate.
+     * @returns Error.
+     */
+    Error GetCert(const String& certType, const Array<uint8_t>& issuer, const Array<uint8_t>& serial,
+        iam::certhandler::CertInfo& resCert) const override
+    {
+        return ErrorEnum::eNone;
+    }
+
+    /**
+     * Subscribes certificates receiver.
+     *
+     * @param certType certificate type.
+     * @param certReceiver certificate receiver.
+     * @returns Error.
+     */
+    Error SubscribeCertChanged(const String& certType, iam::certhandler::CertReceiverItf& certReceiver) override
+    {
+        (void)certType;
+        (void)certReceiver;
+
+        return ErrorEnum::eNone;
+    }
+
+    /**
+     * Unsubscribes certificate receiver.
+     *
+     * @param certReceiver certificate receiver.
+     * @returns Error.
+     */
+    Error UnsubscribeCertChanged(iam::certhandler::CertReceiverItf& certReceiver) override
+    {
+        (void)certReceiver;
+
+        return ErrorEnum::eNone;
+    }
+};
+
+/**
  * Provision manager stub.
  */
 class ProvisionManagerStub : public iam::provisionmanager::ProvisionManagerItf {
