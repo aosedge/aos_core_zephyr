@@ -66,6 +66,26 @@ Error SendSMIncomingMessage(ChannelStub* channel, const servicemanager_v4_SMInco
         channel, &message, servicemanager_v4_SMIncomingMessages_size, &servicemanager_v4_SMIncomingMessages_msg);
 }
 
+void ReceiveAlert(ChannelStub* channel, const String& tag,
+    decltype(servicemanager_v4_Alert::which_AlertItem) whichAlertItem, const Time& timestamp)
+{
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto&                                pbAlert = outgoingMessage.SMOutgoingMessage.alert;
+
+    pbAlert = servicemanager_v4_Alert servicemanager_v4_Alert_init_default;
+
+    auto err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage, servicemanager_v4_SMOutgoingMessages_alert_tag,
+        "Unexpected message type");
+
+    zassert_equal(pbAlert.which_AlertItem, whichAlertItem, "Unexpected alert item message type");
+    zassert_true(pbAlert.has_timestamp, "Timestamp is missing");
+
+    zassert_equal(Time::Unix(pbAlert.timestamp.seconds, pbAlert.timestamp.nanos), timestamp, "Timestamp mismatch");
+}
+
 void ReceiveNodeConfigStatus(ChannelStub* channel, const NodeInfo& nodeInfo, const String& nodeConfigVersion)
 {
     servicemanager_v4_SMOutgoingMessages outgoingMessage;
@@ -331,6 +351,40 @@ ZTEST_F(smclient, test_ClockSync)
     zassert_true(err.IsNone(), "Error waiting clock sync start: %s", utils::ErrorToCStr(err));
 
     zassert_equal(fixture->mClockSync.GetSyncTime(), timestamp, "Wrong timestamp");
+}
+
+// SMClient::SendAlert
+
+ZTEST_F(smclient, test_SendAlert)
+{
+    const auto nodeConfigVersion = "1.0.0";
+    NodeInfo   nodeInfo {.mNodeID = "nodeID", .mNodeType = "nodeType", .mStatus = NodeStatusEnum::eProvisioned};
+
+    auto [channel, err] = InitSMClient(fixture, CONFIG_AOS_SM_SECURE_PORT, nodeInfo, nodeConfigVersion);
+    zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
+
+    // Send core alert
+
+    const auto expectedTimestamp = Time::Now();
+
+    cloudprotocol::AlertVariant alert;
+    {
+        aos::cloudprotocol::SystemAlert systemAlert {expectedTimestamp};
+        systemAlert.mMessage = "test-message";
+
+        alert.SetValue<aos::cloudprotocol::SystemAlert>(systemAlert);
+    }
+
+    err = fixture->mSMClient->SendAlert(alert);
+    zassert_true(err.IsNone(), "Error sending alert: %s", utils::ErrorToCStr(err));
+
+    ReceiveAlert(channel, "SystemAlert", servicemanager_v4_Alert_system_alert_tag, expectedTimestamp);
+
+    // Send unsupported alert
+    alert.SetValue<aos::cloudprotocol::DownloadAlert>({});
+
+    err = fixture->mSMClient->SendAlert(alert);
+    zassert_equal(err, ErrorEnum::eNotSupported, "Not supported error expected: err= %s", utils::ErrorToCStr(err));
 }
 
 ZTEST_F(smclient, test_GetNodeConfigStatus)
