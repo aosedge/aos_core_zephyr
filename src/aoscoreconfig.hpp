@@ -53,6 +53,11 @@
 #define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 32768
 
 /**
+ * Set thread stack alignment.
+ */
+#define AOS_CONFIG_THREAD_STACK_ALIGN        4096
+
+/**
  * Configures thread stack guard size.
  */
 #define AOS_CONFIG_THREAD_STACK_GUARD_SIZE   4096
