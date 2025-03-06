@@ -16,6 +16,11 @@
 #define AOS_CONFIG_THREAD_STACK_ALIGN ARCH_STACK_PTR_ALIGN
 
 /**
+ * Configures thread stack guard size.
+ */
+#define AOS_CONFIG_THREAD_STACK_GUARD_SIZE 0
+
+/**
  * Set timer signal event notification.
  */
 #define AOS_CONFIG_TIMER_SIGEV_NOTIFY SIGEV_SIGNAL
