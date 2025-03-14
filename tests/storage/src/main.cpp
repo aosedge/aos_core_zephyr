@@ -236,6 +236,88 @@ ZTEST_F(storage, test_AddUpdateRemoveService)
     zassert_equal(services2.Size(), 0, "Unexpected number of services");
 }
 
+ZTEST_F(storage, test_AddUpdateRemoveLayer)
+{
+    storage::Storage& storage = fixture->mStorage;
+
+    StaticArray<sm::layermanager::LayerData, 2> layers;
+
+    sm::layermanager::LayerData layerData {};
+
+    layerData.mLayerDigest         = "layer-digest";
+    layerData.mUnpackedLayerDigest = "unpacked-layer-digest";
+    layerData.mLayerID             = "layer-id";
+    layerData.mVersion             = "1.0.0";
+    layerData.mPath                = "layer-path";
+    layerData.mOSVersion           = "layer-os-version";
+    layerData.mTimestamp           = Time::Now();
+    layerData.mState               = sm::layermanager::LayerStateEnum::eActive;
+    layerData.mSize                = 128;
+
+    layers.PushBack(layerData);
+
+    sm::layermanager::LayerData layerData2 {};
+
+    layerData2.mLayerDigest         = "layer-digest-2";
+    layerData2.mUnpackedLayerDigest = "unpacked-layer-digest-2";
+    layerData2.mLayerID             = "layer-id";
+    layerData2.mVersion             = "1.0.0";
+    layerData2.mPath                = "layer-path";
+    layerData2.mOSVersion           = "layer-os-version";
+    layerData2.mTimestamp           = Time::Now();
+    layerData2.mState               = sm::layermanager::LayerStateEnum::eCached;
+    layerData2.mSize                = 256;
+
+    layers.PushBack(layerData2);
+
+    for (const auto& layer : layers) {
+        zassert_equal(storage.AddLayer(layer), ErrorEnum::eNone, "Failed to add layer");
+    }
+
+    for (const auto& layer : layers) {
+        zassert_equal(storage.AddLayer(layer), ErrorEnum::eAlreadyExist, "Unexpected error");
+    }
+
+    layerData2.mTimestamp = Time::Now();
+    layerData2.mSize      = 512;
+    zassert_equal(storage.AddLayer(layerData2), ErrorEnum::eAlreadyExist, "Unexpected error");
+
+    StaticArray<sm::layermanager::LayerData, 2> layers2;
+
+    zassert_equal(storage.GetAllLayers(layers2), ErrorEnum::eNone, "Failed to get all layers");
+
+    zassert_equal(layers2.Size(), 2, "Unexpected number of layers");
+
+    for (const auto& layer : layers2) {
+        zassert_not_equal(layers.Find(layer), layers.end(), "Unexpected layers");
+    }
+
+    layers[0].mTimestamp = Time::Now();
+    layers[1].mTimestamp = Time::Now();
+
+    for (const auto& layer : layers) {
+        zassert_equal(storage.UpdateLayer(layer), ErrorEnum::eNone, "Failed to update layer");
+    }
+
+    layers2.Clear();
+    zassert_equal(storage.GetAllLayers(layers2), ErrorEnum::eNone, "Failed to get all layers");
+
+    zassert_equal(layers2.Size(), 2, "Unexpected number of layers");
+
+    for (const auto& layer : layers2) {
+        zassert_not_equal(layers.Find(layer), layers.end(), "Unexpected layer");
+    }
+
+    for (const auto& layer : layers) {
+        zassert_equal(storage.RemoveLayer(layer.mLayerDigest), ErrorEnum::eNone, "Failed to remove layer");
+    }
+
+    layers2.Clear();
+    zassert_equal(storage.GetAllLayers(layers2), ErrorEnum::eNone, "Failed to get all layers");
+
+    zassert_equal(layers2.Size(), 0, "Unexpected number of layers");
+}
+
 ZTEST_F(storage, test_AddRemoveCertInfo)
 {
     storage::Storage& storage = fixture->mStorage;

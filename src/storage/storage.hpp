@@ -11,6 +11,7 @@
 #include <aos/common/tools/thread.hpp>
 #include <aos/iam/certmodules/certmodule.hpp>
 #include <aos/sm/launcher.hpp>
+#include <aos/sm/layermanager.hpp>
 #include <aos/sm/servicemanager.hpp>
 
 #include "filestorage.hpp"
@@ -22,6 +23,7 @@ namespace aos::zephyr::storage {
  */
 class Storage : public sm::launcher::StorageItf,
                 public sm::servicemanager::StorageItf,
+                public sm::layermanager::StorageItf,
                 public iam::certhandler::StorageItf,
                 private NonCopyable {
 public:
@@ -152,6 +154,47 @@ public:
     Error GetAllServices(Array<sm::servicemanager::ServiceData>& services) override;
 
     /**
+     * Adds layer to storage.
+     *
+     * @param layer layer data to add.
+     * @return Error.
+     */
+    Error AddLayer(const sm::layermanager::LayerData& layer) override;
+
+    /**
+     * Removes layer from storage.
+     *
+     * @param digest layer digest.
+     * @return Error.
+     */
+    Error RemoveLayer(const String& digest) override;
+
+    /**
+     * Returns all stored layers.
+     *
+     * @param layers[out] array to return stored layers.
+     * @return Error.
+     */
+    Error GetAllLayers(Array<sm::layermanager::LayerData>& layers) const override;
+
+    /**
+     * Returns layer data.
+     *
+     * @param digest layer digest.
+     * @param[out] layer layer data.
+     * @return Error.
+     */
+    Error GetLayer(const String& digest, sm::layermanager::LayerData& layer) const override;
+
+    /**
+     * Updates layer.
+     *
+     * @param layer layer data to update.
+     * @return Error.
+     */
+    Error UpdateLayer(const sm::layermanager::LayerData& layer) override;
+
+    /**
      * Adds new certificate info to the storage.
      *
      * @param certType certificate type.
@@ -267,6 +310,34 @@ private:
         }
     };
 
+    struct LayerData {
+        char     mLayerDigest[cLayerDigestLen + 1];
+        char     mUnpackedLayerDigest[cLayerDigestLen + 1];
+        char     mLayerID[cLayerIDLen + 1];
+        char     mVersion[cVersionLen + 1];
+        char     mPath[cFilePathLen + 1];
+        char     mOSVersion[cVersionLen + 1];
+        timespec mTimestamp;
+        char     mState[32];
+        size_t   mSize;
+
+        /**
+         * Compares layer data.
+         *
+         * @param layer layer to compare.
+         * @return bool.
+         */
+        bool operator==(const LayerData& rhs) const
+        {
+            return strcmp(mLayerDigest, rhs.mLayerDigest) == 0
+                && strcmp(mUnpackedLayerDigest, rhs.mUnpackedLayerDigest) == 0 && strcmp(mLayerID, rhs.mLayerID) == 0
+                && strcmp(mVersion, rhs.mVersion) == 0 && strcmp(mPath, rhs.mPath) == 0
+                && strcmp(mOSVersion, rhs.mOSVersion) == 0 && mTimestamp.tv_sec == rhs.mTimestamp.tv_sec
+                && mTimestamp.tv_nsec == rhs.mTimestamp.tv_nsec && strcmp(mState, rhs.mState) == 0
+                && mSize == rhs.mSize;
+        }
+    };
+
     struct CertInfo {
         uint8_t  mIssuer[crypto::cCertIssuerSize];
         size_t   mIssuerSize;
@@ -297,16 +368,21 @@ private:
     Error ConvertInstanceData(const Storage::InstanceData& dbInstance, sm::launcher::InstanceData& outInstance);
     UniquePtr<Storage::ServiceData> ConvertServiceData(const sm::servicemanager::ServiceData& service);
     Error ConvertServiceData(const Storage::ServiceData& storageService, sm::servicemanager::ServiceData& outService);
+    UniquePtr<Storage::LayerData> ConvertLayerData(const sm::layermanager::LayerData& layer);
+    Error ConvertLayerData(const Storage::LayerData& dbLayer, sm::layermanager::LayerData& outLayer) const;
     UniquePtr<Storage::CertInfo> ConvertCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo);
     UniquePtr<iam::certhandler::CertInfo> ConvertCertInfo(const Storage::CertInfo& certInfo);
 
-    FileStorage<Storage::InstanceData> mInstanceDatabase;
-    FileStorage<Storage::ServiceData>  mServiceDatabase;
-    FileStorage<Storage::CertInfo>     mCertDatabase;
-    Mutex                              mMutex;
+    FileStorage<Storage::InstanceData>      mInstanceDatabase;
+    FileStorage<Storage::ServiceData>       mServiceDatabase;
+    mutable FileStorage<Storage::LayerData> mLayerDatabase;
+    FileStorage<Storage::CertInfo>          mCertDatabase;
+    mutable Mutex                           mMutex;
 
-    StaticAllocator<Max(sizeof(Storage::InstanceData), sizeof(sm::launcher::InstanceData))
+    mutable StaticAllocator<Max(sizeof(Storage::InstanceData), sizeof(sm::launcher::InstanceData),
+                                sizeof(Storage::LayerData))
         + Max(sizeof(Storage::ServiceData), sizeof(sm::servicemanager::ServiceData))
+        + Max(sizeof(Storage::LayerData), sizeof(sm::layermanager::LayerData))
         + Max(sizeof(Storage::CertInfo), sizeof(iam::certhandler::CertInfo))>
         mAllocator;
 };
