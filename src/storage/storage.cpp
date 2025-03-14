@@ -36,7 +36,14 @@ Error Storage::Init()
         return AOS_ERROR_WRAP(err);
     }
 
+    auto layerPath = FS::JoinPath(cStoragePath, "layer.db");
+
+    if (auto err = mLayerDatabase.Init(layerPath); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     auto certPath = FS::JoinPath(cStoragePath, "cert.db");
+
     if (auto err = mCertDatabase.Init(certPath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -222,6 +229,83 @@ Error Storage::GetAllServices(Array<sm::servicemanager::ServiceData>& services)
     });
 }
 
+Error Storage::AddLayer(const sm::layermanager::LayerData& layer)
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Add layer: digest=" << layer.mLayerDigest;
+
+    auto storageLayer = ConvertLayerData(layer);
+
+    return mLayerDatabase.Add(
+        *storageLayer, [&storageLayer](const Storage::LayerData& storedLayer, const Storage::LayerData& addedLayer) {
+            return strcmp(storedLayer.mLayerDigest, addedLayer.mLayerDigest) == 0;
+        });
+}
+
+Error Storage::RemoveLayer(const String& digest)
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Remove layer: digest=" << digest;
+
+    return mLayerDatabase.Remove([&digest](const Storage::LayerData& data) { return data.mLayerDigest == digest; });
+}
+
+Error Storage::GetAllLayers(Array<sm::layermanager::LayerData>& layers) const
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get all layers";
+
+    return mLayerDatabase.ReadRecords([&layers, this](const Storage::LayerData& storageLayer) -> Error {
+        if (auto err = layers.EmplaceBack(); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+
+        if (auto err = ConvertLayerData(storageLayer, layers.Back()); !err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+
+        return ErrorEnum::eNone;
+    });
+
+    return ErrorEnum::eNone;
+}
+
+Error Storage::GetLayer(const String& digest, sm::layermanager::LayerData& layer) const
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Get layer: digest=" << digest;
+
+    auto storageLayer = MakeUnique<Storage::LayerData>(&mAllocator);
+
+    if (auto err = mLayerDatabase.ReadRecordByFilter(
+            *storageLayer, [&digest](const Storage::LayerData& data) { return data.mLayerDigest == digest; });
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = ConvertLayerData(*storageLayer, layer); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error Storage::UpdateLayer(const sm::layermanager::LayerData& layer)
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Update layer: digest=" << layer.mLayerDigest;
+
+    auto storageLayer = ConvertLayerData(layer);
+
+    return mLayerDatabase.Update(
+        *storageLayer, [&layer](const Storage::LayerData& data) { return data.mLayerDigest == layer.mLayerDigest; });
+}
+
 Error Storage::AddCertInfo(const String& certType, const iam::certhandler::CertInfo& certInfo)
 {
     LockGuard lock(mMutex);
@@ -382,6 +466,41 @@ Error Storage::ConvertServiceData(
     outService.mGID            = storageService.mGID;
 
     if (auto err = outService.mState.FromString(storageService.mState); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+UniquePtr<Storage::LayerData> Storage::ConvertLayerData(const sm::layermanager::LayerData& layer)
+{
+    auto layerData = MakeUnique<LayerData>(&mAllocator);
+
+    strcpy(layerData->mLayerDigest, layer.mLayerDigest.CStr());
+    strcpy(layerData->mUnpackedLayerDigest, layer.mUnpackedLayerDigest.CStr());
+    strcpy(layerData->mLayerID, layer.mLayerID.CStr());
+    strcpy(layerData->mVersion, layer.mVersion.CStr());
+    strcpy(layerData->mPath, layer.mPath.CStr());
+    strcpy(layerData->mOSVersion, layer.mOSVersion.CStr());
+    layerData->mTimestamp = layer.mTimestamp.UnixTime();
+    strcpy(layerData->mState, layer.mState.ToString().CStr());
+    layerData->mSize = layer.mSize;
+
+    return layerData;
+}
+
+Error Storage::ConvertLayerData(const Storage::LayerData& dbLayer, sm::layermanager::LayerData& outLayer) const
+{
+    outLayer.mLayerDigest         = dbLayer.mLayerDigest;
+    outLayer.mUnpackedLayerDigest = dbLayer.mUnpackedLayerDigest;
+    outLayer.mLayerID             = dbLayer.mLayerID;
+    outLayer.mVersion             = dbLayer.mVersion;
+    outLayer.mPath                = dbLayer.mPath;
+    outLayer.mOSVersion           = dbLayer.mOSVersion;
+    outLayer.mTimestamp           = Time::Unix(dbLayer.mTimestamp.tv_sec, dbLayer.mTimestamp.tv_nsec);
+    outLayer.mSize                = dbLayer.mSize;
+
+    if (auto err = outLayer.mState.FromString(dbLayer.mState); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
