@@ -43,6 +43,10 @@ config AOS_SERVICES_DIR
 	string "Aos services dir"
 	default "/lfs/aos/services"
 
+config AOS_LAYERS_DIR
+	string "Aos layers dir"
+	default "/lfs/aos/layers"
+
 config AOS_NODE_CONFIG_FILE
 	string "Node configuration file path"
 	default "/lfs/aos/node_config.cfg"
