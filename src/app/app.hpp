@@ -139,9 +139,10 @@ private:
     storage::Storage                           mStorage;
     launcher::Runtime                          mRuntime;
 
-    spaceallocator::SpaceAllocator<cMaxNumServices> mServiceSpaceAllocator;
-    spaceallocator::SpaceAllocator<cMaxNumLayers>   mDownloadSpaceAllocator;
-    image::ImageHandler                             mImageHandler;
+    spaceallocator::SpaceAllocator<cMaxNumServices>                     mServiceSpaceAllocator;
+    spaceallocator::SpaceAllocator<cMaxNumLayers>                       mLayerSpaceAllocator;
+    spaceallocator::SpaceAllocator<Max(cMaxNumLayers, cMaxNumServices)> mDownloadSpaceAllocator;
+    image::ImageHandler                                                 mImageHandler;
 };
 
 } // namespace aos::zephyr::app
