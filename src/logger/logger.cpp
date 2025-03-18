@@ -82,6 +82,7 @@ LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
 LOG_CALLBACK(pkcs11);
 LOG_CALLBACK(servicemanager);
+LOG_CALLBACK(layermanager);
 
 /***********************************************************************************************************************
  * Public
@@ -107,6 +108,7 @@ Error Logger::Init()
     sLogCallbacks.Set("resourcemanager", &log_resourcemanager::LogCallback);
     sLogCallbacks.Set("runner", &log_runner::LogCallback);
     sLogCallbacks.Set("servicemanager", &log_servicemanager::LogCallback);
+    sLogCallbacks.Set("layermanager", &log_layermanager::LogCallback);
     sLogCallbacks.Set("smclient", &log_smclient::LogCallback);
     sLogCallbacks.Set("storage", &log_storage::LogCallback);
 
