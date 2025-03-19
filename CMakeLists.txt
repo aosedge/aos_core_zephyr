@@ -81,6 +81,7 @@ target_sources(
             src/communication/channelmanager.cpp
             src/downloader/downloader.cpp
             src/iamclient/iamclient.cpp
+            src/image/imagehandler.cpp
             src/logger/logger.cpp
             src/monitoring/resourceusageprovider.cpp
             src/nodeinfoprovider/nodeinfoprovider.cpp

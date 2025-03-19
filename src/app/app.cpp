@@ -207,6 +207,10 @@ Error App::InitSM()
         return AOS_ERROR_WRAP(err);
     }
 
+    if (auto err = mImageHandler.Init(mLayerSpaceAllocator, mServiceSpaceAllocator); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     aos::sm::servicemanager::Config smConfig;
     smConfig.mServicesDir = CONFIG_AOS_SERVICES_DIR;
     smConfig.mDownloadDir = CONFIG_AOS_DOWNLOAD_DIR;
