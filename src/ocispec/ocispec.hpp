@@ -140,6 +140,15 @@ struct RuntimeSpec {
 };
 
 /**
+ * Service config
+ *
+ */
+struct ServiceConfig {
+    const char* runners[cRunnerNameLen];
+    size_t      runnersLen;
+};
+
+/**
  * OCISpec instance.
  */
 class OCISpec : public oci::OCISpecItf {
