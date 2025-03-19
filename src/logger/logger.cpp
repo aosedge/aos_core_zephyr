@@ -6,6 +6,7 @@
  */
 
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/printk.h>
 
 #if CONFIG_NATIVE_APPLICATION
 #include <aos/common/tools/thread.hpp>
@@ -139,8 +140,8 @@ void Logger::LogCallback(const String& module, LogLevel level, const String& mes
 
     auto callbackIt = sLogCallbacks.Find(module);
     if (callbackIt == sLogCallbacks.end()) {
-        LOG_MODULE_WRN("app") << "Log from unknown module received: module=" << module << ", level=" << level
-                              << ", message=" << message;
+        printk("[app] Log from unknown module received: module=%s, level=%s, message=%s", module.CStr(),
+            level.ToString().CStr(), message.CStr());
         return;
     }
 
