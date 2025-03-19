@@ -87,6 +87,12 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
     JSON_OBJ_DESCR_OBJECT(RuntimeSpec, vm, VMDescr),
 };
 
+// Service config
+
+static const struct json_obj_descr ServiceConfigDescr[] = {
+    JSON_OBJ_DESCR_ARRAY(ServiceConfig, runners, cMaxNumRunners, runnersLen, JSON_TOK_STRING),
+};
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
@@ -478,10 +484,33 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
 
 Error OCISpec::LoadServiceConfig(const String& path, oci::ServiceConfig& serviceConfig)
 {
-    (void)path;
-    (void)serviceConfig;
+    LockGuard lock(mMutex);
 
-    return ErrorEnum::eNotSupported;
+    LOG_DBG() << "Load service config: path=" << path;
+
+    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    mAllocator.Clear();
+
+    auto parsedServiceConfig = MakeUnique<ServiceConfig>(&mAllocator);
+
+    int ret = json_obj_parse(mJsonFileContent.Get(), mJsonFileContent.Size(), ServiceConfigDescr,
+        ARRAY_SIZE(ServiceConfigDescr), parsedServiceConfig.Get());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
+
+    for (size_t i = 0; i < parsedServiceConfig->runnersLen; ++i) {
+        err = serviceConfig.mRunners.PushBack(parsedServiceConfig->runners[i]);
+        if (!err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+    }
+
+    return ErrorEnum::eNone;
 }
 
 Error OCISpec::SaveServiceConfig(const String& path, const oci::ServiceConfig& serviceConfig)
@@ -489,7 +518,7 @@ Error OCISpec::SaveServiceConfig(const String& path, const oci::ServiceConfig& s
     (void)path;
     (void)serviceConfig;
 
-    return ErrorEnum::eNotSupported;
+    return ErrorEnum::eNone;
 }
 
 } // namespace aos::zephyr::ocispec
