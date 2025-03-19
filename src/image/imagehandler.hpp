@@ -17,6 +17,16 @@ namespace aos::zephyr::image {
 class ImageHandler : public aos::sm::image::ImageHandlerItf {
 public:
     /**
+     * Initializes image handler.
+     *
+     * @param layerSpaceAllocator layer space allocator.
+     * @param serviceSpaceAllocator service space allocator.
+     * @return Error.
+     */
+    Error Init(spaceallocator::SpaceAllocatorItf& layerSpaceAllocator,
+        spaceallocator::SpaceAllocatorItf&        serviceSpaceAllocator);
+
+    /**
      * Installs layer from the provided archive.
      *
      * @param archivePath archive path.
@@ -26,15 +36,7 @@ public:
      * @return RetWithError<StaticString<cFilePathLen>>.
      */
     RetWithError<StaticString<cFilePathLen>> InstallLayer(const String& archivePath, const String& installBasePath,
-        const LayerInfo& layer, UniquePtr<aos::spaceallocator::SpaceItf>& space) override
-    {
-        (void)archivePath;
-        (void)installBasePath;
-        (void)layer;
-        (void)space;
-
-        return {StaticString<cFilePathLen>(), ErrorEnum::eNone};
-    }
+        const LayerInfo& layer, UniquePtr<aos::spaceallocator::SpaceItf>& space) override;
 
     /**
      * Installs service from the provided archive.
@@ -46,15 +48,7 @@ public:
      * @return RetWithError<StaticString<cFilePathLen>>.
      */
     RetWithError<StaticString<cFilePathLen>> InstallService(const String& archivePath, const String& installBasePath,
-        const ServiceInfo& service, UniquePtr<aos::spaceallocator::SpaceItf>& space) override
-    {
-        (void)archivePath;
-        (void)installBasePath;
-        (void)service;
-        (void)space;
-
-        return {StaticString<cFilePathLen>(), ErrorEnum::eNone};
-    }
+        const ServiceInfo& service, UniquePtr<aos::spaceallocator::SpaceItf>& space) override;
 
     /**
      * Validates service.
@@ -62,12 +56,7 @@ public:
      * @param path service path.
      * @return Error.
      */
-    Error ValidateService(const String& path) const override
-    {
-        (void)path;
-
-        return ErrorEnum::eNone;
-    }
+    Error ValidateService(const String& path) const override;
 
     /**
      * Calculates digest for the given path or file.
@@ -75,12 +64,11 @@ public:
      * @param path root folder or file.
      * @return RetWithError<StaticString<cMaxDigestLen>>.
      */
-    RetWithError<StaticString<oci::cMaxDigestLen>> CalculateDigest(const String& path) const override
-    {
-        (void)path;
+    RetWithError<StaticString<oci::cMaxDigestLen>> CalculateDigest(const String& path) const override;
 
-        return {StaticString<oci::cMaxDigestLen>(), ErrorEnum::eNone};
-    }
+private:
+    spaceallocator::SpaceAllocatorItf* mLayerSpaceAllocator   = nullptr;
+    spaceallocator::SpaceAllocatorItf* mServiceSpaceAllocator = nullptr;
 };
 
 } // namespace aos::zephyr::image
