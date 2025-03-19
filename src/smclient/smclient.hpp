@@ -185,6 +185,7 @@ private:
     Error SetupChannel();
     void  HandleChannel();
     Error SendNodeConfigStatus(const String& version, const Error& configErr);
+    Error SendRunStatus(const Array<InstanceStatus>& instances);
     Error ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus);
     Error ProcessCheckNodeConfig(const servicemanager_v4_CheckNodeConfig& pbCheckNodeConfig);
     Error ProcessSetNodeConfig(const servicemanager_v4_SetNodeConfig& pbSetNodeConfig);

@@ -104,6 +104,20 @@ void ReceiveNodeConfigStatus(ChannelStub* channel, const NodeInfo& nodeInfo, con
     zassert_equal(pbNodeConfigStatus.version, nodeConfigVersion, "Wrong node config version");
 }
 
+void ReceiveRunInstancesStatus(ChannelStub* channel)
+{
+    servicemanager_v4_SMOutgoingMessages outgoingMessage;
+    auto&                                pbRunInstancesStatus = outgoingMessage.SMOutgoingMessage.run_instances_status;
+
+    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
+
+    auto err = ReceiveSMOutgoingMessage(channel, outgoingMessage);
+    zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(outgoingMessage.which_SMOutgoingMessage,
+        servicemanager_v4_SMOutgoingMessages_run_instances_status_tag, "Unexpected message type");
+}
+
 RetWithError<ChannelStub*> InitSMClient(
     smclient_fixture* fixture, uint32_t port, const NodeInfo& nodeInfo = {}, const String& nodeConfigVersion = "1.0.0")
 {
@@ -126,6 +140,8 @@ RetWithError<ChannelStub*> InitSMClient(
 
     if (port == CONFIG_AOS_SM_SECURE_PORT) {
         ReceiveNodeConfigStatus(channel.mValue, nodeInfo, nodeConfigVersion);
+
+        ReceiveRunInstancesStatus(channel.mValue);
     }
 
     return channel;
