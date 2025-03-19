@@ -19,7 +19,6 @@
 #include <aos/iam/provisionmanager.hpp>
 #include <aos/sm/launcher.hpp>
 #include <aos/sm/layermanager.hpp>
-#include <aos/sm/networkmanager.hpp>
 #include <aos/sm/servicemanager.hpp>
 
 #include "clocksync/clocksync.hpp"
@@ -34,6 +33,7 @@
 #include "image/imagehandler.hpp"
 #include "launcher/runtime.hpp"
 #include "monitoring/resourceusageprovider.hpp"
+#include "networkmanager/networkmanager.hpp"
 #include "nodeinfoprovider/nodeinfoprovider.hpp"
 #include "ocispec/ocispec.hpp"
 #include "provisionmanager/provisionmanagercallback.hpp"
@@ -117,7 +117,7 @@ private:
     sm::resourcemanager::ResourceManager mResourceManager;
     sm::servicemanager::ServiceManager   mServiceManager;
     sm::layermanager::LayerManager       mLayerManager;
-    sm::networkmanager::NetworkManager   mNetworkManager;
+    networkmanager::NetworkManager       mNetworkManager;
 
     clocksync::ClockSync          mClockSync;
     communication::ChannelManager mChannelManager;
