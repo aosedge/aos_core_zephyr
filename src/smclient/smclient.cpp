@@ -313,21 +313,7 @@ Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
 {
     LockGuard lock {mMutex};
 
-    LOG_INF() << "Send run instances status";
-
-    auto  outgoingMessage      = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
-    auto& pbRunInstancesStatus = outgoingMessage->SMOutgoingMessage.run_instances_status;
-
-    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_run_instances_status_tag;
-    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
-
-    pbRunInstancesStatus.instances_count = instances.Size();
-
-    for (size_t i = 0; i < instances.Size(); i++) {
-        InstanceStatusToPB(instances[i], pbRunInstancesStatus.instances[i]);
-    }
-
-    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
+    return SendRunStatus(instances);
 }
 
 Error SMClient::InstancesUpdateStatus(const Array<InstanceStatus>& instances)
@@ -489,6 +475,18 @@ void SMClient::OnConnect()
 
     if (auto err = SendNodeConfigStatus(version, configErr); !err.IsNone()) {
         LOG_ERR() << "Failed to send node config status: err=" << err;
+        return;
+    }
+
+    auto lastRunStatus = MakeUnique<InstanceStatusStaticArray>(&mAllocator);
+
+    if (auto err = mLauncher->GetCurrentRunStatus(*lastRunStatus); !err.IsNone()) {
+        LOG_ERR() << "Can't get current run status: err=" << err;
+        return;
+    }
+
+    if (auto err = SendRunStatus(*lastRunStatus); !err.IsNone()) {
+        LOG_ERR() << "Can't send current run status: err=" << err;
         return;
     }
 
@@ -744,6 +742,25 @@ Error SMClient::SendNodeConfigStatus(const String& version, const Error& configE
     if (!configErr.IsNone()) {
         pbNodeConfigStatus.has_error = true;
         pbNodeConfigStatus.error     = utils::ErrorToPB(configErr);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
+}
+
+Error SMClient::SendRunStatus(const Array<InstanceStatus>& instances)
+{
+    LOG_INF() << "Send run instances status";
+
+    auto  outgoingMessage      = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbRunInstancesStatus = outgoingMessage->SMOutgoingMessage.run_instances_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_run_instances_status_tag;
+    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
+
+    pbRunInstancesStatus.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        InstanceStatusToPB(instances[i], pbRunInstancesStatus.instances[i]);
     }
 
     return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
