@@ -47,7 +47,7 @@ Error ClockSync::Init(ClockSyncSenderItf& sender)
                 continue;
             }
 
-            if (mSynced && abs(Time::Now(CLOCK_MONOTONIC).Sub(mSyncTime)) > cSyncTimeout) {
+            if (mSynced && abs(Time::Now(CLOCK_MONOTONIC).Sub(mSyncTime).Nanoseconds()) > cSyncTimeout.Nanoseconds()) {
                 LOG_WRN() << "Time is not synced";
 
                 mSynced = false;
@@ -101,7 +101,7 @@ Error ClockSync::Sync(const Time& time)
 
     LOG_DBG() << "Sync: time = " << time;
 
-    if (llabs(Time::Now().Sub(time)) > cMaxTimeDiff) {
+    if (llabs(Time::Now().Sub(time).Nanoseconds()) > cMaxTimeDiff.Nanoseconds()) {
         LOG_DBG() << "Set time: time = " << time;
 
         auto ts = time.UnixTime();
