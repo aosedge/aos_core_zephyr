@@ -106,10 +106,10 @@ Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
     }
 
     if (downloadResult->mFile == -1) {
-        auto path    = FS::JoinPath(mRequestedPath, chunk.mRelativePath);
-        auto dirPath = FS::Dir(path);
+        auto path    = fs::JoinPath(mRequestedPath, chunk.mRelativePath);
+        auto dirPath = fs::Dir(path);
 
-        auto err = FS::MakeDirAll(dirPath);
+        auto err = fs::MakeDirAll(dirPath);
         if (!err.IsNone()) {
             err = AOS_ERROR_WRAP(errno);
 

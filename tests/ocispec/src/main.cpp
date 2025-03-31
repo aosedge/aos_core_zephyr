@@ -94,14 +94,14 @@ static void* Setup(void)
 {
     aos::Log::SetCallback(TestLogCallback);
 
-    zassert_true(aos::FS::MakeDirAll("/tmp/aos").IsNone(), "Can't create test folder");
+    zassert_true(aos::fs::MakeDirAll("/tmp/aos").IsNone(), "Can't create test folder");
 
     return nullptr;
 }
 
 static void Cleanup(void*)
 {
-    zassert_true(aos::FS::RemoveAll("/tmp/aos").IsNone(), "Can't remove test folder");
+    zassert_true(aos::fs::RemoveAll("/tmp/aos").IsNone(), "Can't remove test folder");
 }
 
 ZTEST_SUITE(ocispec, NULL, Setup, NULL, NULL, Cleanup);

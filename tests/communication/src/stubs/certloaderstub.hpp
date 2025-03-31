@@ -31,7 +31,7 @@ public:
 
         aos::StaticString<aos::crypto::cCertPEMLen> mCertChainPem;
 
-        auto err = aos::FS::ReadFileToString(url, mCertChainPem);
+        auto err = aos::fs::ReadFileToString(url, mCertChainPem);
         if (!err.IsNone()) {
             return {nullptr, err};
         }
@@ -57,7 +57,7 @@ public:
         std::unique_ptr<mbedtls_ctr_drbg_context, decltype(&mbedtls_ctr_drbg_free)> ctrDrbgPtr(
             &ctrDrbg, mbedtls_ctr_drbg_free);
 
-        auto err = aos::FS::ReadFileToString(url, mPKPem);
+        auto err = aos::fs::ReadFileToString(url, mPKPem);
         if (!err.IsNone()) {
             return {nullptr, err};
         }

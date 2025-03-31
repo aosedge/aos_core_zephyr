@@ -135,7 +135,7 @@ Error NodeInfoProvider::UnsubscribeNodeStatusChanged(iam::nodeinfoprovider::Node
 
 Error NodeInfoProvider::InitNodeID()
 {
-    if (auto err = FS::ReadFileToString(cNodeIDFile, mNodeInfo.mNodeID); !err.IsNone()) {
+    if (auto err = fs::ReadFileToString(cNodeIDFile, mNodeInfo.mNodeID); !err.IsNone()) {
         LOG_WRN() << "Failed to read node id: path=" << cNodeIDFile << ", err=" << err;
     } else if (mNodeInfo.mNodeID.IsEmpty()) {
         LOG_WRN() << "Node id is empty: path=" << cNodeIDFile;
@@ -151,7 +151,7 @@ Error NodeInfoProvider::InitNodeID()
 
     auto uuidStr = uuid::UUIDToString(uuid::CreateUUID());
 
-    if (auto err = FS::WriteStringToFile(cNodeIDFile, uuidStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
+    if (auto err = fs::WriteStringToFile(cNodeIDFile, uuidStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -215,7 +215,7 @@ Error NodeInfoProvider::StoreNodeStatus(const NodeStatus& status) const
 {
     auto statusStr = status.ToString();
 
-    if (auto err = FS::WriteStringToFile(cNodeStatusFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
+    if (auto err = fs::WriteStringToFile(cNodeStatusFile, statusStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -226,7 +226,7 @@ RetWithError<NodeStatus> NodeInfoProvider::ReadNodeStatus() const
 {
     StaticString<cNodeStatusLen> statusStr;
 
-    auto err = FS::ReadFileToString(cNodeStatusFile, statusStr);
+    auto err = fs::ReadFileToString(cNodeStatusFile, statusStr);
     if (!err.IsNone()) {
         if (err == -ENOENT) {
             return {NodeStatusEnum::eUnprovisioned, ErrorEnum::eNone};
