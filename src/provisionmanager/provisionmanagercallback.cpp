@@ -25,7 +25,7 @@ Error ProvisionManagerCallback::OnFinishProvisioning(const String& password)
 
 Error ProvisionManagerCallback::OnDeprovision(const String& password)
 {
-    if (auto err = FS::ClearDir(cHSMDir); !err.IsNone()) {
+    if (auto err = fs::ClearDir(cHSMDir); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

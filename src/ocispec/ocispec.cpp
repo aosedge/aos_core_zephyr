@@ -119,7 +119,7 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
 
     LOG_DBG() << "Load image manifest: " << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -223,7 +223,7 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
         return AOS_ERROR_WRAP(err);
     }
 
-    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = fs::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -237,7 +237,7 @@ Error OCISpec::LoadImageSpec(const String& path, oci::ImageSpec& imageSpec)
 
     LOG_DBG() << "Load image spec: " << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -322,7 +322,7 @@ Error OCISpec::SaveImageSpec(const String& path, const oci::ImageSpec& imageSpec
         return AOS_ERROR_WRAP(err);
     }
 
-    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = fs::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -336,7 +336,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
 
     LOG_DBG() << "Load runtime spec: " << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -474,7 +474,7 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
         return AOS_ERROR_WRAP(err);
     }
 
-    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = fs::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -488,7 +488,7 @@ Error OCISpec::LoadServiceConfig(const String& path, oci::ServiceConfig& service
 
     LOG_DBG() << "Load service config: path=" << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }

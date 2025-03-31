@@ -20,29 +20,29 @@ Error Storage::Init()
 {
     LOG_DBG() << "Initialize storage: " << cStoragePath;
 
-    if (auto err = FS::MakeDirAll(cStoragePath); !err.IsNone()) {
+    if (auto err = fs::MakeDirAll(cStoragePath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    auto instancePath = FS::JoinPath(cStoragePath, "instance.db");
+    auto instancePath = fs::JoinPath(cStoragePath, "instance.db");
 
     if (auto err = mInstanceDatabase.Init(instancePath); !err.IsNone()) {
         return err;
     }
 
-    auto servicePath = FS::JoinPath(cStoragePath, "service.db");
+    auto servicePath = fs::JoinPath(cStoragePath, "service.db");
 
     if (auto err = mServiceDatabase.Init(servicePath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    auto layerPath = FS::JoinPath(cStoragePath, "layer.db");
+    auto layerPath = fs::JoinPath(cStoragePath, "layer.db");
 
     if (auto err = mLayerDatabase.Init(layerPath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    auto certPath = FS::JoinPath(cStoragePath, "cert.db");
+    auto certPath = fs::JoinPath(cStoragePath, "cert.db");
 
     if (auto err = mCertDatabase.Init(certPath); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);

@@ -100,7 +100,7 @@ ZTEST(downloader, test_download_image)
     zassert_equal(sDownloader.Download(url, path, aos::downloader::DownloadContentEnum::eService),
         aos::ErrorEnum::eNone, "Failed to download image");
 
-    aos::StaticString<aos::cFilePathLen> filePath {aos::FS::JoinPath(cDownloadPath, cFileName)};
+    aos::StaticString<aos::cFilePathLen> filePath {aos::fs::JoinPath(cDownloadPath, cFileName)};
 
     auto file = open(filePath.CStr(), O_RDONLY, 0644);
     zassert_false(file < 0, "Failed to open file");
