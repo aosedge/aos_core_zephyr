@@ -51,7 +51,7 @@ ZTEST_SUITE(
 
         assert(!String(cStoragePath).IsEmpty());
 
-        auto err = FS::ClearDir(cStoragePath);
+        auto err = fs::ClearDir(cStoragePath);
         zassert_true(err.IsNone(), "Failed to clear storage directory: err= %s", utils::ErrorToCStr(err));
 
         auto fixture = new storage_fixture;

@@ -139,7 +139,7 @@ private:
     {
         aos::StaticString<aos::crypto::cCertPEMLen> mCACertPem;
 
-        auto err = aos::FS::ReadFileToString(CERT_DIR "/ca.pem", mCACertPem);
+        auto err = aos::fs::ReadFileToString(CERT_DIR "/ca.pem", mCACertPem);
         if (!err.IsNone()) {
             return err;
         }
@@ -152,7 +152,7 @@ private:
     {
         aos::StaticString<aos::crypto::cCertPEMLen> mCertChainPem;
 
-        auto err = aos::FS::ReadFileToString(CERT_DIR "/server.cer", mCertChainPem);
+        auto err = aos::fs::ReadFileToString(CERT_DIR "/server.cer", mCertChainPem);
         if (!err.IsNone()) {
             return err;
         }
@@ -165,7 +165,7 @@ private:
     {
         aos::StaticString<4096> mPKPem;
 
-        auto err = aos::FS::ReadFileToString(CERT_DIR "/server.key", mPKPem);
+        auto err = aos::fs::ReadFileToString(CERT_DIR "/server.key", mPKPem);
         if (!err.IsNone()) {
             return err;
         }
