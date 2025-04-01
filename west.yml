@@ -68,7 +68,7 @@ manifest:
 
     - name: mbedtls
       remote: zephyrproject-rtos
-      revision: "zephyr"
+      revision: "a78176c6ff0733ba08018cba4447bd3f20de7978"
       path: modules/crypto/mbedtls
       groups:
         - crypto
