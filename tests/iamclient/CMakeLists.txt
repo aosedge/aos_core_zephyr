@@ -56,6 +56,12 @@ core_api_generate(${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_api ${CMAKE_CURR
 # ######################################################################################################################
 
 target_sources(
-    app PRIVATE ../../src/communication/pbhandler.cpp ../../src/iamclient/iamclient.cpp ../../src/utils/utils.cpp
-                ../utils/log.cpp ../utils/pbmessages.cpp src/main.cpp
+    app
+    PRIVATE ../../src/communication/pbhandler.cpp
+            ../../src/iamclient/iamclient.cpp
+            ../../src/utils/utils.cpp
+            ../utils/log.cpp
+            ../utils/pbmessages.cpp
+            src/main.cpp
+            ${aoscore_source_dir}/src/common/tools/time.cpp
 )
