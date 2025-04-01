@@ -6,6 +6,7 @@
  */
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
