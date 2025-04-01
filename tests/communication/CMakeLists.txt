@@ -119,4 +119,6 @@ target_sources(
             ../utils/log.cpp
             src/channelmanager.cpp
             src/tlschannel.cpp
+            ${aoscore_source_dir}/src/common/tools/fs.cpp
+            ${aoscore_source_dir}/src/common/tools/time.cpp
 )
