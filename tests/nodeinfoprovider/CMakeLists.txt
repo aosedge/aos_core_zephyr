@@ -34,8 +34,14 @@ zephyr_include_directories_ifdef(CONFIG_NATIVE_APPLICATION ${APPLICATION_SOURCE_
 # ######################################################################################################################
 
 target_sources(
-    app PRIVATE ../../src/nodeinfoprovider/nodeinfoprovider.cpp ../../src/utils/utils.cpp ../utils/log.cpp src/main.cpp
-                ${aoscore_source_dir}/src/common/tools/uuid.cpp
+    app
+    PRIVATE ../../src/nodeinfoprovider/nodeinfoprovider.cpp
+            ../../src/utils/utils.cpp
+            ../utils/log.cpp
+            src/main.cpp
+            ${aoscore_source_dir}/src/common/tools/fs.cpp
+            ${aoscore_source_dir}/src/common/tools/time.cpp
+            ${aoscore_source_dir}/src/common/tools/uuid.cpp
 )
 
 target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE ${APPLICATION_SOURCE_DIR}/../../mocks/xstat/xstat.cpp)

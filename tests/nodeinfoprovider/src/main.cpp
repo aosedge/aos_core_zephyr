@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <fcntl.h>
 #include <sys/statvfs.h>
 
 #include <zephyr/tc_util.h>
