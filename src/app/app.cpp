@@ -193,9 +193,12 @@ Error App::InitIAM()
 
 Error App::InitSM()
 {
-    aos::sm::launcher::Config launcherConfig;
+    mLauncherConfig.mWorkDir              = CONFIG_AOS_LAUNCHER_WORK_DIR;
+    mLauncherConfig.mStorageDir           = CONFIG_AOS_LAUNCHER_STORAGE_DIR;
+    mLauncherConfig.mStateDir             = CONFIG_AOS_LAUNCHER_STATE_DIR;
+    mLauncherConfig.mRemoveOutdatedPeriod = Time::cHours;
 
-    if (auto err = mLauncher.Init(launcherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
+    if (auto err = mLauncher.Init(mLauncherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
             mNetworkManager, mPermHandler, mRunner, mRuntime, mResourceMonitor, mJsonOciSpec, mSMClient, mSMClient,
             mStorage);
         !err.IsNone()) {
