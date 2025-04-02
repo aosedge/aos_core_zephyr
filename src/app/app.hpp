@@ -139,6 +139,8 @@ private:
     storage::Storage                           mStorage;
     launcher::Runtime                          mRuntime;
 
+    aos::sm::launcher::Config mLauncherConfig;
+
     spaceallocator::SpaceAllocator<cMaxNumServices>                     mServiceSpaceAllocator;
     spaceallocator::SpaceAllocator<cMaxNumLayers>                       mLayerSpaceAllocator;
     spaceallocator::SpaceAllocator<Max(cMaxNumLayers, cMaxNumServices)> mDownloadSpaceAllocator;
