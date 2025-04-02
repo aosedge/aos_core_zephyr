@@ -47,6 +47,18 @@ config AOS_LAYERS_DIR
 	string "Aos layers dir"
 	default "/lfs/aos/layers"
 
+config AOS_LAUNCHER_STATE_DIR
+	string "Aos launcher state dir"
+	default "/lfs/aos/launcher/states"
+
+config AOS_LAUNCHER_STORAGE_DIR
+	string "Aos launcher storage dir"
+	default "/lfs/aos/launcher/storages"
+
+config AOS_LAUNCHER_WORK_DIR
+	string "Aos launcher work dir"
+	default "/lfs/aos/launcher"
+
 config AOS_NODE_CONFIG_FILE
 	string "Node configuration file path"
 	default "/lfs/aos/node_config.cfg"
