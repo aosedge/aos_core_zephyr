@@ -50,7 +50,7 @@ Error Socket::Open()
         return Error(ErrorEnum::eRuntime, "invalid server address");
     }
 
-    if (connect(mSocketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (connect(mSocketFd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
         close(mSocketFd);
         mSocketFd = -1;
 
