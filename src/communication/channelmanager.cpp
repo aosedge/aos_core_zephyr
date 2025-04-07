@@ -172,7 +172,7 @@ Error ChannelManager::Run()
 
             if (auto err = TryConnect(); !err.IsNone()) {
                 LOG_ERR() << "Transport connect error: err=" << err;
-                LOG_DBG() << "Reconnect in " << cReconnectPeriod / 1000000 << " ms";
+                LOG_DBG() << "Reconnect in " << cReconnectPeriod;
 
                 if (err = WaitTimeout(); !err.IsNone()) {
                     LOG_ERR() << "Failed to wait timeout: err=" << err;
