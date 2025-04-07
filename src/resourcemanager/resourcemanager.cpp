@@ -68,20 +68,15 @@ struct Resource {
  * Node config.
  */
 struct NodeConfig {
-    // cppcheck-suppress unusedStructMember
     const char* version;
-    // cppcheck-suppress unusedStructMember
     const char* nodeType;
     Device      devices[cMaxNumNodeDevices];
     size_t      devicesLen;
     Resource    resources[cMaxNumNodeResources];
     size_t      resourcesLen;
-    // cppcheck-suppress unusedStructMember
     const char* labels[cMaxNumNodeLabels];
-    // cppcheck-suppress unusedStructMember
-    size_t labelsLen;
-    // cppcheck-suppress unusedStructMember
-    uint32_t priority;
+    size_t      labelsLen;
+    uint32_t    priority;
 };
 
 } // namespace
