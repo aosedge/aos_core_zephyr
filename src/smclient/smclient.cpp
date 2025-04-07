@@ -852,7 +852,7 @@ void SMClient::HandleChannel()
 
         if (auto err = SetupChannel(); !err.IsNone()) {
             LOG_ERR() << "Can't setup channel: err=" << err;
-            LOG_DBG() << "Reconnect in " << cReconnectInterval / 1000000 << " ms";
+            LOG_DBG() << "Reconnect in " << cReconnectInterval;
 
             if (err = mCondVar.Wait(lock, cReconnectInterval, [this] { return mClose; });
                 !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
