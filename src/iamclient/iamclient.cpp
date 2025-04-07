@@ -42,6 +42,7 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error IAMClient::Start()
 {
     LOG_DBG() << "Start IAM client";
@@ -70,6 +71,7 @@ Error IAMClient::Start()
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error IAMClient::Stop()
 {
     LOG_DBG() << "Stop IAM client";
