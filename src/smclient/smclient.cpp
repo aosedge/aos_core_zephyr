@@ -252,6 +252,7 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error SMClient::Start()
 {
     LOG_DBG() << "Start SM client";
@@ -283,6 +284,7 @@ Error SMClient::Start()
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error SMClient::Stop()
 {
     LOG_DBG() << "Stop SM client";
