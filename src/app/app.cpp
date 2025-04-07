@@ -215,8 +215,10 @@ Error App::InitSM()
     }
 
     aos::sm::servicemanager::Config smConfig;
-    smConfig.mServicesDir = CONFIG_AOS_SERVICES_DIR;
-    smConfig.mDownloadDir = CONFIG_AOS_DOWNLOAD_DIR;
+    smConfig.mServicesDir          = CONFIG_AOS_SERVICES_DIR;
+    smConfig.mDownloadDir          = CONFIG_AOS_DOWNLOAD_DIR;
+    smConfig.mTTL                  = 1 * Time::cDay;
+    smConfig.mRemoveOutdatedPeriod = 1 * Time::cDay;
 
     if (auto err = mServiceManager.Init(smConfig, mJsonOciSpec, mDownloader, mStorage, mServiceSpaceAllocator,
             mDownloadSpaceAllocator, mImageHandler);
