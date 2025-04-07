@@ -78,7 +78,7 @@ void InstanceStatusToPB(const InstanceStatus& aosInstanceStatus, servicemanager_
 
 class AlertVisitor : public aos::StaticVisitor<Error> {
 public:
-    AlertVisitor(servicemanager_v4_Alert& pbAlert)
+    explicit AlertVisitor(servicemanager_v4_Alert& pbAlert)
         : mPBAlert(pbAlert)
     {
     }
