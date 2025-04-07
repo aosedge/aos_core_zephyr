@@ -384,7 +384,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
             oci::VMHWConfigIOMEM ioMem {};
-            auto&                jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
+            const auto&          jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
 
             ioMem.mFirstGFN = jsonIOMem.firstGFN;
             ioMem.mFirstMFN = jsonIOMem.firstMFN;
