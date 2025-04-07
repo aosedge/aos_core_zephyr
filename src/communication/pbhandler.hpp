@@ -103,7 +103,7 @@ private:
     void Run();
 
     StaticString<64>                                               mName;
-    ChannelItf*                                                    mChannel;
+    ChannelItf*                                                    mChannel = {};
     mutable Mutex                                                  mMutex;
     ConditionalVariable                                            mCondVar;
     Thread<cDefaultFunctionMaxSize, cThreadStackSize>              mThread;
