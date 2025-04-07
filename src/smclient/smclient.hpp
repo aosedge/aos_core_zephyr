@@ -29,9 +29,7 @@ namespace aos::zephyr::smclient {
 /**
  * SM client instance.
  */
-class SMClient : public communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
-                     servicemanager_v4_SMOutgoingMessages_size>,
-                 public iam::nodeinfoprovider::NodeStatusObserverItf,
+class SMClient : public iam::nodeinfoprovider::NodeStatusObserverItf,
                  public sm::launcher::InstanceStatusReceiverItf,
                  public downloader::DownloadRequesterItf,
                  public aos::monitoring::SenderItf,
@@ -39,6 +37,8 @@ class SMClient : public communication::PBHandler<servicemanager_v4_SMIncomingMes
                  public clocksync::ClockSyncSenderItf,
                  public clocksync::ClockSyncSubscriberItf,
                  public aos::alerts::SenderItf,
+                 private communication::PBHandler<servicemanager_v4_SMIncomingMessages_size,
+                     servicemanager_v4_SMOutgoingMessages_size>,
                  private aos::iam::certhandler::CertReceiverItf,
                  private NonCopyable {
 public:
@@ -66,6 +66,7 @@ public:
 #endif
     );
 
+    // cppcheck-suppress duplInheritedMember
     /**
      * Starts SM client.
      *
@@ -73,6 +74,7 @@ public:
      */
     Error Start();
 
+    // cppcheck-suppress duplInheritedMember
     /**
      * Stops SM client.
      *
