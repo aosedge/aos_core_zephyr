@@ -227,9 +227,10 @@ Error App::InitSM()
     }
 
     sm::layermanager::Config layerConfig;
-    layerConfig.mLayersDir   = CONFIG_AOS_LAYERS_DIR;
-    layerConfig.mDownloadDir = CONFIG_AOS_DOWNLOAD_DIR;
-    layerConfig.mTTL         = Time::cHours * 24;
+    layerConfig.mLayersDir            = CONFIG_AOS_LAYERS_DIR;
+    layerConfig.mDownloadDir          = CONFIG_AOS_DOWNLOAD_DIR;
+    layerConfig.mTTL                  = 1 * Time::cDay;
+    layerConfig.mRemoveOutdatedPeriod = 1 * Time::cDay;
 
     if (auto err = mLayerManager.Init(
             layerConfig, mLayerSpaceAllocator, mDownloadSpaceAllocator, mStorage, mDownloader, mImageHandler);
