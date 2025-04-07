@@ -325,7 +325,6 @@ void ChannelManager::CloseChannels()
 {
     LOG_DBG() << "Close channels";
 
-    // cppcheck-suppress unusedVariable
     for (auto& [_, channel] : mChannels) {
         channel->Close();
     }
