@@ -27,9 +27,9 @@ namespace aos::zephyr::iamclient {
  * IAM client instance.
  */
 class IAMClient
-    : public communication::PBHandler<iamanager_v5_IAMIncomingMessages_size, iamanager_v5_IAMOutgoingMessages_size>,
-      public clocksync::ClockSyncSubscriberItf,
+    : public clocksync::ClockSyncSubscriberItf,
       public iam::nodeinfoprovider::NodeStatusObserverItf,
+      private communication::PBHandler<iamanager_v5_IAMIncomingMessages_size, iamanager_v5_IAMOutgoingMessages_size>,
       private aos::iam::certhandler::CertReceiverItf,
       private NonCopyable {
 public:
@@ -52,6 +52,7 @@ public:
 #endif
     );
 
+    // cppcheck-suppress duplInheritedMember
     /**
      * Starts IAM client.
      *
@@ -59,6 +60,7 @@ public:
      */
     Error Start();
 
+    // cppcheck-suppress duplInheritedMember
     /**
      * Stops IAM client.
      *
