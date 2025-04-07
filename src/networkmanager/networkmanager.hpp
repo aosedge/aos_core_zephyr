@@ -7,7 +7,7 @@
 #ifndef AOS_ZEPHYR_NETWORKMANAGER_HPP_
 #define AOS_ZEPHYR_NETWORKMANAGER_HPP_
 
-#include "aos/sm/networkmanager.hpp"
+#include <aos/sm/networkmanager.hpp>
 
 namespace aos::zephyr::networkmanager {
 
