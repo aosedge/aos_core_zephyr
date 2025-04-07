@@ -194,7 +194,7 @@ Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
 
 bool Downloader::IsAllDownloadDone() const
 {
-    for (auto& result : mDownloadResults) {
+    for (const auto& result : mDownloadResults) {
         if (!result.mIsDone) {
             return false;
         }
