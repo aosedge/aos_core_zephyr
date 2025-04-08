@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef DOMAIN_CONF_H_
-#define DOMAIN_C0NF_H_
+#define DOMAIN_CONF_H_
 
 #ifdef __cplusplus
 extern "C" {
