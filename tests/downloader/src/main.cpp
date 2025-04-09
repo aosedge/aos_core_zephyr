@@ -10,6 +10,7 @@
 #include <zephyr/ztest.h>
 
 #include <fcntl.h>
+#include <memory>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -30,13 +31,13 @@ static downloader::Downloader sDownloader;
 
 void sendImageContentInfo(void*)
 {
-    aos::StaticArray<downloader::FileInfo, 32> files;
-    downloader::FileInfo                       file {};
+    auto                 files = std::make_unique<aos::StaticArray<downloader::FileInfo, 32>>();
+    downloader::FileInfo file {};
     file.mRelativePath = cFileName;
 
-    files.PushBack(file);
+    files->PushBack(file);
 
-    zassert_equal(sDownloader.ReceiveImageContentInfo(downloader::ImageContentInfo {1, files}), aos::ErrorEnum::eNone,
+    zassert_equal(sDownloader.ReceiveImageContentInfo(downloader::ImageContentInfo {1, *files}), aos::ErrorEnum::eNone,
         "Failed to initialize downloader");
 
     aos::StaticArray<uint8_t, aos::cFileChunkSize> fileData {};
@@ -75,7 +76,7 @@ public:
             return aos::ErrorEnum::eInvalidArgument;
         }
 
-        timerReceive.Create(200, sendImageContentInfo);
+        timerReceive.Start(aos::Time::cSeconds, sendImageContentInfo);
 
         return aos::ErrorEnum::eNone;
     }
