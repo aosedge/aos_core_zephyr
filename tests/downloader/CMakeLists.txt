@@ -34,5 +34,5 @@ zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)
 
 target_sources(
     app PRIVATE ../../src/downloader/downloader.cpp ../utils/log.cpp src/main.cpp
-                ${aoscore_source_dir}/src/common/tools/fs.cpp
+                ${aoscore_source_dir}/src/common/tools/timer.cpp ${aoscore_source_dir}/src/common/tools/fs.cpp
 )
