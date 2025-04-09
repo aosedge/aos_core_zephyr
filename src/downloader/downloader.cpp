@@ -7,6 +7,7 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <aos/common/tools/fs.hpp>
 
@@ -45,7 +46,7 @@ Error Downloader::Download(const String& url, const String& path, aos::downloade
     mFinishDownload = false;
     mDownloadResults.Clear();
 
-    auto err = mTimer.Create(
+    auto err = mTimer.Start(
         Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
     if (!err.IsNone()) {
         LOG_DBG() << "Create timer failed: " << err;
@@ -137,7 +138,8 @@ Error Downloader::ReceiveFileChunk(const FileChunk& chunk)
         return err;
     }
 
-    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
+    mTimer.Start(
+        Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
 
     if (chunk.mPart == chunk.mPartsCount) {
         ret = close(downloadResult->mFile);
@@ -183,7 +185,8 @@ Error Downloader::ReceiveImageContentInfo(const ImageContentInfo& content)
         mDownloadResults.PushBack(DownloadResult {file.mRelativePath, -1, false});
     }
 
-    mTimer.Reset([this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
+    mTimer.Start(
+        Downloader::cDownloadTimeout, [this](void*) { SetErrorAndNotify(AOS_ERROR_WRAP(ErrorEnum::eTimeout)); });
 
     return ErrorEnum::eNone;
 }
