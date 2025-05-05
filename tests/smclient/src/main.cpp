@@ -193,13 +193,13 @@ void PBToInstanceStatus(const servicemanager_v4_InstanceStatus& pbInstance, Inst
     aosInstance.mServiceVersion = utils::StringFromCStr(pbInstance.service_version);
     utils::PBToEnum(pbInstance.run_state, aosInstance.mRunState);
 
-    aosInstance.mError = utils::PBToError(pbInstance.error_info);
+    aosInstance.mError = utils::PBToError(pbInstance.error);
 
-    if (pbInstance.has_error_info) {
-        if (pbInstance.error_info.exit_code) {
-            aosInstance.mError = pbInstance.error_info.exit_code;
+    if (pbInstance.has_error) {
+        if (pbInstance.error.exit_code) {
+            aosInstance.mError = pbInstance.error.exit_code;
         } else {
-            aosInstance.mError = static_cast<ErrorEnum>(pbInstance.error_info.aos_code);
+            aosInstance.mError = static_cast<ErrorEnum>(pbInstance.error.aos_code);
         }
     }
 }
