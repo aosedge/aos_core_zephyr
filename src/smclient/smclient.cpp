@@ -71,8 +71,8 @@ void InstanceStatusToPB(const InstanceStatus& aosInstanceStatus, servicemanager_
     utils::StringFromCStr(pbInstanceStatus.run_state)       = aosInstanceStatus.mRunState.ToString();
 
     if (!aosInstanceStatus.mError.IsNone()) {
-        pbInstanceStatus.has_error_info = true;
-        pbInstanceStatus.error_info     = utils::ErrorToPB(aosInstanceStatus.mError);
+        pbInstanceStatus.has_error = true;
+        pbInstanceStatus.error     = utils::ErrorToPB(aosInstanceStatus.mError);
     }
 }
 
