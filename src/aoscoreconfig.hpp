@@ -120,4 +120,9 @@
  */
 #define AOS_CONFIG_TYPES_MAX_NUM_LAYERS 16
 
+/**
+ * Log content len.
+ */
+#define AOS_CONFIG_CLOUDPROTOCOL_LOG_CONTENT_LEN 10240
+
 #endif
