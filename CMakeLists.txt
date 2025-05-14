@@ -84,6 +84,8 @@ target_sources(
             src/image/imagehandler.cpp
             src/logger/fsbackend.cpp
             src/logger/logger.cpp
+            src/logprovider/fslogreader.cpp
+            src/logprovider/logprovider.cpp
             src/monitoring/resourceusageprovider.cpp
             src/nodeinfoprovider/nodeinfoprovider.cpp
             src/ocispec/ocispec.cpp
