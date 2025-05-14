@@ -313,7 +313,7 @@ Error App::InitCommunication()
     }
 
     if (auto err = mSMClient.Init(mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader,
-            mClockSync, mChannelManager, mCertHandler, mCertLoader);
+            mClockSync, mChannelManager, mCertHandler, mCertLoader, mLogProvider);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }

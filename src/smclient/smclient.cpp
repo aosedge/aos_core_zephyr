@@ -224,7 +224,8 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     ,
     iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader
 #endif
-)
+    ,
+    sm::logprovider::LogProviderItf& logProvider)
 {
     LOG_DBG() << "Initialize SM client";
 
@@ -239,6 +240,7 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
 #endif
+    mLogProvider = &logProvider;
 
     auto [openChannel, err] = mChannelManager->CreateChannel(cOpenPort);
     if (!err.IsNone()) {
@@ -266,6 +268,10 @@ Error SMClient::Start()
     mProvisioned = nodeInfo->mStatus != NodeStatusEnum::eUnprovisioned;
 
     if (auto err = mClockSync->Subscribe(*this); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mLogProvider->Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -297,6 +303,10 @@ Error SMClient::Stop()
         if (auto err = mChannelManager->DeleteChannel(cOpenPort); !err.IsNone()) {
             LOG_ERR() << "Failed to delete channel: err=" << err;
         }
+    }
+
+    if (auto err = mLogProvider->Unsubscribe(*this); !err.IsNone()) {
+        LOG_ERR() << "Failed to unsubscribe log provider: err=" << err;
     }
 
     {
@@ -542,6 +552,10 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
         err = ProcessRunInstances(incomingMessages->SMIncomingMessage.run_instances);
         break;
 
+    case servicemanager_v4_SMIncomingMessages_system_log_request_tag:
+        err = ProcessSystemLogRequest(incomingMessages->SMIncomingMessage.system_log_request);
+        break;
+
     case servicemanager_v4_SMIncomingMessages_image_content_info_tag:
         err = ProcessImageContentInfo(incomingMessages->SMIncomingMessage.image_content_info);
         break;
@@ -556,6 +570,33 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
     }
 
     return err;
+}
+
+Error SMClient::OnLogReceived(const cloudprotocol::PushLog& log)
+{
+    LOG_DBG() << "Received log: logID=" << log.mLogID << ", part=" << log.mPart << ", status=" << log.mStatus.ToString()
+              << ", size=" << log.mContent.Size();
+
+    auto  outgoingMessage = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbLog           = outgoingMessage->SMOutgoingMessage.log;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_log_tag;
+    pbLog                                    = servicemanager_v4_LogData servicemanager_v4_LogData_init_default;
+
+    utils::StringFromCStr(pbLog.log_id) = log.mLogID.CStr();
+    utils::StringFromCStr(pbLog.status) = log.mStatus.ToString();
+    pbLog.part                          = log.mPart;
+    pbLog.part_count                    = log.mPartsCount;
+
+    utils::ByteArrayToPB(
+        Array<uint8_t>(reinterpret_cast<const uint8_t*>(log.mContent.begin()), log.mContent.Size()), pbLog.data);
+
+    if (!log.mErrorInfo.IsNone()) {
+        pbLog.has_error = true;
+        pbLog.error     = utils::ErrorToPB(log.mErrorInfo);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus)
@@ -671,6 +712,25 @@ Error SMClient::ProcessRunInstances(const servicemanager_v4_RunInstances& pbRunI
     }
 
     return ErrorEnum::eNone;
+}
+
+Error SMClient::ProcessSystemLogRequest(const servicemanager_v4_SystemLogRequest& pbSystemLogRequest)
+{
+    LOG_INF() << "Process system log request";
+
+    auto logRequest = MakeUnique<cloudprotocol::RequestLog>(&mAllocator);
+
+    logRequest->mLogID   = utils::StringFromCStr(pbSystemLogRequest.log_id);
+    logRequest->mLogType = cloudprotocol::LogTypeEnum::eSystemLog;
+
+    if (pbSystemLogRequest.has_from) {
+        logRequest->mFilter.mFrom.SetValue(Time::Unix(pbSystemLogRequest.from.seconds, pbSystemLogRequest.from.nanos));
+    }
+    if (pbSystemLogRequest.has_till) {
+        logRequest->mFilter.mTill.SetValue(Time::Unix(pbSystemLogRequest.till.seconds, pbSystemLogRequest.till.nanos));
+    }
+
+    return mLogProvider->GetSystemLog(*logRequest);
 }
 
 Error SMClient::ProcessImageContentInfo(const servicemanager_v4_ImageContentInfo& pbImageContentInfo)
