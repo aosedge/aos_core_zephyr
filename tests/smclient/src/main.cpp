@@ -17,6 +17,7 @@
 #include "stubs/connectionsubscriberstub.hpp"
 #include "stubs/downloaderstub.hpp"
 #include "stubs/launcherstub.hpp"
+#include "stubs/logproviderstub.hpp"
 #include "stubs/nodeinfoproviderstub.hpp"
 #include "stubs/resourcemanagerstub.hpp"
 #include "stubs/resourcemonitorstub.hpp"
@@ -44,6 +45,7 @@ struct smclient_fixture {
     ResourceMonitorStub                 mResourceMonitor;
     DownloaderStub                      mDownloader;
     ClockSyncStub                       mClockSync;
+    logprovider::LogProviderStub        mLogProvider;
     ChannelManagerStub                  mChannelManager;
     std::unique_ptr<smclient::SMClient> mSMClient;
 };
@@ -125,7 +127,8 @@ RetWithError<ChannelStub*> InitSMClient(
     fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
 
     auto err = fixture->mSMClient->Init(fixture->mNodeInfoProvider, fixture->mLauncher, fixture->mResourceManager,
-        fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync, fixture->mChannelManager);
+        fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync, fixture->mChannelManager,
+        fixture->mLogProvider);
     zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
     err = fixture->mSMClient->Start();
