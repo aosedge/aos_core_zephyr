@@ -76,6 +76,7 @@ LOG_CALLBACK(runner);
 LOG_CALLBACK(smclient);
 LOG_CALLBACK(storage);
 LOG_CALLBACK(image);
+LOG_CALLBACK(logprovider);
 
 // Aos lib logs
 LOG_CALLBACK(certhandler);
@@ -114,6 +115,7 @@ Error Logger::Init()
     sLogCallbacks.Set("smclient", &log_smclient::LogCallback);
     sLogCallbacks.Set("storage", &log_storage::LogCallback);
     sLogCallbacks.Set("image", &log_image::LogCallback);
+    sLogCallbacks.Set("logprovider", &log_logprovider::LogCallback);
 
 #if CONFIG_LOG_RUNTIME_FILTERING
     for (auto& [module, _] : sLogCallbacks) {
