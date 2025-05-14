@@ -51,6 +51,10 @@ Error App::Start()
 {
     LOG_INF() << "Start application";
 
+    if (auto err = mLogProvider.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mLauncher.Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -77,6 +81,10 @@ Error App::Start()
 Error App::Stop()
 {
     LOG_INF() << "Stop application";
+
+    if (auto err = mLogProvider.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop log provider: err=" << err;
+    }
 
     if (auto err = mLauncher.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop launcher: err=" << err;
@@ -270,6 +278,10 @@ Error App::InitZephyr()
     }
 
     if (auto err = mRunner.Init(mLauncher); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mLogProvider.Init(mLogReader); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

@@ -32,6 +32,8 @@
 #include "iamclient/iamclient.hpp"
 #include "image/imagehandler.hpp"
 #include "launcher/runtime.hpp"
+#include "logprovider/fslogreader.hpp"
+#include "logprovider/logprovider.hpp"
 #include "monitoring/resourceusageprovider.hpp"
 #include "networkmanager/networkmanager.hpp"
 #include "nodeinfoprovider/nodeinfoprovider.hpp"
@@ -145,6 +147,8 @@ private:
     spaceallocator::SpaceAllocator<cMaxNumLayers>                       mLayerSpaceAllocator;
     spaceallocator::SpaceAllocator<Max(cMaxNumLayers, cMaxNumServices)> mDownloadSpaceAllocator;
     image::ImageHandler                                                 mImageHandler;
+    logprovider::FSLogReader                                            mLogReader;
+    logprovider::LogProvider                                            mLogProvider;
 };
 
 } // namespace aos::zephyr::app
