@@ -27,6 +27,22 @@ config AOS_DISK_MOUNT_POINT
 	string "Disk mount point"
 	default "/lfs"
 
+config AOS_LOG_BACKEND_FS_DIR
+	string "Path to the log directory"
+	default "/lfs/aos/logs"
+
+config AOS_LOG_BACKEND_FS_FILE_SIZE
+	int "Log file size"
+	default 16384
+
+config AOS_LOG_BACKEND_FS_FILE_PREFIX
+	string "Log file prefix"
+	default "log_"
+
+config AOS_LOG_BACKEND_FS_FILES_LIMIT
+	int "Log file count"
+	default 8
+
 config AOS_STORAGE_DIR
 	string "Path to the storage"
 	default "/lfs/aos/storage"
