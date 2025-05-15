@@ -233,7 +233,7 @@ ExternalProject_Add(
                -DWITH_MBEDTLS=OFF
     SOURCE_DIR ${aoscore_source_dir}
     BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossm.a ${aoscore_build_dir}/lib/libaosiam.a
-                     ${aoscore_build_dir}/lib/libaoscommon.a
+                     ${aoscore_build_dir}/lib/libaoscommon.a ${aoscore_build_dir}/lib/libaoscrypto.a
     DEPENDS zephyr_interface
 )
 
@@ -263,12 +263,21 @@ target_link_libraries(app PUBLIC aosiam)
 
 # aoscommon
 
-add_library(aoscommon STATIC IMPORTED GLOBAL)
+add_library(
+    aoscommon STATIC ${aoscore_source_dir}/src/common/crypto/mbedtls/cryptoprovider.cpp
+                     ${aoscore_source_dir}/src/common/crypto/mbedtls/driverwrapper.cpp
+)
 
 add_dependencies(aoscommon aoscore)
 
-set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommon.a)
-set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
+target_link_libraries(
+    aoscommon PUBLIC ${aoscore_build_dir}/lib/libaoscommon.a ${aoscore_build_dir}/lib/libaoscrypto.a mbedTLSCrypto
+)
+target_include_directories(
+    aoscommon
+    PUBLIC ${aoscore_build_dir}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 target_link_libraries(app PUBLIC aoscommon)
 
