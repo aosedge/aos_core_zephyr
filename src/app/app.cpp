@@ -234,7 +234,7 @@ Error App::InitSM()
 
     if (auto err = mLauncher.Init(mLauncherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
             mNetworkManager, mPermHandler, mRunner, mRuntime, mResourceMonitor, mJsonOciSpec, mSMClient, mSMClient,
-            mStorage);
+            mStorage, mCryptoProvider);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -287,7 +287,7 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
+    if (auto err = mNodeInfoProvider.Init(mCryptoProvider); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
