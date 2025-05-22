@@ -36,6 +36,10 @@ Error App::Init()
         return err;
     }
 
+    if (auto err = InitSpaceAllocators(); !err.IsNone()) {
+        return err;
+    }
+
     if (auto err = InitSM(); !err.IsNone()) {
         return err;
     }
@@ -193,6 +197,23 @@ Error App::InitIAM()
     }
 
     if (auto err = mProvisionManager.Init(mProvisionManagerCallback, mCertHandler); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error App::InitSpaceAllocators()
+{
+    if (auto err = mDownloadSpaceAllocator.Init(CONFIG_AOS_DOWNLOAD_DIR, mFSPlatform); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mLayerSpaceAllocator.Init(CONFIG_AOS_LAYERS_DIR, mFSPlatform); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mServiceSpaceAllocator.Init(CONFIG_AOS_SERVICES_DIR, mFSPlatform); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
