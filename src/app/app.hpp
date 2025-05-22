@@ -43,6 +43,7 @@
 #include "runner/runner.hpp"
 #include "smclient/smclient.hpp"
 #include "storage/storage.hpp"
+#include "utils/fsplatform.hpp"
 
 namespace aos::zephyr::app {
 
@@ -96,6 +97,7 @@ private:
 
     Error InitCommon();
     Error InitIAM();
+    Error InitSpaceAllocators();
     Error InitSM();
     Error InitZephyr();
     Error InitCommunication();
@@ -143,6 +145,7 @@ private:
 
     aos::sm::launcher::Config mLauncherConfig;
 
+    utils::FSPlatform                                                   mFSPlatform;
     spaceallocator::SpaceAllocator<cMaxNumServices>                     mServiceSpaceAllocator;
     spaceallocator::SpaceAllocator<cMaxNumLayers>                       mLayerSpaceAllocator;
     spaceallocator::SpaceAllocator<Max(cMaxNumLayers, cMaxNumServices)> mDownloadSpaceAllocator;
