@@ -420,12 +420,18 @@ Error IAMClient::SendNodeInfo()
     pbNodeInfo.cpus_count = mNodeInfo.mCPUs.Size();
 
     for (size_t i = 0; i < mNodeInfo.mCPUs.Size(); i++) {
-        utils::StringFromCStr(pbNodeInfo.cpus[i].model_name)  = mNodeInfo.mCPUs[i].mModelName;
-        pbNodeInfo.cpus[i].num_cores                          = mNodeInfo.mCPUs[i].mNumCores;
-        pbNodeInfo.cpus[i].num_threads                        = mNodeInfo.mCPUs[i].mNumThreads;
-        utils::StringFromCStr(pbNodeInfo.cpus[i].arch)        = mNodeInfo.mCPUs[i].mArch;
-        utils::StringFromCStr(pbNodeInfo.cpus[i].arch_family) = mNodeInfo.mCPUs[i].mArchFamily;
-        pbNodeInfo.cpus[i].max_dmips                          = mNodeInfo.mCPUs[i].mMaxDMIPS;
+        utils::StringFromCStr(pbNodeInfo.cpus[i].model_name) = mNodeInfo.mCPUs[i].mModelName;
+        pbNodeInfo.cpus[i].num_cores                         = mNodeInfo.mCPUs[i].mNumCores;
+        pbNodeInfo.cpus[i].num_threads                       = mNodeInfo.mCPUs[i].mNumThreads;
+        utils::StringFromCStr(pbNodeInfo.cpus[i].arch)       = mNodeInfo.mCPUs[i].mArch;
+
+        if (mNodeInfo.mCPUs[i].mArchFamily.HasValue()) {
+            utils::StringFromCStr(pbNodeInfo.cpus[i].arch_family) = mNodeInfo.mCPUs[i].mArchFamily->CStr();
+        }
+
+        if (mNodeInfo.mCPUs[i].mMaxDMIPS.HasValue()) {
+            pbNodeInfo.cpus[i].max_dmips = *mNodeInfo.mCPUs[i].mMaxDMIPS;
+        }
     }
 
     pbNodeInfo.partitions_count = mNodeInfo.mPartitions.Size();
