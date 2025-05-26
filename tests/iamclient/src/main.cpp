@@ -224,6 +224,8 @@ ZTEST_F(iamclient, test_Deprovision)
 
     ReceiveNodeInfo(channel, nodeInfo);
 
+    zassert_equal(nodeInfo.mStatus, aos::NodeStatusEnum::eProvisioned);
+
     // Send deprovision request
 
     iamanager_v5_IAMIncomingMessages incomingMessage;
@@ -241,16 +243,17 @@ ZTEST_F(iamclient, test_Deprovision)
     // Receive deprovision response
 
     iamanager_v5_IAMOutgoingMessages outgoingMessage;
-    auto& pbDeprovisionResponse = outgoingMessage.IAMOutgoingMessage.finish_provisioning_response;
+    auto&                            pbDeprovisionResponse = outgoingMessage.IAMOutgoingMessage.deprovision_response;
 
-    pbDeprovisionResponse
-        = iamanager_v5_FinishProvisioningResponse iamanager_v5_FinishProvisioningResponse_init_default;
+    pbDeprovisionResponse = iamanager_v5_DeprovisionResponse iamanager_v5_DeprovisionResponse_init_default;
 
     err = ReceiveIAMOutgoingMessage(channel, outgoingMessage);
     zassert_true(err.IsNone(), "Error receiving message: %s", utils::ErrorToCStr(err));
 
     zassert_equal(outgoingMessage.which_IAMOutgoingMessage, iamanager_v5_IAMOutgoingMessages_deprovision_response_tag,
-        "Unexpected message type");
+        "Unexpected message type: type=%d", outgoingMessage.which_IAMOutgoingMessage);
+
+    // Check that deprovision response has no error
     zassert_false(pbDeprovisionResponse.has_error, "Unexpected error received");
 
     zassert_equal(fixture->mProvisionManager.GetPassword(), pbDeprovisionRequest.password, "Wrong password");
