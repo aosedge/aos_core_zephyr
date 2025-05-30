@@ -36,11 +36,19 @@ sm::runner::RunStatus Runner::StartInstance(
         runStatus.mError = AOS_ERROR_WRAP(ret);
     }
 
+    if (auto err = mConsoleReader.Subscribe(instanceID); !err.IsNone()) {
+        LOG_WRN() << "Can't subscribe instance console" << Log::Field("instanceID", instanceID) << Log::Field(err);
+    }
+
     return runStatus;
 }
 
 Error Runner::StopInstance(const String& instanceID)
 {
+    if (auto err = mConsoleReader.Unsubscribe(instanceID); !err.IsNone()) {
+        LOG_WRN() << "Can't unsubscribe instance console" << Log::Field("instanceID", instanceID) << Log::Field(err);
+    }
+
     auto ret = xrun_kill(instanceID.CStr());
     if (ret != 0) {
         return AOS_ERROR_WRAP(ret);
