@@ -209,11 +209,12 @@ Error App::InitSpaceAllocators()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mLayerSpaceAllocator.Init(CONFIG_AOS_LAYERS_DIR, mFSPlatform); !err.IsNone()) {
+    if (auto err = mLayerSpaceAllocator.Init(CONFIG_AOS_LAYERS_DIR, mFSPlatform, 0, &mLayerManager); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mServiceSpaceAllocator.Init(CONFIG_AOS_SERVICES_DIR, mFSPlatform); !err.IsNone()) {
+    if (auto err = mServiceSpaceAllocator.Init(CONFIG_AOS_SERVICES_DIR, mFSPlatform, 0, &mServiceManager);
+        !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
