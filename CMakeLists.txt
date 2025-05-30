@@ -91,6 +91,7 @@ target_sources(
             src/ocispec/ocispec.cpp
             src/provisionmanager/provisionmanagercallback.cpp
             src/resourcemanager/resourcemanager.cpp
+            src/runner/consolereader.cpp
             src/runner/runner.cpp
             src/smclient/openhandler.cpp
             src/smclient/smclient.cpp

@@ -10,6 +10,8 @@
 
 #include <aos/sm/runner.hpp>
 
+#include "runner/consolereader.hpp"
+
 namespace aos::zephyr::runner {
 
 /**
@@ -47,6 +49,7 @@ private:
     static constexpr int cConsoleSocket = 0;
 
     sm::runner::RunStatusReceiverItf* mStatusReceiver {};
+    ConsoleReader                     mConsoleReader;
 };
 
 } // namespace aos::zephyr::runner
