@@ -108,7 +108,16 @@ target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/soc
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/xenvchan.cpp)
 
 # Enable vchannels and xrun mocks for native posix
-target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
+target_sources_ifdef(
+    CONFIG_NATIVE_APPLICATION
+    app
+    PRIVATE
+    mocks/vch/vch.cpp
+    mocks/xenlib/xenconsole.cpp
+    mocks/xenlib/xendommgmt.cpp
+    mocks/xrun/xrun.cpp
+    mocks/xstat/xstat.cpp
+)
 
 # Include domain IPL and dtb for xen_dom0 snippet
 target_sources_ifdef(CONFIG_XEN_DOM0 app PRIVATE src/domains/dom_runner.c src/domains/domain_bins.S)
