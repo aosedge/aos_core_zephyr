@@ -93,7 +93,7 @@ Error FSLogReader::ReadLine()
 
     mCurrentEntry.EmplaceValue();
 
-    if (auto err = fs::ReadLine(mFD, mCurrentPos, mCurrentEntry->mContent); !err.IsNone()) {
+    if (auto err = fs::ReadLine(mFD, mCurrentPos, mCurrentEntry->mContent, "\r\n\0"); !err.IsNone()) {
         CloseFile();
 
         return err;
