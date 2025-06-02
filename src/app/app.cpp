@@ -303,7 +303,7 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mLogProvider.Init(mLogReader); !err.IsNone()) {
+    if (auto err = mLogProvider.Init(mLogReader, mStorage); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

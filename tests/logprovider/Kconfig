@@ -4,6 +4,14 @@
 
 mainmenu "Aos zephyr application"
 
+config AOS_RUNTIME_DIR
+	string "Aos runtime dir"
+	default "runtime"
+
+config AOS_STORAGE_DIR
+	string "Path to the storage"
+	default "storage"
+
 config AOS_LOG_BACKEND_FS_DIR
 	string "Path to the log directory"
 	default "logs"
@@ -19,5 +27,9 @@ config AOS_LOG_BACKEND_FS_FILE_PREFIX
 config AOS_LOG_BACKEND_FS_FILES_LIMIT
 	int "Log file count"
 	default 2
+
+config AOS_LAUNCHER_THREAD_STACK_SIZE
+	int "Aos launcher stack size"
+	default 16384
 
 source "Kconfig"
