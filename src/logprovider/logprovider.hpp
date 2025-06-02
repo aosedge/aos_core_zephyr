@@ -12,6 +12,7 @@
 #include <aos/sm/logprovider.hpp>
 
 #include "logger/types.hpp"
+#include "storage/storage.hpp"
 
 namespace aos::zephyr::logprovider {
 
@@ -76,7 +77,7 @@ public:
      * @param logReader log reader.
      * @return Error.
      */
-    Error Init(LogReaderItf& logReader);
+    Error Init(LogReaderItf& logReader, sm::launcher::StorageItf& launcherStorage);
 
     /**
      * Starts log provider.
@@ -134,23 +135,27 @@ public:
 
 private:
     static constexpr auto cMaxNumLogRequests = 4;
-    static constexpr auto cAllocatorSize     = sizeof(cloudprotocol::PushLog) + sizeof(LogEntry);
+    static constexpr auto cAllocatorSize
+        = sizeof(cloudprotocol::PushLog) + sizeof(LogEntry) + sizeof(sm::launcher::InstanceDataStaticArray);
 
     Error SendLogChunk(cloudprotocol::PushLog& log);
     Error SendFinalChunk(cloudprotocol::PushLog& log);
     Error SendErrorLog(const String& logID, const Error& err);
     Error HandleLogRequest(const cloudprotocol::RequestLog& request);
     void  ProcessLogRequests();
-    bool  SkipLogEntry(const LogEntry& logEntry, const cloudprotocol::RequestLog& request);
+    bool  FilterByDate(const LogEntry& logEntry, const cloudprotocol::RequestLog& request);
+    bool  FilterByInstanceID(const LogEntry& logEntry, const String& instanceFilter);
+    Optional<StaticString<cInstanceIDLen>> GetInstanceFilter(const cloudprotocol::RequestLog& request);
 
     StaticAllocator<cAllocatorSize>                            mAllocator;
     StaticArray<cloudprotocol::RequestLog, cMaxNumLogRequests> mLogRequests;
     Mutex                                                      mMutex;
     ConditionalVariable                                        mCondVar;
     Thread<>                                                   mThread;
-    bool                                                       mStopped     = true;
-    sm::logprovider::LogObserverItf*                           mLogObserver = nullptr;
-    LogReaderItf*                                              mLogReader   = nullptr;
+    bool                                                       mStopped         = true;
+    sm::logprovider::LogObserverItf*                           mLogObserver     = {};
+    LogReaderItf*                                              mLogReader       = {};
+    sm::launcher::StorageItf*                                  mLauncherStorage = {};
 };
 
 } // namespace aos::zephyr::logprovider

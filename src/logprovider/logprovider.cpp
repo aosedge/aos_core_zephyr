@@ -21,11 +21,12 @@ namespace aos::zephyr::logprovider {
  * Public
  **********************************************************************************************************************/
 
-Error LogProvider::Init(LogReaderItf& logReader)
+Error LogProvider::Init(LogReaderItf& logReader, sm::launcher::StorageItf& launcherStorage)
 {
     LOG_DBG() << "Initialize log provider";
 
-    mLogReader = &logReader;
+    mLogReader       = &logReader;
+    mLauncherStorage = &launcherStorage;
 
     return ErrorEnum::eNone;
 }
@@ -65,9 +66,18 @@ Error LogProvider::Stop()
 
 Error LogProvider::GetInstanceLog(const cloudprotocol::RequestLog& request)
 {
-    LOG_DBG() << "Get instance log: logID=" << request.mLogID;
+    LockGuard lock {mMutex};
 
-    return ErrorEnum::eNotSupported;
+    LOG_DBG() << "Get instance log" << Log::Field("logID", request.mLogID)
+              << Log::Field("filter", request.mFilter.mInstanceFilter);
+
+    if (auto err = mLogRequests.PushBack(request); !err.IsNone()) {
+        return err;
+    }
+
+    mCondVar.NotifyAll();
+
+    return ErrorEnum::eNone;
 }
 
 Error LogProvider::GetInstanceCrashLog(const cloudprotocol::RequestLog& request)
@@ -124,6 +134,7 @@ Error LogProvider::Unsubscribe(sm::logprovider::LogObserverItf& observer)
 
 Error LogProvider::SendLogChunk(cloudprotocol::PushLog& log)
 {
+    ++log.mPart;
     ++log.mPartsCount;
 
     if (!mLogObserver) {
@@ -155,7 +166,7 @@ Error LogProvider::SendErrorLog(const String& logID, const Error& err)
     log->mStatus      = cloudprotocol::LogStatusEnum::eError;
     log->mErrorInfo   = err;
     log->mPartsCount  = 0;
-    log->mPart        = 1;
+    log->mPart        = 0;
 
     return SendLogChunk(*log);
 }
@@ -167,6 +178,8 @@ Error LogProvider::HandleLogRequest(const cloudprotocol::RequestLog& request)
     if (auto err = mLogReader->Reset(); !err.IsNone()) {
         return err;
     }
+
+    auto instanceIDFilter = GetInstanceFilter(request);
 
     auto logEntry = MakeUnique<LogEntry>(&mAllocator);
 
@@ -184,9 +197,15 @@ Error LogProvider::HandleLogRequest(const cloudprotocol::RequestLog& request)
             continue;
         }
 
-        if (SkipLogEntry(*logEntry, request)) {
+        if (FilterByDate(*logEntry, request)) {
             continue;
         }
+
+        if (instanceIDFilter.HasValue() && FilterByInstanceID(*logEntry, *instanceIDFilter)) {
+            continue;
+        }
+
+        logEntry->mContent.Append("\n");
 
         if (log->mContent.Size() + logEntry->mContent.Size() > log->mContent.MaxSize()) {
             if (auto err = SendLogChunk(*log); !err.IsNone()) {
@@ -231,7 +250,7 @@ void LogProvider::ProcessLogRequests()
     }
 }
 
-bool LogProvider::SkipLogEntry(const LogEntry& logEntry, const cloudprotocol::RequestLog& request)
+bool LogProvider::FilterByDate(const LogEntry& logEntry, const cloudprotocol::RequestLog& request)
 {
     if (logEntry.mContent.IsEmpty()) {
         return true;
@@ -259,6 +278,37 @@ bool LogProvider::SkipLogEntry(const LogEntry& logEntry, const cloudprotocol::Re
     }
 
     return false;
+}
+
+bool LogProvider::FilterByInstanceID(const LogEntry& logEntry, const String& instanceFilter)
+{
+    if (instanceFilter.IsEmpty()) {
+        return true;
+    }
+
+    StaticString<cInstanceIDLen + 2> instanceIdent;
+
+    instanceIdent.Append("[").Append(instanceFilter).Append("]");
+
+    return !logEntry.mContent.FindSubstr(0, instanceIdent).mError.IsNone();
+}
+
+Optional<StaticString<cInstanceIDLen>> LogProvider::GetInstanceFilter(const cloudprotocol::RequestLog& request)
+{
+    if (request.mFilter.mInstanceFilter == cloudprotocol::InstanceFilter {}) {
+        return {};
+    }
+
+    auto instances = MakeUnique<sm::launcher::InstanceDataStaticArray>(&mAllocator);
+    mLauncherStorage->GetAllInstances(*instances);
+
+    for (const auto& instance : *instances) {
+        if (request.mFilter.mInstanceFilter.Match(instance.mInstanceInfo.mInstanceIdent)) {
+            return {instance.mInstanceID};
+        }
+    }
+
+    return {};
 }
 
 } // namespace aos::zephyr::logprovider

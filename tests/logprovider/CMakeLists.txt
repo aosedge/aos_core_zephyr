@@ -24,6 +24,7 @@ add_definitions(-include ${aoscore_config})
 # ######################################################################################################################
 
 zephyr_include_directories(${aoscore_source_dir}/include)
+zephyr_include_directories(${aoscore_source_dir}/tests/sm)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/..)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/../../src)
 zephyr_include_directories(${APPLICATION_SOURCE_DIR}/src)

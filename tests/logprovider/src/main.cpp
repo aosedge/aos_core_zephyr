@@ -17,6 +17,7 @@
 
 #include "logprovider/fslogreader.hpp"
 #include "logprovider/logprovider.hpp"
+#include "stubs/launcherstub.hpp"
 #include "stubs/logobserverstub.hpp"
 #include "stubs/logproviderstub.hpp"
 #include "utils/log.hpp"
@@ -39,9 +40,10 @@ const auto cTillTimeFilter = cFromTimeFilter.Add(Time::cHours); // "2024-01-31T1
  **********************************************************************************************************************/
 
 struct logprovider_fixture {
-    std::unique_ptr<LogObserverStub> mLogObserver;
-    std::unique_ptr<LogReaderStub>   mLogReader;
-    std::unique_ptr<LogProvider>     mLogProvider;
+    std::unique_ptr<LogObserverStub>           mLogObserver;
+    std::unique_ptr<LogReaderStub>             mLogReader;
+    std::unique_ptr<LogProvider>               mLogProvider;
+    std::unique_ptr<sm::launcher::StorageStub> mLauncherStorage;
 };
 
 struct TestFSLogEntry {
@@ -114,11 +116,13 @@ ZTEST_SUITE(
     [](void* fixture) {
         auto logproviderFixture = static_cast<logprovider_fixture*>(fixture);
 
-        logproviderFixture->mLogObserver = std::make_unique<LogObserverStub>();
-        logproviderFixture->mLogReader   = std::make_unique<LogReaderStub>();
-        logproviderFixture->mLogProvider = std::make_unique<LogProvider>();
+        logproviderFixture->mLogObserver     = std::make_unique<LogObserverStub>();
+        logproviderFixture->mLogReader       = std::make_unique<LogReaderStub>();
+        logproviderFixture->mLogProvider     = std::make_unique<LogProvider>();
+        logproviderFixture->mLauncherStorage = std::make_unique<sm::launcher::StorageStub>();
 
-        auto err = logproviderFixture->mLogProvider->Init(*logproviderFixture->mLogReader);
+        auto err = logproviderFixture->mLogProvider->Init(
+            *logproviderFixture->mLogReader, *logproviderFixture->mLauncherStorage);
         zassert_true(err.IsNone(), "Failed to initialize log provider: %s", utils::ErrorToCStr(err));
 
         err = logproviderFixture->mLogProvider->Subscribe(*logproviderFixture->mLogObserver);
@@ -157,12 +161,66 @@ ZTEST_F(logprovider, test_start_stop)
     zassert_true(err.IsNone(), "Failed to start log provider: %s", utils::ErrorToCStr(err));
 }
 
+sm::launcher::InstanceData CreateInstanceData(const String& instanceID)
+{
+    auto data = sm::launcher::InstanceData {};
+
+    data.mInstanceID.Assign(instanceID);
+
+    data.mInstanceInfo.mInstanceIdent.mSubjectID.Assign(instanceID);
+
+    return data;
+}
+
 ZTEST_F(logprovider, test_get_instance_log)
 {
-    auto logRequest = std::make_unique<cloudprotocol::RequestLog>();
+    const std::vector<LogEntry> logEntries = {
+        CreateLogEntry("[instance-id-1] should not be filtered out 1", cFromTimeFilter),
+        CreateLogEntry("[instance-id-1] should not be filtered out 2", cFromTimeFilter),
+        CreateLogEntry("instance-id-1] should be filtered out", cFromTimeFilter),
+        CreateLogEntry("no-instance-id should be filtered out", cFromTimeFilter),
+    };
 
-    auto err = fixture->mLogProvider->GetInstanceLog(*logRequest);
-    zassert_true(err.Is(ErrorEnum::eNotSupported), "Not supported error expected: %s", utils::ErrorToCStr(err));
+    fixture->mLogReader->SetLogEntries(logEntries);
+
+    const auto cInstanceData = CreateInstanceData("instance-id-1");
+
+    auto err = fixture->mLauncherStorage->AddInstance(cInstanceData);
+    zassert_true(err.IsNone(), "Failed to add instance data: %s", utils::ErrorToCStr(err));
+
+    auto logRequest                                = std::make_unique<cloudprotocol::RequestLog>();
+    logRequest->mLogID                             = "log_id";
+    logRequest->mFilter.mInstanceFilter.mSubjectID = cInstanceData.mInstanceInfo.mInstanceIdent.mSubjectID;
+
+    err = fixture->mLogProvider->GetInstanceLog(*logRequest);
+    zassert_true(err.IsNone(), "No error expected: %s", utils::ErrorToCStr(err));
+
+    auto response = std::make_unique<cloudprotocol::PushLog>();
+
+    err = fixture->mLogObserver->WaitLogReceived(*response);
+    zassert_true(err.IsNone(), "Failed to wait log received: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(response->mLogID, logRequest->mLogID, "Log ID mismatch");
+    zassert_equal(response->mStatus, cloudprotocol::LogStatusEnum::eOk, "Log status mismatch");
+    zassert_equal(response->mPart, 1, "Log part mismatch");
+    zassert_equal(response->mPartsCount, 1, "Log parts count mismatch");
+
+    for (size_t i = 0; i < 2; ++i) {
+        auto trimmedContent = logEntries[i].mContent;
+        trimmedContent.Trim("\n");
+
+        auto [pos, errFind] = response->mContent.FindSubstr(0, trimmedContent);
+        zassert_true(errFind.IsNone(), "Failed to find log entry: %s", utils::ErrorToCStr(errFind));
+    }
+
+    err = fixture->mLogObserver->WaitLogReceived(*response);
+    zassert_true(err.IsNone(), "Failed to wait log received: %s", utils::ErrorToCStr(err));
+
+    zassert_equal(response->mLogID, logRequest->mLogID, "Log ID mismatch");
+    zassert_equal(response->mStatus, cloudprotocol::LogStatusEnum::eEmpty, "Log status mismatch");
+    zassert_equal(response->mPart, 2, "Log part mismatch");
+    zassert_equal(response->mPartsCount, 2, "Log parts count mismatch");
+    zassert_equal(response->mContent.Size(), 0, "Log content size mismatch");
 }
 
 ZTEST_F(logprovider, test_get_instance_crash_log)
@@ -294,8 +352,11 @@ ZTEST(logprovider, test_fslogreader)
     zassert_equal(readLogEntries.size(), logs.size(), "Log entries count mismatched");
 
     for (size_t i = 0; i < readLogEntries.size(); ++i) {
-        const auto& expectedLog = logs[i].mLogEntry;
-        const auto& readLog     = readLogEntries[i];
+        auto expectedLog = logs[i].mLogEntry;
+        expectedLog.mContent.Trim("\n");
+
+        auto readLog = readLogEntries[i];
+        readLog.mContent.Trim("\n");
 
         zassert_equal(readLog.mContent, expectedLog.mContent, "Log entry mismatched");
         zassert_equal(readLog.mTime, expectedLog.mTime, "Log time mismatched");
