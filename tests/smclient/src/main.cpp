@@ -46,7 +46,7 @@ struct smclient_fixture {
     DownloaderStub                      mDownloader;
     ClockSyncStub                       mClockSync;
     logprovider::LogProviderStub        mLogProvider;
-    ChannelManagerStub                  mChannelManager;
+    std::unique_ptr<ChannelManagerStub> mChannelManager;
     std::unique_ptr<smclient::SMClient> mSMClient;
 };
 
@@ -127,7 +127,7 @@ RetWithError<ChannelStub*> InitSMClient(
     fixture->mResourceManager.UpdateNodeConfig(nodeConfigVersion, "");
 
     auto err = fixture->mSMClient->Init(fixture->mNodeInfoProvider, fixture->mLauncher, fixture->mResourceManager,
-        fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync, fixture->mChannelManager,
+        fixture->mResourceMonitor, fixture->mDownloader, fixture->mClockSync, *fixture->mChannelManager,
         fixture->mLogProvider);
     zassert_true(err.IsNone(), "Can't initialize SM client: %s", utils::ErrorToCStr(err));
 
@@ -136,7 +136,7 @@ RetWithError<ChannelStub*> InitSMClient(
 
     fixture->mSMClient->OnClockSynced();
 
-    auto channel = fixture->mChannelManager.GetChannel(port, cWaitTimeout);
+    auto channel = fixture->mChannelManager->GetChannel(port, cWaitTimeout);
     if (!channel.mError.IsNone()) {
         return {nullptr, channel.mError};
     }
@@ -303,6 +303,7 @@ ZTEST_SUITE(
         smclientFixture->mDownloader.Clear();
         smclientFixture->mClockSync.Clear();
         smclientFixture->mNodeInfoProvider.Clear();
+        smclientFixture->mChannelManager.reset(new ChannelManagerStub);
         smclientFixture->mSMClient.reset(new smclient::SMClient);
     },
     [](void* fixture) {

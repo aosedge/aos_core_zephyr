@@ -37,11 +37,14 @@ public:
     {
         std::lock_guard lock {mMutex};
 
-        if (mChannels.find(port) == mChannels.end()) {
+        auto it = mChannels.find(port);
+        if (it == mChannels.end()) {
             return aos::ErrorEnum::eNotFound;
         }
 
-        mChannels.erase(port);
+        mErasedChannels.push_back(std::move(it->second));
+
+        mChannels.erase(it);
 
         mCV.notify_one();
 
@@ -70,6 +73,7 @@ public:
     }
 
 private:
+    std::vector<std::unique_ptr<ChannelStub>>                  mErasedChannels;
     std::unordered_map<uint32_t, std::unique_ptr<ChannelStub>> mChannels;
     std::mutex                                                 mMutex;
     std::condition_variable                                    mCV;
