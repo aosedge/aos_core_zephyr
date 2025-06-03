@@ -21,13 +21,15 @@
 #include "utils/pbmessages.hpp"
 #include "utils/utils.hpp"
 
-using namespace aos::zephyr;
+namespace aos::zephyr::iamclient {
+
+namespace {
 
 /***********************************************************************************************************************
  * Consts
  **********************************************************************************************************************/
 
-static constexpr auto cWaitTimeout = std::chrono::seconds {5};
+constexpr auto cWaitTimeout = std::chrono::seconds {5};
 
 /***********************************************************************************************************************
  * Types
@@ -37,7 +39,7 @@ struct iamclient_fixture {
     ClockSyncStub                         mClockSync;
     NodeInfoProviderStub                  mNodeInfoProvider;
     ProvisionManagerStub                  mProvisionManager;
-    ChannelManagerStub                    mChannelManager;
+    std::unique_ptr<ChannelManagerStub>   mChannelManager;
     std::unique_ptr<iamclient::IAMClient> mIAMClient;
 };
 
@@ -45,24 +47,24 @@ struct iamclient_fixture {
  * Static
  **********************************************************************************************************************/
 
-static aos::Error ReceiveIAMOutgoingMessage(ChannelStub* channel, iamanager_v5_IAMOutgoingMessages& message)
+Error ReceiveIAMOutgoingMessage(ChannelStub* channel, iamanager_v5_IAMOutgoingMessages& message)
 {
     return ReceivePBMessage(
         channel, cWaitTimeout, &message, iamanager_v5_IAMOutgoingMessages_size, &iamanager_v5_IAMOutgoingMessages_msg);
 }
 
-static aos::Error SendIAMIncomingMessage(ChannelStub* channel, const iamanager_v5_IAMIncomingMessages& message)
+Error SendIAMIncomingMessage(ChannelStub* channel, const iamanager_v5_IAMIncomingMessages& message)
 {
     return SendPBMessage(
         channel, &message, iamanager_v5_IAMIncomingMessages_size, &iamanager_v5_IAMIncomingMessages_msg);
 }
 
-static void InitIAMClient(iamclient_fixture* fixture, const aos::NodeInfo& nodeInfo)
+void InitIAMClient(iamclient_fixture* fixture, const NodeInfo& nodeInfo)
 {
     fixture->mNodeInfoProvider.SetNodeInfo(nodeInfo);
 
     auto err = fixture->mIAMClient->Init(
-        fixture->mClockSync, fixture->mNodeInfoProvider, fixture->mProvisionManager, fixture->mChannelManager);
+        fixture->mClockSync, fixture->mNodeInfoProvider, fixture->mProvisionManager, *fixture->mChannelManager);
     zassert_true(err.IsNone(), "Can't initialize IAM client: %s", utils::ErrorToCStr(err));
 
     err = fixture->mIAMClient->Start();
@@ -71,7 +73,7 @@ static void InitIAMClient(iamclient_fixture* fixture, const aos::NodeInfo& nodeI
     fixture->mIAMClient->OnClockSynced();
 }
 
-static void ReceiveNodeInfo(ChannelStub* channel, const aos::NodeInfo& nodeInfo)
+void ReceiveNodeInfo(ChannelStub* channel, const NodeInfo& nodeInfo)
 {
     iamanager_v5_IAMOutgoingMessages outgoingMessage;
     auto&                            pbNodeInfo = outgoingMessage.IAMOutgoingMessage.node_info;
@@ -88,6 +90,8 @@ static void ReceiveNodeInfo(ChannelStub* channel, const aos::NodeInfo& nodeInfo)
     zassert_equal(pbNodeInfo.status, nodeInfo.mStatus.ToString(), "Wrong node status");
 }
 
+} // namespace
+
 /***********************************************************************************************************************
  * Setup
  **********************************************************************************************************************/
@@ -95,20 +99,25 @@ static void ReceiveNodeInfo(ChannelStub* channel, const aos::NodeInfo& nodeInfo)
 ZTEST_SUITE(
     iamclient, nullptr,
     []() -> void* {
-        aos::Log::SetCallback(TestLogCallback);
+        Log::SetCallback(TestLogCallback);
 
         auto fixture = new iamclient_fixture;
 
         return fixture;
     },
-    [](void* fixture) { static_cast<iamclient_fixture*>(fixture)->mIAMClient.reset(new iamclient::IAMClient); },
     [](void* fixture) {
-        auto& iamClientFixture = static_cast<iamclient_fixture*>(fixture)->mIAMClient;
+        auto iamClientFixture = static_cast<iamclient_fixture*>(fixture);
 
-        auto err = iamClientFixture->Stop();
+        iamClientFixture->mChannelManager.reset(new ChannelManagerStub);
+        iamClientFixture->mIAMClient.reset(new IAMClient);
+    },
+    [](void* fixture) {
+        auto iamClientFixture = static_cast<iamclient_fixture*>(fixture);
+
+        iamClientFixture->mChannelManager->Stop();
+
+        auto err = iamClientFixture->mIAMClient->Stop();
         zassert_true(err.IsNone(), "Can't stop IAM client: %s", utils::ErrorToCStr(err));
-
-        iamClientFixture.reset();
     },
     [](void* fixture) { delete static_cast<iamclient_fixture*>(fixture); });
 
@@ -118,11 +127,11 @@ ZTEST_SUITE(
 
 ZTEST_F(iamclient, test_StartProvisioning)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eUnprovisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eUnprovisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
@@ -162,11 +171,11 @@ ZTEST_F(iamclient, test_StartProvisioning)
 
 ZTEST_F(iamclient, test_FinishProvisioning)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eUnprovisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eUnprovisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
@@ -205,26 +214,26 @@ ZTEST_F(iamclient, test_FinishProvisioning)
 
     // Wait for node status changed
 
-    aos::Tie(channel, err) = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
+    Tie(channel, err) = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
-    nodeInfo.mStatus = aos::NodeStatusEnum::eProvisioned;
+    nodeInfo.mStatus = NodeStatusEnum::eProvisioned;
 
     ReceiveNodeInfo(channel, nodeInfo);
 }
 
 ZTEST_F(iamclient, test_Deprovision)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eProvisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eProvisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
 
-    zassert_equal(nodeInfo.mStatus, aos::NodeStatusEnum::eProvisioned);
+    zassert_equal(nodeInfo.mStatus, NodeStatusEnum::eProvisioned);
 
     // Send deprovision request
 
@@ -260,26 +269,26 @@ ZTEST_F(iamclient, test_Deprovision)
 
     // Wait for node status changed
 
-    aos::Tie(channel, err) = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    Tie(channel, err) = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
-    nodeInfo.mStatus = aos::NodeStatusEnum::eUnprovisioned;
+    nodeInfo.mStatus = NodeStatusEnum::eUnprovisioned;
 
     ReceiveNodeInfo(channel, nodeInfo);
 }
 
 ZTEST_F(iamclient, test_GetCertTypes)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eUnprovisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eUnprovisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
 
-    aos::iam::provisionmanager::CertTypes certTypes;
+    iam::provisionmanager::CertTypes certTypes;
 
     certTypes.PushBack("certType1");
     certTypes.PushBack("certType2");
@@ -320,11 +329,11 @@ ZTEST_F(iamclient, test_GetCertTypes)
 
 ZTEST_F(iamclient, test_CreateKey)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eUnprovisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eUnprovisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
@@ -370,18 +379,18 @@ ZTEST_F(iamclient, test_CreateKey)
 
 ZTEST_F(iamclient, test_ApplyCert)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eUnprovisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eUnprovisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_OPEN_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
 
-    aos::iam::certhandler::CertInfo certInfo {};
+    iam::certhandler::CertInfo certInfo {};
 
-    aos::StaticString<aos::crypto::cSerialNumStrLen> serial = "0123456789abcdef";
+    StaticString<crypto::cSerialNumStrLen> serial = "0123456789abcdef";
 
     err = serial.HexToByteArray(certInfo.mSerial);
     zassert_true(err.IsNone(), "Convert serial error: %s", utils::ErrorToCStr(err));
@@ -424,11 +433,11 @@ ZTEST_F(iamclient, test_ApplyCert)
 
 ZTEST_F(iamclient, test_PauseNode)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::eProvisioned};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::eProvisioned};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
@@ -448,7 +457,7 @@ ZTEST_F(iamclient, test_PauseNode)
 
     // Receive node info
 
-    nodeInfo.mStatus = aos::NodeStatusEnum::ePaused;
+    nodeInfo.mStatus = NodeStatusEnum::ePaused;
 
     ReceiveNodeInfo(channel, nodeInfo);
 
@@ -469,11 +478,11 @@ ZTEST_F(iamclient, test_PauseNode)
 
 ZTEST_F(iamclient, test_ResumeNode)
 {
-    aos::NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = aos::NodeStatusEnum::ePaused};
+    NodeInfo nodeInfo = {.mNodeID = "node1", .mStatus = NodeStatusEnum::ePaused};
 
     InitIAMClient(fixture, nodeInfo);
 
-    auto [channel, err] = fixture->mChannelManager.GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
+    auto [channel, err] = fixture->mChannelManager->GetChannel(CONFIG_AOS_IAM_SECURE_PORT, cWaitTimeout);
     zassert_true(err.IsNone(), "Getting channel error: %s", utils::ErrorToCStr(err));
 
     ReceiveNodeInfo(channel, nodeInfo);
@@ -493,7 +502,7 @@ ZTEST_F(iamclient, test_ResumeNode)
 
     // Receive node info
 
-    nodeInfo.mStatus = aos::NodeStatusEnum::eProvisioned;
+    nodeInfo.mStatus = NodeStatusEnum::eProvisioned;
 
     ReceiveNodeInfo(channel, nodeInfo);
 
@@ -511,3 +520,5 @@ ZTEST_F(iamclient, test_ResumeNode)
         "Unexpected message type");
     zassert_false(pbResumeNodeResponse.has_error, "Unexpected error received");
 }
+
+} // namespace aos::zephyr::iamclient
