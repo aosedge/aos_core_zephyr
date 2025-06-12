@@ -40,7 +40,8 @@ static const char* domu_backend_configs[] = {
     "vif=['backend=1,bridge=xenbr0,mac=08:00:27:ff:cb:ce,ip=172.44.0.2 255.255.255.0 172.44.0.1']",
 };
 
-struct xen_domain_cfg domu_cfg = {
+DECL_CONFIG struct xen_domain_cfg domu_cfg = {
+    .name   = DOMU_NAME,
     .mem_kb = 0x40000, /* 256Mb */
 
     .flags               = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),

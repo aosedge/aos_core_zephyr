@@ -5,11 +5,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef DOMAIN_CONF_H_
-#define DOMAIN_C0NF_H_
+#define DOMAIN_CONF_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define H3ULCB_DOMD_NAME      "h3ulcb_domd"
+#define SALVATOR_XS_DOMD_NAME "salvator_xs_domd"
+#define SPIDER_DOMD_NAME      "spider_domd"
 
 int create_domains();
 

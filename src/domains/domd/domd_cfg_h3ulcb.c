@@ -5,6 +5,7 @@
  */
 
 #include <domain.h>
+#include <domains/dom_runner.h>
 #include <string.h>
 #include <xen_dom_mgmt.h>
 #include <zephyr/xen/public/domctl.h>
@@ -478,7 +479,8 @@ static ssize_t get_ipl_image_size(void* image_info, uint64_t* size)
     return 0;
 }
 
-struct xen_domain_cfg domd_cfg = {
+DECL_CONFIG struct xen_domain_cfg domd_cfg = {
+    .name   = H3ULCB_DOMD_NAME,
     .mem_kb = 0x200000, /* 2Gb */
 
     .flags               = (XEN_DOMCTL_CDF_hvm | XEN_DOMCTL_CDF_hap | XEN_DOMCTL_CDF_iommu),
