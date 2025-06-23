@@ -36,6 +36,10 @@ Error App::Init()
         return err;
     }
 
+    if (auto err = InitSpaceAllocators(); !err.IsNone()) {
+        return err;
+    }
+
     if (auto err = InitSM(); !err.IsNone()) {
         return err;
     }
@@ -50,6 +54,10 @@ Error App::Init()
 Error App::Start()
 {
     LOG_INF() << "Start application";
+
+    if (auto err = mLogProvider.Start(); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
 
     if (auto err = mLauncher.Start(); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
@@ -77,6 +85,10 @@ Error App::Start()
 Error App::Stop()
 {
     LOG_INF() << "Stop application";
+
+    if (auto err = mLogProvider.Stop(); !err.IsNone()) {
+        LOG_ERR() << "Failed to stop log provider: err=" << err;
+    }
 
     if (auto err = mLauncher.Stop(); !err.IsNone()) {
         LOG_ERR() << "Failed to stop launcher: err=" << err;
@@ -119,7 +131,10 @@ Error App::InitCommon()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mResourceMonitor.Init(mNodeInfoProvider, mResourceUsageProvider, mSMClient, mSMClient);
+    aos::monitoring::Config monitorConfig;
+
+    if (auto err = mResourceMonitor.Init(monitorConfig, mNodeInfoProvider, mResourceManager, mResourceUsageProvider,
+            mSMClient, mSMClient, mSMClient);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -134,7 +149,7 @@ Error App::InitIAM()
         return AOS_ERROR_WRAP(Error(ret, "can't set softhsm env"));
     }
 
-    if (auto err = FS::MakeDirAll(cHSMDir); !err.IsNone()) {
+    if (auto err = fs::MakeDirAll(cHSMDir); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 #endif
@@ -188,21 +203,68 @@ Error App::InitIAM()
     return ErrorEnum::eNone;
 }
 
+Error App::InitSpaceAllocators()
+{
+    if (auto err = mDownloadSpaceAllocator.Init(CONFIG_AOS_DOWNLOAD_DIR, mFSPlatform); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mLayerSpaceAllocator.Init(CONFIG_AOS_LAYERS_DIR, mFSPlatform, 0, &mLayerManager); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mServiceSpaceAllocator.Init(CONFIG_AOS_SERVICES_DIR, mFSPlatform, 0, &mServiceManager);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return ErrorEnum::eNone;
+}
+
 Error App::InitSM()
 {
-    if (auto err
-        = mLauncher.Init(mServiceManager, mRunner, mJsonOciSpec, mSMClient, mStorage, mResourceMonitor, mSMClient);
+    mLauncherConfig.mWorkDir              = CONFIG_AOS_LAUNCHER_WORK_DIR;
+    mLauncherConfig.mStorageDir           = CONFIG_AOS_LAUNCHER_STORAGE_DIR;
+    mLauncherConfig.mStateDir             = CONFIG_AOS_LAUNCHER_STATE_DIR;
+    mLauncherConfig.mRemoveOutdatedPeriod = Time::cHours;
+
+    if (auto err = mLauncher.Init(mLauncherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
+            mNetworkManager, mPermHandler, mRunner, mRuntime, mResourceMonitor, mJsonOciSpec, mSMClient, mSMClient,
+            mStorage);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mResourceManager.Init(
-            mResourceManagerJSONProvider, mHostDeviceManager, mHostGroupManager, cNodeType, cNodeConfigFile);
+    if (auto err = mResourceManager.Init(mResourceManagerJSONProvider, mHostDeviceManager, cNodeType, cNodeConfigFile);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mServiceManager.Init(mJsonOciSpec, mDownloader, mStorage); !err.IsNone()) {
+    if (auto err = mImageHandler.Init(mLayerSpaceAllocator, mServiceSpaceAllocator); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    aos::sm::servicemanager::Config smConfig;
+    smConfig.mServicesDir          = CONFIG_AOS_SERVICES_DIR;
+    smConfig.mDownloadDir          = CONFIG_AOS_DOWNLOAD_DIR;
+    smConfig.mTTL                  = 1 * Time::cDay;
+    smConfig.mRemoveOutdatedPeriod = 1 * Time::cDay;
+
+    if (auto err = mServiceManager.Init(smConfig, mJsonOciSpec, mDownloader, mStorage, mServiceSpaceAllocator,
+            mDownloadSpaceAllocator, mImageHandler);
+        !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    sm::layermanager::Config layerConfig;
+    layerConfig.mLayersDir            = CONFIG_AOS_LAYERS_DIR;
+    layerConfig.mDownloadDir          = CONFIG_AOS_DOWNLOAD_DIR;
+    layerConfig.mTTL                  = 1 * Time::cDay;
+    layerConfig.mRemoveOutdatedPeriod = 1 * Time::cDay;
+
+    if (auto err = mLayerManager.Init(
+            layerConfig, mLayerSpaceAllocator, mDownloadSpaceAllocator, mStorage, mDownloader, mImageHandler);
+        !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -212,7 +274,7 @@ Error App::InitSM()
 Error App::InitZephyr()
 {
 #ifdef CONFIG_NATIVE_APPLICATION
-    if (auto err = FS::MakeDirAll(cAosDiskMountPoint); !err.IsNone()) {
+    if (auto err = fs::MakeDirAll(cAosDiskMountPoint); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 #endif
@@ -238,6 +300,10 @@ Error App::InitZephyr()
     }
 
     if (auto err = mRunner.Init(mLauncher); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mLogProvider.Init(mLogReader, mStorage); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -269,7 +335,7 @@ Error App::InitCommunication()
     }
 
     if (auto err = mSMClient.Init(mNodeInfoProvider, mLauncher, mResourceManager, mResourceMonitor, mDownloader,
-            mClockSync, mChannelManager, mCertHandler, mCertLoader);
+            mClockSync, mChannelManager, mCertHandler, mCertLoader, mLogProvider);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }

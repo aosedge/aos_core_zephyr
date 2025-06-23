@@ -29,7 +29,7 @@ public:
      * Returns node monitoring data.
      *
      * @param nodeID node ident.
-     * @param monitoringData monitoring data.
+     * @param[out] monitoringData monitoring data.
      * @return Error.
      */
     Error GetNodeMonitoringData(const String& nodeID, aos::monitoring::MonitoringData& monitoringData) override;
@@ -37,11 +37,12 @@ public:
     /**
      * Returns instance monitoring data.
      *
-     * @param instance instance ident.
-     * @param monitoringData monitoring data.
+     * @param instanceID instance ID.
+     * @param[out] monitoringData instance monitoring data.
      * @return Error.
      */
-    Error GetInstanceMonitoringData(const String& instanceID, aos::monitoring::MonitoringData& monitoringData) override;
+    Error GetInstanceMonitoringData(
+        const String& instanceID, aos::monitoring::InstanceMonitoringData& monitoringData) override;
 
 private:
     static constexpr auto cDom0ID = 0;
@@ -54,15 +55,15 @@ private:
         {
         }
 
-        unsigned long long                mInstanceCPUTime;
-        StaticString<aos::cInstanceIDLen> mInstanceID;
-        timeval                           mInstancePrevTime;
+        unsigned long long           mInstanceCPUTime;
+        StaticString<cInstanceIDLen> mInstanceID;
+        timeval                      mInstancePrevTime;
     };
 
-    unsigned long long                                  mPrevNodeCPUTime {};
-    timeval                                             mPrevTime {};
-    StaticArray<InstanceCPUData, aos::cMaxNumInstances> mPrevInstanceCPUTime {};
-    Mutex                                               mMutex {};
+    unsigned long long                             mPrevNodeCPUTime {};
+    timeval                                        mPrevTime {};
+    StaticArray<InstanceCPUData, cMaxNumInstances> mPrevInstanceCPUTime {};
+    Mutex                                          mMutex {};
 };
 
 } // namespace aos::zephyr::monitoring

@@ -64,4 +64,5 @@ target_sources(
             ../utils/log.cpp
             ../utils/pbmessages.cpp
             src/main.cpp
+            ${aoscore_source_dir}/src/common/tools/time.cpp
 )

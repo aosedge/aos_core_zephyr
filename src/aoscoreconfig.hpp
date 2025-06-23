@@ -11,14 +11,14 @@
 #ifndef CONFIG_NATIVE_APPLICATION
 
 /**
- * Set thread stack size.
- */
-#define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 16384
-
-/**
  * Set thread stack alignment.
  */
 #define AOS_CONFIG_THREAD_STACK_ALIGN ARCH_STACK_PTR_ALIGN
+
+/**
+ * Configures thread stack guard size.
+ */
+#define AOS_CONFIG_THREAD_STACK_GUARD_SIZE 0
 
 /**
  * Set timer signal event notification.
@@ -48,16 +48,21 @@
 #else
 
 /**
- * Set default thread stack size.
+ * Set thread stack alignment.
  */
-#define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 32768
+#define AOS_CONFIG_THREAD_STACK_ALIGN      4096
 
 /**
  * Configures thread stack guard size.
  */
-#define AOS_CONFIG_THREAD_STACK_GUARD_SIZE   4096
+#define AOS_CONFIG_THREAD_STACK_GUARD_SIZE 4096
 
 #endif // CONFIG_NATIVE_APPLICATION
+
+/**
+ * Set default thread stack size.
+ */
+#define AOS_CONFIG_THREAD_DEFAULT_STACK_SIZE 32768
 
 // This config also used to generate proto options file. Using Aos new operator causes redefinition error.
 // Add condition to enable it for zephyr only to avoid the error.
@@ -94,5 +99,30 @@
  * Configures thread stack usage logging.
  */
 #define AOS_CONFIG_THREAD_STACK_USAGE 1
+
+/**
+ * Maximum number of functions for functional service.
+ */
+#define AOS_CONFIG_TYPES_FUNCTIONS_MAX_COUNT 8
+
+/**
+ * Max number of instances.
+ */
+#define AOS_CONFIG_TYPES_MAX_NUM_INSTANCES 16
+
+/**
+ * Max number of services.
+ */
+#define AOS_CONFIG_TYPES_MAX_NUM_SERVICES 16
+
+/**
+ * Max number of layers.
+ */
+#define AOS_CONFIG_TYPES_MAX_NUM_LAYERS 16
+
+/**
+ * Log content len.
+ */
+#define AOS_CONFIG_CLOUDPROTOCOL_LOG_CONTENT_LEN 10240
 
 #endif

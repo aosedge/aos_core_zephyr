@@ -81,17 +81,23 @@ target_sources(
             src/communication/channelmanager.cpp
             src/downloader/downloader.cpp
             src/iamclient/iamclient.cpp
+            src/image/imagehandler.cpp
+            src/logger/fsbackend.cpp
             src/logger/logger.cpp
+            src/logprovider/fslogreader.cpp
+            src/logprovider/logprovider.cpp
             src/monitoring/resourceusageprovider.cpp
             src/nodeinfoprovider/nodeinfoprovider.cpp
             src/ocispec/ocispec.cpp
             src/provisionmanager/provisionmanagercallback.cpp
             src/resourcemanager/resourcemanager.cpp
+            src/runner/consolereader.cpp
             src/runner/runner.cpp
             src/smclient/openhandler.cpp
             src/smclient/smclient.cpp
             src/storage/storage.cpp
             src/utils/checksum.cpp
+            src/utils/fsplatform.cpp
             src/utils/utils.cpp
 )
 
@@ -102,7 +108,16 @@ target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/soc
 target_sources_ifndef(CONFIG_NATIVE_APPLICATION app PRIVATE src/communication/xenvchan.cpp)
 
 # Enable vchannels and xrun mocks for native posix
-target_sources_ifdef(CONFIG_NATIVE_APPLICATION app PRIVATE mocks/vch/vch.cpp mocks/xrun/xrun.cpp mocks/xstat/xstat.cpp)
+target_sources_ifdef(
+    CONFIG_NATIVE_APPLICATION
+    app
+    PRIVATE
+    mocks/vch/vch.cpp
+    mocks/xenlib/xenconsole.cpp
+    mocks/xenlib/xendommgmt.cpp
+    mocks/xrun/xrun.cpp
+    mocks/xstat/xstat.cpp
+)
 
 # Include domain IPL and dtb for xen_dom0 snippet
 target_sources_ifdef(CONFIG_XEN_DOM0 app PRIVATE src/domains/dom_runner.c src/domains/domain_bins.S)
@@ -232,7 +247,7 @@ ExternalProject_Add(
                -DWITH_MBEDTLS=OFF
     SOURCE_DIR ${aoscore_source_dir}
     BUILD_BYPRODUCTS ${aoscore_build_dir}/lib/libaossm.a ${aoscore_build_dir}/lib/libaosiam.a
-                     ${aoscore_build_dir}/lib/libaoscommon.a
+                     ${aoscore_build_dir}/lib/libaoscommon.a ${aoscore_build_dir}/lib/libaoscrypto.a
     DEPENDS zephyr_interface
 )
 
@@ -262,12 +277,21 @@ target_link_libraries(app PUBLIC aosiam)
 
 # aoscommon
 
-add_library(aoscommon STATIC IMPORTED GLOBAL)
+add_library(
+    aoscommon STATIC ${aoscore_source_dir}/src/common/crypto/mbedtls/cryptoprovider.cpp
+                     ${aoscore_source_dir}/src/common/crypto/mbedtls/driverwrapper.cpp
+)
 
 add_dependencies(aoscommon aoscore)
 
-set_target_properties(aoscommon PROPERTIES IMPORTED_LOCATION ${aoscore_build_dir}/lib/libaoscommon.a)
-set_target_properties(aoscommon PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${aoscore_build_dir}/include)
+target_link_libraries(
+    aoscommon PUBLIC ${aoscore_build_dir}/lib/libaoscommon.a ${aoscore_build_dir}/lib/libaoscrypto.a mbedTLSCrypto
+)
+target_include_directories(
+    aoscommon
+    PUBLIC ${aoscore_build_dir}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 target_link_libraries(app PUBLIC aoscommon)
 

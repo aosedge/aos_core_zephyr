@@ -6,6 +6,7 @@
  */
 
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/printk.h>
 
 #if CONFIG_NATIVE_APPLICATION
 #include <aos/common/tools/thread.hpp>
@@ -74,6 +75,8 @@ LOG_CALLBACK(resourcemanager);
 LOG_CALLBACK(runner);
 LOG_CALLBACK(smclient);
 LOG_CALLBACK(storage);
+LOG_CALLBACK(image);
+LOG_CALLBACK(logprovider);
 
 // Aos lib logs
 LOG_CALLBACK(certhandler);
@@ -82,6 +85,7 @@ LOG_CALLBACK(launcher);
 LOG_CALLBACK(monitoring);
 LOG_CALLBACK(pkcs11);
 LOG_CALLBACK(servicemanager);
+LOG_CALLBACK(layermanager);
 
 /***********************************************************************************************************************
  * Public
@@ -107,8 +111,11 @@ Error Logger::Init()
     sLogCallbacks.Set("resourcemanager", &log_resourcemanager::LogCallback);
     sLogCallbacks.Set("runner", &log_runner::LogCallback);
     sLogCallbacks.Set("servicemanager", &log_servicemanager::LogCallback);
+    sLogCallbacks.Set("layermanager", &log_layermanager::LogCallback);
     sLogCallbacks.Set("smclient", &log_smclient::LogCallback);
     sLogCallbacks.Set("storage", &log_storage::LogCallback);
+    sLogCallbacks.Set("image", &log_image::LogCallback);
+    sLogCallbacks.Set("logprovider", &log_logprovider::LogCallback);
 
 #if CONFIG_LOG_RUNTIME_FILTERING
     for (auto& [module, _] : sLogCallbacks) {
@@ -133,14 +140,14 @@ void Logger::LogCallback(const String& module, LogLevel level, const String& mes
     LockGuard lock(sMutex);
 #endif
 
-    auto [callback, err] = sLogCallbacks.At(module);
-    if (!err.IsNone()) {
-        LOG_MODULE_WRN("app") << "Log from unknown module received: module=" << module << ", level=" << level
-                              << ", message=" << message;
+    auto callbackIt = sLogCallbacks.Find(module);
+    if (callbackIt == sLogCallbacks.end()) {
+        printk("[app] Log from unknown module received: module=%s, level=%s, message=%s", module.CStr(),
+            level.ToString().CStr(), message.CStr());
         return;
     }
 
-    callback(level, message);
+    callbackIt->mSecond(level, message);
 }
 
 #if CONFIG_LOG_RUNTIME_FILTERING

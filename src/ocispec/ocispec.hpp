@@ -10,7 +10,7 @@
 
 #include <zephyr/data/json.h>
 
-#include <aos/common/ocispec.hpp>
+#include <aos/common/ocispec/ocispec.hpp>
 #include <aos/common/tools/allocator.hpp>
 #include <aos/common/tools/thread.hpp>
 
@@ -140,10 +140,37 @@ struct RuntimeSpec {
 };
 
 /**
+ * Service config
+ *
+ */
+struct ServiceConfig {
+    const char* runners[cRunnerNameLen];
+    size_t      runnersLen;
+};
+
+/**
  * OCISpec instance.
  */
-class OCISpec : public OCISpecItf {
+class OCISpec : public oci::OCISpecItf {
 public:
+    /**
+     * Loads OCI content descriptor.
+     *
+     * @param path file path.
+     * @param descriptor[out]  content descriptor.
+     * @return Error.
+     */
+    Error LoadContentDescriptor(const String& path, oci::ContentDescriptor& descriptor) override;
+
+    /**
+     * Saves OCI content descriptor.
+     *
+     * @param path file path.
+     * @param descriptor[out] content descriptor.
+     * @return Error.
+     */
+    Error SaveContentDescriptor(const String& path, const oci::ContentDescriptor& descriptor) override;
+
     /**
      * Loads OCI image manifest.
      *
@@ -196,7 +223,25 @@ public:
      * @param runtimeSpec runtime spec.
      * @return Error.
      */
-    virtual Error SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runtimeSpec) override;
+    Error SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runtimeSpec) override;
+
+    /**
+     * Loads Aos service config.
+     *
+     * @param path file path.
+     * @param serviceConfig service config.
+     * @return Error.
+     */
+    Error LoadServiceConfig(const String& path, oci::ServiceConfig& serviceConfig) override;
+
+    /**
+     * Saves Aos service config.
+     *
+     * @param path file path.
+     * @param serviceConfig service config.
+     * @return Error.
+     */
+    Error SaveServiceConfig(const String& path, const oci::ServiceConfig& serviceConfig) override;
 
 private:
     static constexpr size_t cJsonMaxContentLen = 4096;

@@ -15,8 +15,10 @@
 #include <aos/common/tools/noncopyable.hpp>
 #include <aos/iam/certhandler.hpp>
 #include <aos/iam/certmodules/pkcs11/pkcs11.hpp>
+#include <aos/iam/permhandler.hpp>
 #include <aos/iam/provisionmanager.hpp>
 #include <aos/sm/launcher.hpp>
+#include <aos/sm/layermanager.hpp>
 #include <aos/sm/servicemanager.hpp>
 
 #include "clocksync/clocksync.hpp"
@@ -28,7 +30,12 @@
 #endif
 #include "downloader/downloader.hpp"
 #include "iamclient/iamclient.hpp"
+#include "image/imagehandler.hpp"
+#include "launcher/runtime.hpp"
+#include "logprovider/fslogreader.hpp"
+#include "logprovider/logprovider.hpp"
 #include "monitoring/resourceusageprovider.hpp"
+#include "networkmanager/networkmanager.hpp"
 #include "nodeinfoprovider/nodeinfoprovider.hpp"
 #include "ocispec/ocispec.hpp"
 #include "provisionmanager/provisionmanagercallback.hpp"
@@ -36,6 +43,7 @@
 #include "runner/runner.hpp"
 #include "smclient/smclient.hpp"
 #include "storage/storage.hpp"
+#include "utils/fsplatform.hpp"
 
 namespace aos::zephyr::app {
 
@@ -89,6 +97,7 @@ private:
 
     Error InitCommon();
     Error InitIAM();
+    Error InitSpaceAllocators();
     Error InitSM();
     Error InitZephyr();
     Error InitCommunication();
@@ -106,10 +115,13 @@ private:
     iam::certhandler::PKCS11Module          mIAMHSMModule;
     iam::certhandler::PKCS11Module          mSMHSMModule;
     iam::provisionmanager::ProvisionManager mProvisionManager;
+    iam::permhandler::PermHandler           mPermHandler;
 
     sm::launcher::Launcher               mLauncher;
     sm::resourcemanager::ResourceManager mResourceManager;
     sm::servicemanager::ServiceManager   mServiceManager;
+    sm::layermanager::LayerManager       mLayerManager;
+    networkmanager::NetworkManager       mNetworkManager;
 
     clocksync::ClockSync          mClockSync;
     communication::ChannelManager mChannelManager;
@@ -125,11 +137,21 @@ private:
     ocispec::OCISpec                           mJsonOciSpec;
     provisionmanager::ProvisionManagerCallback mProvisionManagerCallback;
     resourcemanager::HostDeviceManager         mHostDeviceManager;
-    resourcemanager::HostGroupManager          mHostGroupManager;
     resourcemanager::JSONProvider              mResourceManagerJSONProvider;
     runner::Runner                             mRunner;
     smclient::SMClient                         mSMClient;
     storage::Storage                           mStorage;
+    launcher::Runtime                          mRuntime;
+
+    aos::sm::launcher::Config mLauncherConfig;
+
+    utils::FSPlatform                                                   mFSPlatform;
+    spaceallocator::SpaceAllocator<cMaxNumServices>                     mServiceSpaceAllocator;
+    spaceallocator::SpaceAllocator<cMaxNumLayers>                       mLayerSpaceAllocator;
+    spaceallocator::SpaceAllocator<Max(cMaxNumLayers, cMaxNumServices)> mDownloadSpaceAllocator;
+    image::ImageHandler                                                 mImageHandler;
+    logprovider::FSLogReader                                            mLogReader;
+    logprovider::LogProvider                                            mLogProvider;
 };
 
 } // namespace aos::zephyr::app

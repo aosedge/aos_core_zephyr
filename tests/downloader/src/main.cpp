@@ -10,6 +10,7 @@
 #include <zephyr/ztest.h>
 
 #include <fcntl.h>
+#include <memory>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -30,13 +31,13 @@ static downloader::Downloader sDownloader;
 
 void sendImageContentInfo(void*)
 {
-    aos::StaticArray<downloader::FileInfo, 32> files;
-    downloader::FileInfo                       file {};
+    auto                 files = std::make_unique<aos::StaticArray<downloader::FileInfo, 32>>();
+    downloader::FileInfo file {};
     file.mRelativePath = cFileName;
 
-    files.PushBack(file);
+    files->PushBack(file);
 
-    zassert_equal(sDownloader.ReceiveImageContentInfo(downloader::ImageContentInfo {1, files}), aos::ErrorEnum::eNone,
+    zassert_equal(sDownloader.ReceiveImageContentInfo(downloader::ImageContentInfo {1, *files}), aos::ErrorEnum::eNone,
         "Failed to initialize downloader");
 
     aos::StaticArray<uint8_t, aos::cFileChunkSize> fileData {};
@@ -67,7 +68,7 @@ public:
             return aos::ErrorEnum::eInvalidArgument;
         }
 
-        if (request.mContentType != aos::DownloadContentEnum::eService) {
+        if (request.mContentType != aos::downloader::DownloadContentEnum::eService) {
             return aos::ErrorEnum::eInvalidArgument;
         }
 
@@ -75,7 +76,7 @@ public:
             return aos::ErrorEnum::eInvalidArgument;
         }
 
-        timerReceive.Create(200, sendImageContentInfo);
+        timerReceive.Start(aos::Time::cSeconds, sendImageContentInfo);
 
         return aos::ErrorEnum::eNone;
     }
@@ -97,10 +98,10 @@ ZTEST(downloader, test_download_image)
     aos::StaticString<aos::cURLLen>      url {cDownloadUrl};
     aos::StaticString<aos::cFilePathLen> path {cDownloadPath};
 
-    zassert_equal(sDownloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eNone,
-        "Failed to download image");
+    zassert_equal(sDownloader.Download(url, path, aos::downloader::DownloadContentEnum::eService),
+        aos::ErrorEnum::eNone, "Failed to download image");
 
-    aos::StaticString<aos::cFilePathLen> filePath {aos::FS::JoinPath(cDownloadPath, cFileName)};
+    aos::StaticString<aos::cFilePathLen> filePath {aos::fs::JoinPath(cDownloadPath, cFileName)};
 
     auto file = open(filePath.CStr(), O_RDONLY, 0644);
     zassert_false(file < 0, "Failed to open file");
@@ -125,6 +126,6 @@ ZTEST(downloader, test_timeout_download_image)
     aos::StaticString<aos::cURLLen>      url {cDownloadUrl};
     aos::StaticString<aos::cFilePathLen> path {cDownloadPath};
 
-    zassert_equal(sDownloader.Download(url, path, aos::DownloadContentEnum::eService), aos::ErrorEnum::eTimeout,
-        "Expected timeout error");
+    zassert_equal(sDownloader.Download(url, path, aos::downloader::DownloadContentEnum::eService),
+        aos::ErrorEnum::eTimeout, "Expected timeout error");
 }

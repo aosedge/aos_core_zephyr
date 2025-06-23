@@ -20,14 +20,16 @@ namespace aos::zephyr::smclient {
  * Static
  **********************************************************************************************************************/
 
-static google_protobuf_Timestamp TimestampToPB(const Time& time)
+namespace {
+
+google_protobuf_Timestamp TimestampToPB(const Time& time)
 {
     auto unixTime = time.UnixTime();
 
     return google_protobuf_Timestamp {unixTime.tv_sec, static_cast<int32_t>(unixTime.tv_nsec)};
 }
 
-static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
+void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData, const Time& timestamp,
     servicemanager_v4_MonitoringData& pbMonitoringData)
 {
     pbMonitoringData.cpu              = monitoringData.mCPU + 0.5;
@@ -45,7 +47,7 @@ static void MonitoringDataToPB(const monitoring::MonitoringData& monitoringData,
 }
 
 template <typename T>
-static constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& nodeMonitoring, T& pbNodeMonitoring)
+constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& nodeMonitoring, T& pbNodeMonitoring)
 {
     pbNodeMonitoring.has_node_monitoring = true;
     MonitoringDataToPB(nodeMonitoring.mMonitoringData, nodeMonitoring.mTimestamp, pbNodeMonitoring.node_monitoring);
@@ -61,8 +63,7 @@ static constexpr void NodeMonitoringToPB(const monitoring::NodeMonitoringData& n
     }
 }
 
-static void InstanceStatusToPB(
-    const InstanceStatus& aosInstanceStatus, servicemanager_v4_InstanceStatus& pbInstanceStatus)
+void InstanceStatusToPB(const InstanceStatus& aosInstanceStatus, servicemanager_v4_InstanceStatus& pbInstanceStatus)
 {
     pbInstanceStatus.has_instance = true;
     utils::InstanceIdentToPB(aosInstanceStatus.mInstanceIdent, pbInstanceStatus.instance);
@@ -70,10 +71,147 @@ static void InstanceStatusToPB(
     utils::StringFromCStr(pbInstanceStatus.run_state)       = aosInstanceStatus.mRunState.ToString();
 
     if (!aosInstanceStatus.mError.IsNone()) {
-        pbInstanceStatus.has_error_info = true;
-        pbInstanceStatus.error_info     = utils::ErrorToPB(aosInstanceStatus.mError);
+        pbInstanceStatus.has_error = true;
+        pbInstanceStatus.error     = utils::ErrorToPB(aosInstanceStatus.mError);
     }
 }
+
+class AlertVisitor : public aos::StaticVisitor<Error> {
+public:
+    explicit AlertVisitor(servicemanager_v4_Alert& pbAlert)
+        : mPBAlert(pbAlert)
+    {
+    }
+
+    Res Visit(const aos::cloudprotocol::SystemAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_system_alert_tag);
+
+        auto&                                 alert = mPBAlert.AlertItem.system_alert;
+        alert = servicemanager_v4_SystemAlert servicemanager_v4_SystemAlert_init_default;
+
+        utils::StringFromCStr(alert.message) = val.mMessage;
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::CoreAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_core_alert_tag);
+
+        auto&                               alert = mPBAlert.AlertItem.core_alert;
+        alert = servicemanager_v4_CoreAlert servicemanager_v4_CoreAlert_init_default;
+
+        utils::StringFromCStr(alert.core_component) = val.mCoreComponent.ToString();
+        utils::StringFromCStr(alert.message)        = val.mMessage;
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::SystemQuotaAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_system_alert_tag);
+
+        auto&                                      alert = mPBAlert.AlertItem.system_quota_alert;
+        alert = servicemanager_v4_SystemQuotaAlert servicemanager_v4_SystemQuotaAlert_init_default;
+
+        utils::StringFromCStr(alert.parameter) = val.mParameter;
+        alert.value                            = val.mValue;
+        utils::StringFromCStr(alert.status)    = val.mStatus.ToString();
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::InstanceQuotaAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_instance_quota_alert_tag);
+
+        auto&                                        alert = mPBAlert.AlertItem.instance_quota_alert;
+        alert = servicemanager_v4_InstanceQuotaAlert servicemanager_v4_InstanceQuotaAlert_init_default;
+
+        SetInstanceIndent(val, alert);
+
+        utils::StringFromCStr(alert.parameter) = val.mParameter;
+        alert.value                            = val.mValue;
+        utils::StringFromCStr(alert.status)    = val.mStatus.ToString();
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::DeviceAllocateAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_device_allocate_alert_tag);
+
+        auto&                                         alert = mPBAlert.AlertItem.device_allocate_alert;
+        alert = servicemanager_v4_DeviceAllocateAlert servicemanager_v4_DeviceAllocateAlert_init_default;
+
+        SetInstanceIndent(val, alert);
+
+        utils::StringFromCStr(alert.device)  = val.mDevice;
+        utils::StringFromCStr(alert.message) = val.mMessage;
+
+        return ErrorEnum::eNone;
+    }
+
+    Res Visit(const aos::cloudprotocol::ResourceValidateAlert& val) const
+    {
+        SetTimeAndTag(val, servicemanager_v4_Alert_resource_validate_alert_tag);
+
+        auto&                                           alert = mPBAlert.AlertItem.resource_validate_alert;
+        alert = servicemanager_v4_ResourceValidateAlert servicemanager_v4_ResourceValidateAlert_init_default;
+
+        utils::StringFromCStr(alert.name) = val.mName;
+
+        alert.errors_count = val.mErrors.Size();
+
+        for (size_t i = 0; i < alert.errors_count; ++i) {
+            auto& alertError = alert.errors[i];
+
+            alertError                                = common_v1_ErrorInfo common_v1_ErrorInfo_init_default;
+            alertError.aos_code                       = static_cast<int32_t>(val.mErrors[i].Value());
+            alertError.exit_code                      = val.mErrors[i].Errno();
+            utils::StringFromCStr(alertError.message) = val.mErrors[i].Message();
+        }
+
+        return ErrorEnum::eNone;
+    }
+
+    template <class T>
+    Res Visit(const T&) const
+    {
+        return ErrorEnum::eNotSupported;
+    }
+
+private:
+    void SetTimeAndTag(const aos::cloudprotocol::AlertItem& src,
+        decltype(servicemanager_v4_Alert::which_AlertItem)  whichAlertItem) const
+    {
+        utils::StringFromCStr(mPBAlert.tag) = src.mTag.ToString();
+        mPBAlert.has_timestamp              = true;
+        mPBAlert.timestamp                  = TimestampToPB(src.mTimestamp);
+
+        mPBAlert.which_AlertItem = whichAlertItem;
+    }
+
+    template <class T, class P>
+    void SetInstanceIndent(const T& aosAlert, P& pbAlert) const
+    {
+        pbAlert.has_instance                               = true;
+        utils::StringFromCStr(pbAlert.instance.service_id) = aosAlert.mInstanceIdent.mServiceID;
+        utils::StringFromCStr(pbAlert.instance.subject_id) = aosAlert.mInstanceIdent.mSubjectID;
+        pbAlert.instance.instance                          = aosAlert.mInstanceIdent.mInstance;
+    }
+
+    servicemanager_v4_Alert& mPBAlert;
+};
+
+Error AlertToPB(const cloudprotocol::AlertVariant& alert, servicemanager_v4_Alert& pbAlert)
+{
+    return alert.ApplyVisitor(AlertVisitor(pbAlert));
+}
+
+} // namespace
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
@@ -86,7 +224,8 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     ,
     iam::certhandler::CertHandlerItf& certHandler, crypto::CertLoaderItf& certLoader
 #endif
-)
+    ,
+    sm::logprovider::LogProviderItf& logProvider)
 {
     LOG_DBG() << "Initialize SM client";
 
@@ -101,6 +240,7 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     mCertHandler = &certHandler;
     mCertLoader  = &certLoader;
 #endif
+    mLogProvider = &logProvider;
 
     auto [openChannel, err] = mChannelManager->CreateChannel(cOpenPort);
     if (!err.IsNone()) {
@@ -114,6 +254,7 @@ Error SMClient::Init(iam::nodeinfoprovider::NodeInfoProviderItf& nodeInfoProvide
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error SMClient::Start()
 {
     LOG_DBG() << "Start SM client";
@@ -127,6 +268,10 @@ Error SMClient::Start()
     mProvisioned = nodeInfo->mStatus != NodeStatusEnum::eUnprovisioned;
 
     if (auto err = mClockSync->Subscribe(*this); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    if (auto err = mLogProvider->Subscribe(*this); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
@@ -145,6 +290,7 @@ Error SMClient::Start()
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error SMClient::Stop()
 {
     LOG_DBG() << "Stop SM client";
@@ -157,6 +303,10 @@ Error SMClient::Stop()
         if (auto err = mChannelManager->DeleteChannel(cOpenPort); !err.IsNone()) {
             LOG_ERR() << "Failed to delete channel: err=" << err;
         }
+    }
+
+    if (auto err = mLogProvider->Unsubscribe(*this); !err.IsNone()) {
+        LOG_ERR() << "Failed to unsubscribe log provider: err=" << err;
     }
 
     {
@@ -175,21 +325,7 @@ Error SMClient::InstancesRunStatus(const Array<InstanceStatus>& instances)
 {
     LockGuard lock {mMutex};
 
-    LOG_INF() << "Send run instances status";
-
-    auto  outgoingMessage      = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
-    auto& pbRunInstancesStatus = outgoingMessage->SMOutgoingMessage.run_instances_status;
-
-    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_run_instances_status_tag;
-    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
-
-    pbRunInstancesStatus.instances_count = instances.Size();
-
-    for (size_t i = 0; i < instances.Size(); i++) {
-        InstanceStatusToPB(instances[i], pbRunInstancesStatus.instances[i]);
-    }
-
-    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
+    return SendRunStatus(instances);
 }
 
 Error SMClient::InstancesUpdateStatus(const Array<InstanceStatus>& instances)
@@ -316,6 +452,27 @@ Error SMClient::SendClockSyncRequest()
     return mOpenHandler.SendClockSyncRequest();
 }
 
+Error SMClient::SendAlert(const cloudprotocol::AlertVariant& alert)
+{
+    LockGuard lock {mMutex};
+
+    LOG_INF() << "Send alert";
+    LOG_DBG() << "Send alert: alert=" << alert;
+
+    auto outgoingMessage                     = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_alert_tag;
+
+    auto& pbAlert = outgoingMessage->SMOutgoingMessage.alert;
+
+    pbAlert = servicemanager_v4_Alert servicemanager_v4_Alert_init_default;
+
+    if (auto err = AlertToPB(alert, pbAlert); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -330,6 +487,18 @@ void SMClient::OnConnect()
 
     if (auto err = SendNodeConfigStatus(version, configErr); !err.IsNone()) {
         LOG_ERR() << "Failed to send node config status: err=" << err;
+        return;
+    }
+
+    auto lastRunStatus = MakeUnique<InstanceStatusStaticArray>(&mAllocator);
+
+    if (auto err = mLauncher->GetCurrentRunStatus(*lastRunStatus); !err.IsNone()) {
+        LOG_ERR() << "Can't get current run status: err=" << err;
+        return;
+    }
+
+    if (auto err = SendRunStatus(*lastRunStatus); !err.IsNone()) {
+        LOG_ERR() << "Can't send current run status: err=" << err;
         return;
     }
 
@@ -383,6 +552,10 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
         err = ProcessRunInstances(incomingMessages->SMIncomingMessage.run_instances);
         break;
 
+    case servicemanager_v4_SMIncomingMessages_system_log_request_tag:
+        err = ProcessSystemLogRequest(incomingMessages->SMIncomingMessage.system_log_request);
+        break;
+
     case servicemanager_v4_SMIncomingMessages_image_content_info_tag:
         err = ProcessImageContentInfo(incomingMessages->SMIncomingMessage.image_content_info);
         break;
@@ -397,6 +570,33 @@ Error SMClient::ReceiveMessage(const Array<uint8_t>& data)
     }
 
     return err;
+}
+
+Error SMClient::OnLogReceived(const cloudprotocol::PushLog& log)
+{
+    LOG_DBG() << "Received log: logID=" << log.mLogID << ", part=" << log.mPart << ", status=" << log.mStatus.ToString()
+              << ", size=" << log.mContent.Size();
+
+    auto  outgoingMessage = MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbLog           = outgoingMessage->SMOutgoingMessage.log;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_log_tag;
+    pbLog                                    = servicemanager_v4_LogData servicemanager_v4_LogData_init_default;
+
+    utils::StringFromCStr(pbLog.log_id) = log.mLogID.CStr();
+    utils::StringFromCStr(pbLog.status) = log.mStatus.ToString();
+    pbLog.part                          = log.mPart;
+    pbLog.part_count                    = log.mPartsCount;
+
+    utils::ByteArrayToPB(
+        Array<uint8_t>(reinterpret_cast<const uint8_t*>(log.mContent.begin()), log.mContent.Size()), pbLog.data);
+
+    if (!log.mErrorInfo.IsNone()) {
+        pbLog.has_error = true;
+        pbLog.error     = utils::ErrorToPB(log.mErrorInfo);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
 }
 
 Error SMClient::ProcessGetNodeConfigStatus(const servicemanager_v4_GetNodeConfigStatus& pbGetNodeConfigStatus)
@@ -514,6 +714,25 @@ Error SMClient::ProcessRunInstances(const servicemanager_v4_RunInstances& pbRunI
     return ErrorEnum::eNone;
 }
 
+Error SMClient::ProcessSystemLogRequest(const servicemanager_v4_SystemLogRequest& pbSystemLogRequest)
+{
+    LOG_INF() << "Process system log request";
+
+    auto logRequest = MakeUnique<cloudprotocol::RequestLog>(&mAllocator);
+
+    logRequest->mLogID   = utils::StringFromCStr(pbSystemLogRequest.log_id);
+    logRequest->mLogType = cloudprotocol::LogTypeEnum::eSystemLog;
+
+    if (pbSystemLogRequest.has_from) {
+        logRequest->mFilter.mFrom.SetValue(Time::Unix(pbSystemLogRequest.from.seconds, pbSystemLogRequest.from.nanos));
+    }
+    if (pbSystemLogRequest.has_till) {
+        logRequest->mFilter.mTill.SetValue(Time::Unix(pbSystemLogRequest.till.seconds, pbSystemLogRequest.till.nanos));
+    }
+
+    return mLogProvider->GetSystemLog(*logRequest);
+}
+
 Error SMClient::ProcessImageContentInfo(const servicemanager_v4_ImageContentInfo& pbImageContentInfo)
 {
     LOG_INF() << "Process image content info: requestID=" << pbImageContentInfo.request_id;
@@ -585,6 +804,25 @@ Error SMClient::SendNodeConfigStatus(const String& version, const Error& configE
     if (!configErr.IsNone()) {
         pbNodeConfigStatus.has_error = true;
         pbNodeConfigStatus.error     = utils::ErrorToPB(configErr);
+    }
+
+    return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
+}
+
+Error SMClient::SendRunStatus(const Array<InstanceStatus>& instances)
+{
+    LOG_INF() << "Send run instances status";
+
+    auto  outgoingMessage      = aos::MakeUnique<servicemanager_v4_SMOutgoingMessages>(&mAllocator);
+    auto& pbRunInstancesStatus = outgoingMessage->SMOutgoingMessage.run_instances_status;
+
+    outgoingMessage->which_SMOutgoingMessage = servicemanager_v4_SMOutgoingMessages_run_instances_status_tag;
+    pbRunInstancesStatus = servicemanager_v4_RunInstancesStatus servicemanager_v4_RunInstancesStatus_init_default;
+
+    pbRunInstancesStatus.instances_count = instances.Size();
+
+    for (size_t i = 0; i < instances.Size(); i++) {
+        InstanceStatusToPB(instances[i], pbRunInstancesStatus.instances[i]);
     }
 
     return SendMessage(outgoingMessage.Get(), &servicemanager_v4_SMOutgoingMessages_msg);
@@ -674,7 +912,7 @@ void SMClient::HandleChannel()
 
         if (auto err = SetupChannel(); !err.IsNone()) {
             LOG_ERR() << "Can't setup channel: err=" << err;
-            LOG_DBG() << "Reconnect in " << cReconnectInterval / 1000000 << " ms";
+            LOG_DBG() << "Reconnect in " << cReconnectInterval;
 
             if (err = mCondVar.Wait(lock, cReconnectInterval, [this] { return mClose; });
                 !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {

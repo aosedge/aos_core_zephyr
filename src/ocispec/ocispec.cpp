@@ -87,9 +87,31 @@ static const struct json_obj_descr RuntimeSpecDescr[] = {
     JSON_OBJ_DESCR_OBJECT(RuntimeSpec, vm, VMDescr),
 };
 
+// Service config
+
+static const struct json_obj_descr ServiceConfigDescr[] = {
+    JSON_OBJ_DESCR_ARRAY(ServiceConfig, runners, cMaxNumRunners, runnersLen, JSON_TOK_STRING),
+};
+
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
+
+Error OCISpec::LoadContentDescriptor(const String& path, oci::ContentDescriptor& descriptor)
+{
+    (void)path;
+    (void)descriptor;
+
+    return ErrorEnum::eNotSupported;
+}
+
+Error OCISpec::SaveContentDescriptor(const String& path, const oci::ContentDescriptor& descriptor)
+{
+    (void)path;
+    (void)descriptor;
+
+    return ErrorEnum::eNotSupported;
+}
 
 Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifest)
 {
@@ -97,7 +119,7 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
 
     LOG_DBG() << "Load image manifest: " << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -144,15 +166,8 @@ Error OCISpec::LoadImageManifest(const String& path, oci::ImageManifest& manifes
     // aosService
 
     if (ret & eImageManifestAosServiceField) {
-        if (manifest.mAosService == nullptr) {
-            return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
-        }
-
-        *manifest.mAosService = {
-            jsonImageManifest->aosService.mediaType,
-            jsonImageManifest->aosService.digest,
-            jsonImageManifest->aosService.size,
-        };
+        manifest.mAosService.EmplaceValue(jsonImageManifest->aosService.mediaType, jsonImageManifest->aosService.digest,
+            jsonImageManifest->aosService.size);
     }
 
     return ErrorEnum::eNone;
@@ -192,7 +207,7 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
 
     // aosService
 
-    if (manifest.mAosService) {
+    if (manifest.mAosService.HasValue()) {
         jsonImageManifest->aosService = {
             manifest.mAosService->mMediaType.CStr(), manifest.mAosService->mDigest.CStr(), manifest.mAosService->mSize};
     }
@@ -208,7 +223,7 @@ Error OCISpec::SaveImageManifest(const String& path, const oci::ImageManifest& m
         return AOS_ERROR_WRAP(err);
     }
 
-    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = fs::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -222,7 +237,7 @@ Error OCISpec::LoadImageSpec(const String& path, oci::ImageSpec& imageSpec)
 
     LOG_DBG() << "Load image spec: " << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -307,7 +322,7 @@ Error OCISpec::SaveImageSpec(const String& path, const oci::ImageSpec& imageSpec
         return AOS_ERROR_WRAP(err);
     }
 
-    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = fs::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
@@ -321,7 +336,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
 
     LOG_DBG() << "Load runtime spec: " << path;
 
-    auto err = FS::ReadFileToString(path, mJsonFileContent);
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
     if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -346,9 +361,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
     runtimeSpec.mOCIVersion = jsonRuntimeSpec->ociVersion;
 
     if (ret & eRuntimeVMField) {
-        if (runtimeSpec.mVM == nullptr) {
-            return AOS_ERROR_WRAP(ErrorEnum::eNoMemory);
-        }
+        runtimeSpec.mVM.EmplaceValue();
 
         runtimeSpec.mVM->mHypervisor.mPath = jsonRuntimeSpec->vm.hypervisor.path;
         runtimeSpec.mVM->mKernel.mPath     = jsonRuntimeSpec->vm.kernel.path;
@@ -371,7 +384,7 @@ Error OCISpec::LoadRuntimeSpec(const String& path, oci::RuntimeSpec& runtimeSpec
 
         for (size_t i = 0; i < jsonRuntimeSpec->vm.hwConfig.iomemsLen; i++) {
             oci::VMHWConfigIOMEM ioMem {};
-            auto&                jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
+            const auto&          jsonIOMem = jsonRuntimeSpec->vm.hwConfig.iomems[i];
 
             ioMem.mFirstGFN = jsonIOMem.firstGFN;
             ioMem.mFirstMFN = jsonIOMem.firstMFN;
@@ -405,7 +418,7 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
     jsonRuntimeSpec->vm.hwConfig.deviceTree = "";
     jsonRuntimeSpec->ociVersion             = runtimeSpec.mOCIVersion.CStr();
 
-    if (runtimeSpec.mVM) {
+    if (runtimeSpec.mVM.HasValue()) {
         jsonRuntimeSpec->vm.hypervisor.path          = const_cast<char*>(runtimeSpec.mVM->mHypervisor.mPath.CStr());
         jsonRuntimeSpec->vm.kernel.path              = const_cast<char*>(runtimeSpec.mVM->mKernel.mPath.CStr());
         jsonRuntimeSpec->vm.hypervisor.parametersLen = runtimeSpec.mVM->mHypervisor.mParameters.Size();
@@ -461,10 +474,49 @@ Error OCISpec::SaveRuntimeSpec(const String& path, const oci::RuntimeSpec& runti
         return AOS_ERROR_WRAP(err);
     }
 
-    err = FS::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
+    err = fs::WriteStringToFile(path, mJsonFileContent, S_IRUSR | S_IWUSR);
     if (!err.IsNone()) {
         return err;
     }
+
+    return ErrorEnum::eNone;
+}
+
+Error OCISpec::LoadServiceConfig(const String& path, oci::ServiceConfig& serviceConfig)
+{
+    LockGuard lock(mMutex);
+
+    LOG_DBG() << "Load service config: path=" << path;
+
+    auto err = fs::ReadFileToString(path, mJsonFileContent);
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
+    mAllocator.Clear();
+
+    auto parsedServiceConfig = MakeUnique<ServiceConfig>(&mAllocator);
+
+    int ret = json_obj_parse(mJsonFileContent.Get(), mJsonFileContent.Size(), ServiceConfigDescr,
+        ARRAY_SIZE(ServiceConfigDescr), parsedServiceConfig.Get());
+    if (ret < 0) {
+        return AOS_ERROR_WRAP(ret);
+    }
+
+    for (size_t i = 0; i < parsedServiceConfig->runnersLen; ++i) {
+        err = serviceConfig.mRunners.PushBack(parsedServiceConfig->runners[i]);
+        if (!err.IsNone()) {
+            return AOS_ERROR_WRAP(err);
+        }
+    }
+
+    return ErrorEnum::eNone;
+}
+
+Error OCISpec::SaveServiceConfig(const String& path, const oci::ServiceConfig& serviceConfig)
+{
+    (void)path;
+    (void)serviceConfig;
 
     return ErrorEnum::eNone;
 }

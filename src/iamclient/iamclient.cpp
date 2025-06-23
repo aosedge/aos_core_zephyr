@@ -42,6 +42,7 @@ Error IAMClient::Init(clocksync::ClockSyncItf& clockSync, iam::nodeinfoprovider:
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error IAMClient::Start()
 {
     LOG_DBG() << "Start IAM client";
@@ -70,6 +71,7 @@ Error IAMClient::Start()
     return ErrorEnum::eNone;
 }
 
+// cppcheck-suppress duplInheritedMember
 Error IAMClient::Stop()
 {
     LOG_DBG() << "Stop IAM client";
@@ -299,7 +301,7 @@ void IAMClient::HandleChannels()
 
         if (auto err = SetupChannel(); !err.IsNone()) {
             LOG_ERR() << "Can't setup channel: err=" << err;
-            LOG_DBG() << "Reconnect in " << cReconnectInterval / 1000000 << " ms";
+            LOG_DBG() << "Reconnect in " << cReconnectInterval;
 
             if (err = mCondVar.Wait(lock, cReconnectInterval, [this] { return mClose; });
                 !err.IsNone() && !err.Is(ErrorEnum::eTimeout)) {
@@ -390,7 +392,7 @@ Error IAMClient::CheckNodeIDAndStatus(const String& nodeID, const Array<NodeStat
         return Error(ErrorEnum::eInvalidArgument, "wrong node ID");
     }
 
-    if (auto [_, err] = expectedStatuses.Find(mNodeInfo.mStatus); !err.IsNone()) {
+    if (auto it = expectedStatuses.Find(mNodeInfo.mStatus); it == expectedStatuses.end()) {
         return Error(ErrorEnum::eWrongState, "wrong node status");
     }
 
@@ -418,12 +420,18 @@ Error IAMClient::SendNodeInfo()
     pbNodeInfo.cpus_count = mNodeInfo.mCPUs.Size();
 
     for (size_t i = 0; i < mNodeInfo.mCPUs.Size(); i++) {
-        utils::StringFromCStr(pbNodeInfo.cpus[i].model_name)  = mNodeInfo.mCPUs[i].mModelName;
-        pbNodeInfo.cpus[i].num_cores                          = mNodeInfo.mCPUs[i].mNumCores;
-        pbNodeInfo.cpus[i].num_threads                        = mNodeInfo.mCPUs[i].mNumThreads;
-        utils::StringFromCStr(pbNodeInfo.cpus[i].arch)        = mNodeInfo.mCPUs[i].mArch;
-        utils::StringFromCStr(pbNodeInfo.cpus[i].arch_family) = mNodeInfo.mCPUs[i].mArchFamily;
-        pbNodeInfo.cpus[i].max_dmips                          = mNodeInfo.mCPUs[i].mMaxDMIPS;
+        utils::StringFromCStr(pbNodeInfo.cpus[i].model_name) = mNodeInfo.mCPUs[i].mModelName;
+        pbNodeInfo.cpus[i].num_cores                         = mNodeInfo.mCPUs[i].mNumCores;
+        pbNodeInfo.cpus[i].num_threads                       = mNodeInfo.mCPUs[i].mNumThreads;
+        utils::StringFromCStr(pbNodeInfo.cpus[i].arch)       = mNodeInfo.mCPUs[i].mArch;
+
+        if (mNodeInfo.mCPUs[i].mArchFamily.HasValue()) {
+            utils::StringFromCStr(pbNodeInfo.cpus[i].arch_family) = mNodeInfo.mCPUs[i].mArchFamily->CStr();
+        }
+
+        if (mNodeInfo.mCPUs[i].mMaxDMIPS.HasValue()) {
+            pbNodeInfo.cpus[i].max_dmips = *mNodeInfo.mCPUs[i].mMaxDMIPS;
+        }
     }
 
     pbNodeInfo.partitions_count = mNodeInfo.mPartitions.Size();

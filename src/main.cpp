@@ -12,6 +12,7 @@
 #include <aos/common/version.hpp>
 
 #include "app/app.hpp"
+#include "logger/fsbackend.hpp"
 #include "logger/logger.hpp"
 #include "utils/utils.hpp"
 
@@ -30,6 +31,8 @@ using namespace aos::zephyr;
 
 int main(void)
 {
+    logger::backend::FSBackend::SetCustomTimestamp();
+
     printk("*** Aos zephyr application: %s ***\n", AOS_ZEPHYR_APP_VERSION);
     printk("*** Aos core library: %s ***\n", AOS_CORE_VERSION);
     printk("*** Aos core size: %lu ***\n", sizeof(app::App));
@@ -49,6 +52,9 @@ int main(void)
 
     auto err = logger::Logger::Init();
     __ASSERT(err.IsNone(), "Error initializing logger: %s", utils::ErrorToCStr(err));
+
+    err = logger::backend::FSBackend::Get().Init();
+    __ASSERT(err.IsNone(), "Error initializing fs backend logger: %s", utils::ErrorToCStr(err));
 
     auto& app = aos::zephyr::app::App::Get();
 

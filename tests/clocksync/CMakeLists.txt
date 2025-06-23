@@ -10,6 +10,7 @@ project(clocksync_test)
 # ######################################################################################################################
 
 set(AOS_CORE_CONFIG aoscoreconfig.hpp)
+set(aoscore_source_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../../aos_core_lib_cpp")
 
 # ######################################################################################################################
 # Definitions
@@ -31,4 +32,7 @@ zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # Target
 # ######################################################################################################################
 
-target_sources(app PRIVATE src/main.cpp ../utils/log.cpp ../../src/utils/utils.cpp ../../src/clocksync/clocksync.cpp)
+target_sources(
+    app PRIVATE src/main.cpp ../utils/log.cpp ../../src/utils/utils.cpp ../../src/clocksync/clocksync.cpp
+                ${aoscore_source_dir}/src/common/tools/time.cpp
+)
