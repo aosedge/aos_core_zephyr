@@ -29,15 +29,15 @@ manifest:
 
     - name: aos_core_lib_cpp
       remote: aosedge
-      revision: "v1.0.1"
+      revision: "v1.2.0"
 
     - name: aos_core_api
       remote: aosedge
-      revision: "v8.0.2"
+      revision: "v8.2.0"
 
     - name: zephyr-xenlib
       remote: xen-troops
-      revision: "v3.0.0"
+      revision: "v3.1.0"
 
     - name: zephyr-optee-client
       remote: xen-troops
