@@ -228,6 +228,10 @@ Error App::InitSM()
     mLauncherConfig.mStateDir             = CONFIG_AOS_LAUNCHER_STATE_DIR;
     mLauncherConfig.mRemoveOutdatedPeriod = Time::cHours;
 
+    if (auto err = mPermHandler.Init(mCryptoProvider); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mLauncher.Init(mLauncherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
             mNetworkManager, mPermHandler, mRunner, mRuntime, mResourceMonitor, mJsonOciSpec, mSMClient, mSMClient,
             mStorage);
