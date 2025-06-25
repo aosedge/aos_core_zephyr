@@ -18,6 +18,9 @@ manifest:
     - name: aosedge
       url-base: https://github.com/aosedge
 
+    - name: mlohvynenko
+      url-base: https://github.com/mlohvynenko
+
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
 
@@ -28,8 +31,8 @@ manifest:
       west-commands: scripts/west-commands.yml
 
     - name: aos_core_lib_cpp
-      remote: aosedge
-      revision: "develop"
+      remote: mlohvynenko
+      revision: "feature_improve_uuid"
 
     - name: aos_core_api
       remote: aosedge

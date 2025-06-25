@@ -228,9 +228,13 @@ Error App::InitSM()
     mLauncherConfig.mStateDir             = CONFIG_AOS_LAUNCHER_STATE_DIR;
     mLauncherConfig.mRemoveOutdatedPeriod = Time::cHours;
 
+    if (auto err = mPermHandler.Init(mCryptoProvider); !err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
+
     if (auto err = mLauncher.Init(mLauncherConfig, mNodeInfoProvider, mServiceManager, mLayerManager, mResourceManager,
             mNetworkManager, mPermHandler, mRunner, mRuntime, mResourceMonitor, mJsonOciSpec, mSMClient, mSMClient,
-            mStorage);
+            mStorage, mCryptoProvider);
         !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
@@ -283,7 +287,7 @@ Error App::InitZephyr()
         return AOS_ERROR_WRAP(err);
     }
 
-    if (auto err = mNodeInfoProvider.Init(); !err.IsNone()) {
+    if (auto err = mNodeInfoProvider.Init(mCryptoProvider); !err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 
