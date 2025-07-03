@@ -731,7 +731,7 @@ ZTEST_F(smclient, test_ImageContentRequest)
     // Send image content request
 
     downloader::ImageContentRequest sendContentRequest {
-        "content URL", 42, aos::downloader::DownloadContentEnum::eService};
+        "content URL", 42, aos::cloudprotocol::DownloadTargetEnum::eService};
 
     err = fixture->mSMClient->SendImageContentRequest(sendContentRequest);
     zassert_true(err.IsNone(), "Error sending image content request: %s", utils::ErrorToCStr(err));

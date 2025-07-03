@@ -37,7 +37,8 @@ Error Downloader::Init(DownloadRequesterItf& downloadRequester)
     return ErrorEnum::eNone;
 }
 
-Error Downloader::Download(const String& url, const String& path, aos::downloader::DownloadContent contentType)
+Error Downloader::Download(const String& url, const String& path, cloudprotocol::DownloadTarget targetType,
+    const String& targetID, const String& version)
 {
     UniqueLock lock(mMutex);
 
@@ -55,7 +56,7 @@ Error Downloader::Download(const String& url, const String& path, aos::downloade
     }
 
     mRequestedPath          = path;
-    mErrProcessImageRequest = mDownloadRequester->SendImageContentRequest({url, ++mRequestID, contentType});
+    mErrProcessImageRequest = mDownloadRequester->SendImageContentRequest({url, ++mRequestID, targetType});
 
     if (!mErrProcessImageRequest.IsNone()) {
         return mErrProcessImageRequest;
