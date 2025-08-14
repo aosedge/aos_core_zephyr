@@ -29,9 +29,11 @@ namespace aos::zephyr::nodeinfoprovider {
  * Public
  **********************************************************************************************************************/
 
-Error NodeInfoProvider::Init()
+Error NodeInfoProvider::Init(crypto::UUIDItf& uuidProvider)
 {
     LOG_DBG() << "Init node info provider";
+
+    mUUIDProvider = &uuidProvider;
 
     if (auto err = InitNodeID(); !err.IsNone() && !err.Is(ErrorEnum::eNotSupported)) {
         return AOS_ERROR_WRAP(Error(err, "failed to init node id"));
@@ -149,9 +151,15 @@ Error NodeInfoProvider::InitNodeID()
 
     LOG_DBG() << "Generate node id";
 
-    auto uuidStr = uuid::UUIDToString(uuid::CreateUUID());
+    auto [uuid, err] = mUUIDProvider->CreateUUIDv4();
+    if (!err.IsNone()) {
+        return AOS_ERROR_WRAP(err);
+    }
 
-    if (auto err = fs::WriteStringToFile(cNodeIDFile, uuidStr, S_IRUSR | S_IWUSR); !err.IsNone()) {
+    auto uuidStr = uuid::UUIDToString(uuid);
+
+    err = fs::WriteStringToFile(cNodeIDFile, uuidStr, S_IRUSR | S_IWUSR);
+    if (!err.IsNone()) {
         return AOS_ERROR_WRAP(err);
     }
 

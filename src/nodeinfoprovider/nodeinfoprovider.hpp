@@ -8,6 +8,7 @@
 #ifndef NODEINFOPROVIDER_HPP_
 #define NODEINFOPROVIDER_HPP_
 
+#include <aos/common/crypto/crypto.hpp>
 #include <aos/common/tools/map.hpp>
 #include <aos/common/tools/thread.hpp>
 #include <aos/iam/nodeinfoprovider.hpp>
@@ -22,9 +23,10 @@ public:
     /**
      * Initializes the node info provider.
      *
-     * @return Error
+     * @param uuidProvider UUID provider.
+     * @return Error.
      */
-    Error Init();
+    Error Init(crypto::UUIDItf& uuidProvider);
 
     /**
      * Gets the node info object.
@@ -81,6 +83,7 @@ private:
     NodeInfo                                                                                  mNodeInfo;
     StaticMap<iam::nodeinfoprovider::NodeStatusObserverItf*, bool, cMaxNodeStatusSubscribers> mStatusChangedSubscribers;
     mutable Mutex                                                                             mMutex;
+    crypto::UUIDItf*                                                                          mUUIDProvider {};
 };
 
 } // namespace aos::zephyr::nodeinfoprovider

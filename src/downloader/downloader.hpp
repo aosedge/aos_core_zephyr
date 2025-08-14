@@ -22,9 +22,9 @@ namespace aos::zephyr::downloader {
  * Image content request.
  */
 struct ImageContentRequest {
-    StaticString<cURLLen>            mURL;
-    uint64_t                         mRequestID;
-    aos::downloader::DownloadContent mContentType;
+    StaticString<cURLLen>         mURL;
+    uint64_t                      mRequestID;
+    cloudprotocol::DownloadTarget mContentType;
 
     /**
      * Compares image content request.
@@ -209,10 +209,13 @@ public:
      *
      * @param url URL.
      * @param path path to file.
-     * @param contentType content type.
-     * @return Error
+     * @param targetType target type.
+     * @param targetID target ID.
+     * @param version version.
+     * @return Error.
      */
-    Error Download(const String& url, const String& path, aos::downloader::DownloadContent contentType) override;
+    Error Download(const String& url, const String& path, cloudprotocol::DownloadTarget targetType,
+        const String& targetID = "", const String& version = "") override;
 
     /**
      * Receives image content request.
