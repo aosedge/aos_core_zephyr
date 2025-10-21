@@ -6,7 +6,7 @@
 
 ## Overview
 
-This project contains code of the Aos core application for zephyr OS.
+This project contains code of the AosCore application for zephyr OS.
 
 ## Prerequisites
 
