@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - feature*
 
   pull_request_target:
     types:
@@ -97,18 +98,18 @@ jobs:
 
       - name: SonarCloud Scan on push
         if: startsWith(matrix.platform, 'native_posix_64') && github.event_name == 'push'
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
         with:
           args: >
-            --define sonar.cfamily.compile-commands=build/compile_commands.json
-            --define sonar.coverageReportPaths=./coverage-sonar.xml
+            --define "sonar.cfamily.compile-commands=build/compile_commands.json"
+            --define "sonar.coverageReportPaths=./coverage-sonar.xml"
 
       - name: SonarCloud Scan on pull request
         if: startsWith(matrix.platform, 'native_posix_64') && github.event_name == 'pull_request_target'
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -116,9 +117,9 @@ jobs:
         with:
           projectBaseDir: "."
           args: >
-            --define sonar.scm.revision=${{ github.event.pull_request.head.sha }}
-            --define sonar.pullrequest.key=${{ github.event.pull_request.number }}
-            --define sonar.pullrequest.branch=${{ github.event.pull_request.head.ref }}
-            --define sonar.pullrequest.base=${{ github.event.pull_request.base.ref }}
-            --define sonar.cfamily.compile-commands=build/compile_commands.json
-            --define sonar.coverageReportPaths=./coverage-sonar.xml
+            --define "sonar.scm.revision=${{ github.event.pull_request.head.sha }}""
+            --define "sonar.pullrequest.key=${{ github.event.pull_request.number }}"
+            --define "sonar.pullrequest.branch=${{ github.event.pull_request.head.ref }}"
+            --define "sonar.pullrequest.base=${{ github.event.pull_request.base.ref }}"
+            --define "sonar.cfamily.compile-commands=build/compile_commands.json"
+            --define "sonar.coverageReportPaths=./coverage-sonar.xml"
