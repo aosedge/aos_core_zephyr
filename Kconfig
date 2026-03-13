@@ -5,6 +5,10 @@
 
 mainmenu "Aos zephyr application"
 
+config AOS_ENABLE
+	bool "Enable Aos"
+	default y
+
 config AOS_DOMD_ID
 	int "DomD id"
 	default 1
