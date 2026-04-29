@@ -29,6 +29,35 @@
 
 using namespace aos::zephyr;
 
+void RunAosApp()
+{
+    auto& app = aos::zephyr::app::App::Get();
+
+    auto err = app.Init();
+    __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
+
+    err = app.Start();
+    __ASSERT(err.IsNone(), "Error starting application: %s", utils::ErrorToCStr(err));
+}
+
+void SetAtExitHandler()
+{
+    atexit([]() {
+
+#if defined(CONFIG_AOS_ENABLE)
+        if (auto err = aos::zephyr::app::App::Get().Stop(); !err.IsNone()) {
+            printk("Error stopping application: %s\n", utils::ErrorToCStr(err));
+
+            _exit(1);
+        }
+#endif
+
+        printk("Application stopped\n");
+
+        _exit(0);
+    });
+}
+
 int main(void)
 {
     logger::backend::FSBackend::SetCustomTimestamp();
@@ -56,26 +85,11 @@ int main(void)
     err = logger::backend::FSBackend::Get().Init();
     __ASSERT(err.IsNone(), "Error initializing fs backend logger: %s", utils::ErrorToCStr(err));
 
-    auto& app = aos::zephyr::app::App::Get();
+#if defined(CONFIG_AOS_ENABLE)
+    RunAosApp();
+#endif
 
-    atexit([]() {
-        auto err = aos::zephyr::app::App::Get().Stop();
-        if (!err.IsNone()) {
-            printk("Error stopping application: %s\n", utils::ErrorToCStr(err));
-
-            _exit(1);
-        }
-
-        printk("Application stopped\n");
-
-        _exit(0);
-    });
-
-    err = app.Init();
-    __ASSERT(err.IsNone(), "Error initializing application: %s", utils::ErrorToCStr(err));
-
-    err = app.Start();
-    __ASSERT(err.IsNone(), "Error starting application: %s", utils::ErrorToCStr(err));
+    SetAtExitHandler();
 
     return 0;
 }
